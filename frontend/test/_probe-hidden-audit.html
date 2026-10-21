@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>hidden 类有效性审计</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">全站审计：给每个元素加上 hidden，是否真的会隐藏</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/" style="width:1360px;height:820px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+/*
+ * 背景：视图 CSS 由 core/router.js 的 ensureStyle() 动态 append 到 <head>，
+ * 排在 Tailwind 运行时样式之后。若视图 CSS 用「单类选择器」给某元素设了 display，
+ * 就会与 Tailwind 的 .hidden { display: none } 同优先级（0,1,0），后注入者胜，
+ * 于是 hidden 失效 —— 这正是「点日期提醒直接触发删除」的成因（模态框常显、层级压叠）。
+ *
+ * 本探针把这条约定变成可执行的断言，分两级报告：
+ *
+ *   [FAIL] 初始就漏 —— 元素在模板里本来就带 hidden，实测 display 却不是 none。
+ *          这是**正在发生的故障**（点日期提醒直接触发删除，就是这一级）。
+ *   [INFO] 潜在风险 —— 元素当前不带 hidden，但给它加上 hidden 也不会隐藏。
+ *          现在没坏，以后谁给它加 hidden 就会坏。仅记录，不算失败。
+ */
+(function () {
+    'use strict';
+    var out = [];
+    function log(s) { out.push(s); document.getElementById('result').textContent = out.join('\n'); }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    var frame = document.getElementById('frame');
+    var totalLeaks = 0;          // FAIL 级：初始就漏
+    var latentClasses = {};      // INFO 级：加 hidden 无效的类名 -> 计数
+    var auditedViews = 0;
+
+    /**
+     * 从「当前已加载的全部样式表」里反查：哪些类被声明了 display。
+     * 这样 INFO 级报告只会给出真正的元凶类名，而不是把元素整个 class 属性倒出来。
+     *
+     * 区分来源很关键：
+     *   <link href=...>  → 我们的视图 CSS（能改，也是问题源头）
+     *   href 为 null     → tailwind.min.js 运行时注入的 <style>（改不了，只做备注）
+     * 同一元素上两者都有时，优先报我们的，避免把 .flex 这类工具类当元凶。
+     */
+    function collectDisplayClasses(w) {
+        var map = {};   // 类名 -> { display, fromLink }
+        var sheets = w.document.styleSheets;
+        for (var s = 0; s < sheets.length; s++) {
+            var sheet = sheets[s];
+            var rules;
+            try { rules = sheet.cssRules; } catch (e) { continue; }  // 跨域样式表忽略
+            if (!rules) continue;
+            var fromLink = !!sheet.href;
+            for (var r = 0; r < rules.length; r++) {
+                var rule = rules[r];
+                if (!rule.selectorText || !rule.style || !rule.style.display) continue;
+                var names = rule.selectorText.match(/\.[\w-]+/g) || [];
+                names.forEach(function (n) {
+                    var cls = n.slice(1);
+                    if (cls === 'hidden') return;
+                    if (!map[cls] || (fromLink && !map[cls].fromLink)) {
+                        map[cls] = { display: rule.style.display, fromLink: fromLink };
+                    }
+                });
+            }
+        }
+        return map;
+    }
+
+    function signature(el) {
+        var cls = (el.getAttribute('class') || '').trim().replace(/\s+/g, ' ');
+        var id = el.id ? '#' + el.id : '';
+        return el.tagName.toLowerCase() + id + (cls ? '.' + cls.split(' ').join('.') : '');
+    }
+
+    /** 对单个视图容器做审计 */
+    function audit(w, d, viewName) {
+        var root = d.getElementById('page-view');
+        if (!root) { log('  ✗ 缺少 #page-view'); return; }
+
+        var dispMap = collectDisplayClasses(w);
+
+        // ---- FAIL 级：模板里带着 hidden 的元素，初始状态必须真的是 none ----
+        var preHidden = root.querySelectorAll('.hidden');
+        var preBad = [];
+        var i, el;
+
+        for (i = 0; i < preHidden.length; i++) {
+            el = preHidden[i];
+            if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'OPTION') continue;
+            var disp = w.getComputedStyle(el).display;
+            if (disp !== 'none') preBad.push(signature(el) + ' → display=' + disp);
+        }
+
+        // ---- INFO 级：给每个元素临时加 hidden，看是否真的会隐藏 ----
+        var all = root.querySelectorAll('*');
+        for (i = 0; i < all.length; i++) {
+            el = all[i];
+            if (el.classList.contains('hidden')) continue;
+            if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'OPTION') continue;
+
+            el.classList.add('hidden');
+            var after = w.getComputedStyle(el).display;
+            el.classList.remove('hidden');
+
+            if (after !== 'none') {
+                // 只记「真正设了 display 的那个类」；我们的 CSS 优先，Tailwind 的做备注
+                var ownHits = [], twHits = [];
+                var cls = (el.getAttribute('class') || '').trim().split(/\s+/);
+                for (var c = 0; c < cls.length; c++) {
+                    var info = dispMap[cls[c]];
+                    if (!info) continue;
+                    var line = '.' + cls[c] + ' { display:' + info.display + ' }';
+                    (info.fromLink ? ownHits : twHits).push(line);
+                }
+                var hits = ownHits.length ? ownHits : twHits.map(function (h) { return h + '（Tailwind）'; });
+                if (hits.length) {
+                    hits.forEach(function (h) { latentClasses[h] = true; });
+                } else {
+                    var inline = /display/i.test(el.getAttribute('style') || '');
+                    latentClasses[(el.id ? '#' + el.id : el.tagName.toLowerCase()) +
+                        (inline ? '（内联 style 覆盖）' : '')] = true;
+                }
+            }
+        }
+
+        if (preBad.length === 0) {
+            log('  ✓ ' + viewName + '：' + preHidden.length + ' 个 hidden 元素全部正确隐藏');
+        } else {
+            totalLeaks += preBad.length;
+            log('  ✗ ' + viewName + '：' + preBad.length + ' 处【初始就漏】');
+            preBad.forEach(function (s) { log('      ' + s); });
+        }
+    }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        if (!w.App || !w.App.views) { log('✗ 框架未就绪'); document.title = 'HAS-ERROR'; return; }
+
+        var registry = w.App.views.all();
+        var targets = [];
+        Object.keys(registry).forEach(function (name) {
+            var def = registry[name];
+            if (!def || !def.path) return;
+            if (def.path.indexOf(':') !== -1) return;   // 带参数的详情路由需要真实 id，跳过
+            targets.push({ name: name, path: def.path });
+        });
+
+        log('待审计视图: ' + targets.length + ' 个\n');
+
+        for (var i = 0; i < targets.length; i++) {
+            var t = targets[i];
+            try {
+                w.App.router.navigate(t.path);
+            } catch (e) {
+                log('  ✗ ' + t.name + '：导航异常 ' + e.message);
+                continue;
+            }
+            // 等 mount 完成：当前视图名对上 + 容器有内容
+            var waited = 0;
+            while (waited < 6000) {
+                await sleep(150);
+                waited += 150;
+                var cur = w.App.views.current ? w.App.views.current() : null;
+                var rootEl = d.getElementById('page-view');
+                if (cur && cur.name === t.name && rootEl && rootEl.children.length > 1) break;
+            }
+            await sleep(900);   // 等异步数据渲染（fetch 回来的列表）
+            audit(w, d, t.name);
+            auditedViews++;
+        }
+
+        log('');
+        log('================ 汇总 ================');
+        log('已审计视图: ' + auditedViews);
+        if (totalLeaks === 0) {
+            log('[FAIL] 初始就漏: 0 处 ✓ 没有任何「带着 hidden 却仍然显示」的元素');
+        } else {
+            log('[FAIL] 初始就漏: ' + totalLeaks + ' 处 ← 这是正在发生的故障，必须修');
+        }
+
+        var latent = Object.keys(latentClasses).sort();
+        if (latent.length) {
+            log('[INFO] 潜在风险 ' + latent.length + ' 条（当前不带 hidden，加了自己不会隐藏；仅记录）：');
+            latent.forEach(function (k) { log('       ' + k); });
+        }
+
+        document.title = totalLeaks ? 'HAS-VIOLATION' : 'ALL-OK';
+    };
+})();
+</script>
+</body>
+</html>

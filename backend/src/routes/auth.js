@@ -62,7 +62,10 @@ router.get('/status', function (req, res) {
             enabled: auth.enabled,
             authenticated: auth.isAuthenticated(req),
             trustedLocal: auth.trustLocalhost && local,
-            authRequired: auth.enabled && !(auth.trustLocalhost && local)
+            authRequired: auth.enabled && !(auth.trustLocalhost && local),
+            usernameHint: auth.getUsername ? auth.getUsername() : 'admin',
+            trialLoginAvailable: auth.trialLoginEnabled && auth.trialLoginEnabled(),
+            trialUsername: auth.getTrialUsername ? auth.getTrialUsername() : 'trial'
         }
     });
 });
@@ -83,19 +86,28 @@ router.post('/login', function (req, res) {
         });
     }
 
+    var username = req.body && req.body.username != null ? String(req.body.username).trim() : '';
     var password = req.body && req.body.password;
-    if (!password) {
-        return res.status(400).json({ success: false, error: '请输入密码' });
+    // 兼容旧客户端仅传 password：视为 admin
+    if (!username && password) {
+        username = auth.getUsername ? auth.getUsername() : 'admin';
+    }
+    var trial = auth.isTrialLogin && auth.isTrialLogin(username);
+    if (!username) {
+        return res.status(400).json({ success: false, error: '请输入用户名' });
+    }
+    if (!trial && !password) {
+        return res.status(400).json({ success: false, error: '请输入用户名和密码' });
     }
 
-    if (!auth.verifyPassword(password)) {
+    if (!auth.verifyCredentials(username, password)) {
         recordFail(req);
         var rec = getRecord(req);
         var left = MAX_FAILS - rec.count;
         return res.status(401).json({
             success: false,
-            error: left > 0 ? '密码错误（还可尝试 ' + left + ' 次）' : '密码错误次数过多，已临时锁定',
-            code: 'BAD_PASSWORD'
+            error: left > 0 ? '用户名或密码错误（还可尝试 ' + left + ' 次）' : '错误次数过多，已临时锁定',
+            code: 'BAD_CREDENTIALS'
         });
     }
 
@@ -103,7 +115,9 @@ router.post('/login', function (req, res) {
 
     // remember=true 记 30 天，否则仅会话级（这里仍给 12 小时，避免频繁登录）
     var remember = !!(req.body && req.body.remember);
-    var ttl = remember ? auth.DEFAULT_TTL_MS : 12 * 60 * 60 * 1000;
+    var ttl = trial
+        ? auth.TRIAL_TTL_MS
+        : (remember ? auth.DEFAULT_TTL_MS : 12 * 60 * 60 * 1000);
     var token = auth.setCookie(res, req, ttl);
 
     res.json({
@@ -111,7 +125,8 @@ router.post('/login', function (req, res) {
         data: {
             // 同时返回 token，便于非浏览器客户端用 Authorization: Bearer
             token: token,
-            expiresIn: ttl
+            expiresIn: ttl,
+            trial: trial
         }
     });
 });

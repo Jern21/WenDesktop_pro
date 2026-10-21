@@ -1,6 +1,6 @@
 # 文的项目工作台
 
-[![Version](https://img.shields.io/badge/version-2.0.0-2563eb?style=flat-square)](frontend/js/changelog.js)
+[![Version](https://img.shields.io/badge/version-2.0.1-2563eb?style=flat-square)](CHANGELOG.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com)
 [![Frontend](https://img.shields.io/badge/frontend-native%20SPA-f59e0b?style=flat-square)](docs/架构重构方案.md)
@@ -11,7 +11,7 @@
 
 个人接单工作台，一套用于管理接单业务全流程的本地 Web 应用：从客户、订单、报价到多平台内容发布、素材库与数据统计，一站式完成记录与复盘。
 
-> 版本说明与更新记录：应用内顶栏 **更新日志** 按钮，或查看 [`frontend/js/changelog.js`](frontend/js/changelog.js)。
+> 版本说明与更新记录：维护仓库根目录 [`CHANGELOG.json`](CHANGELOG.json)（push 到 GitHub 后，应用内顶栏 **更新日志** 会通过 Raw 链接对比本地与线上版本差异）。
 
 ## 功能特性
 
@@ -48,12 +48,16 @@
 - API 地址：<http://localhost:3456/api>
 - 健康检查：<http://localhost:3456/api/health>
 
-首次开启鉴权时，控制台会打印自动生成的访问密码（也可设置环境变量 `APP_PASSWORD`）。本机开发可保持默认「本机免登录」；公网部署请设置强密码。
+首次开启鉴权时，控制台会打印自动生成的 **用户名（默认 admin）+ 密码**。也可用 `APP_USERNAME` / `APP_PASSWORD` 指定。
 
 | 环境变量 | 说明 |
 |----------|------|
 | `AUTH_ENABLED=0` | 关闭鉴权（仅建议完全可信的本机环境） |
-| `AUTH_TRUST_LOCALHOST=0` | 本机也需输入密码 |
+| `AUTH_TRUST_LOCALHOST=1` | 恢复本机 127.0.0.1 免登录（默认关闭） |
+| `APP_USERNAME` | 登录用户名（默认 `admin`） |
+| `APP_PASSWORD` | 登录密码 |
+| `TRIAL_LOGIN=0` | 关闭试用免密账号 |
+| `TRIAL_USERNAME` | 试用用户名（默认 `trial`） |
 | `SPA_AS_HOME=0` | 首页回退旧版 `index.html` |
 
 停止服务请双击 `stop.bat`。
@@ -74,6 +78,16 @@ cd backend
 npm test           # 或双击 test.bat（node --test）
 ```
 
+## 版本日志（CHANGELOG）
+
+| 步骤 | 说明 |
+|------|------|
+| 1 | 编辑仓库根目录 [`CHANGELOG.json`](CHANGELOG.json)：更新 `latestVersion`，在 `entries` **最上方**追加新版本条目 |
+| 2 | 提交并 **push 到 GitHub**（默认 `main` 分支） |
+| 3 | 各环境打开应用后，顶栏 **更新日志** 会拉取 `changelogRawUrl` 与本地 `/CHANGELOG.json` 对比，提示「线上较新 / 与线上一致 / 本地未 push」 |
+
+换仓库或分支时，请同步修改 `CHANGELOG.json` 里的 `repository` 与 `changelogRawUrl`（Raw 地址示例：`https://raw.githubusercontent.com/<owner>/<repo>/main/CHANGELOG.json`）。
+
 前端另有路由冒烟、迁移校验等页面测试，见 `frontend/test/` 与 `tools/verify-consistency.js`。
 
 ## 项目结构
@@ -91,17 +105,39 @@ npm test           # 或双击 test.bat（node --test）
 │   │   ├── core/            # dom / ui / view / router
 │   │   ├── views/           # 各页面视图模块
 │   │   ├── app.js           # 启动与导航桥接
-│   │   └── changelog.js     # 版本更新日志数据
+│   │   └── changelog.js     # 更新日志 UI（读取 CHANGELOG.json + GitHub Raw）
 │   ├── views/               # 页面 HTML 模板片段
 │   ├── css/views/           # 按页样式
 │   ├── pages/               # 旧版多页（迁移期可回退）
 │   └── test/                # 前端冒烟与交互测试
+├── mobile-pwa/              # ★ 移动端 PWA（Vite，默认 :3460）
 ├── docs/                    # 架构与方案文档
 ├── tools/                   # 视图迁移与一致性校验脚本
-└── start.bat / stop.bat / test.bat
+└── start.bat / start-mobile.bat / stop.bat / test.bat
 ```
 
 架构细节见 [`docs/架构重构方案.md`](docs/架构重构方案.md)。
+
+### 移动端 PWA（独立工程）
+
+桌面与移动 **分目录、分端口**，共享同一 backend 数据：
+
+| 工程 | 目录 | 开发端口 |
+|------|------|----------|
+| 桌面 SPA | `frontend/` | 3456（经 backend 托管） |
+| 移动 PWA | [`mobile-pwa/`](mobile-pwa/) | **3460**（Vite，`/api` 代理到 3456） |
+
+```bash
+# 终端 1
+cd backend && npm start
+
+# 终端 2
+cd mobile-pwa && npm install && npm run dev
+```
+
+或 Windows 双击 [`start-mobile.bat`](start-mobile.bat)（需 backend 已启动）。
+
+并行开发约定见 [`docs/mobile-pwa-architecture.md`](docs/mobile-pwa-architecture.md)。
 
 ## 主要 API
 

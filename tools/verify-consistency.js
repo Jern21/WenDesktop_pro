@@ -74,6 +74,85 @@ const uncovered = navItems.filter(n => !viewNavs.has(n));
 ok('侧边栏每个导航项都有对应视图', uncovered.length === 0,
     uncovered.length ? '未覆盖: ' + uncovered.join(', ') : navItems.length + ' 项全覆盖');
 
+// ---------- 视图 CSS 的 display 声明会不会压掉 Tailwind 的 hidden ----------
+/*
+ * 视图 CSS 由 core/router.js 的 ensureStyle() 动态 append 到 <head>，
+ * 位置排在 Tailwind 运行时样式之后。若它用「孤立的单类选择器」给某类设了 display，
+ * 就与 Tailwind 的 .hidden { display: none } 同优先级（都是 0,1,0），后注入者胜，
+ * 于是 hidden 被压掉。曾经就因此让 reminder 页的三个模态框常显并层叠，
+ * 最上面的 #delete-modal 抢先接到点击 —— 用户看到的是「点日期提醒直接触发删除」。
+ *
+ * 约定（两种修法，满足任一即可）：
+ *   .foo.hidden { display: none }      ← 组合选择器抬到 0,2,0
+ *   .foo:not(.hidden) { display: ... } ← 非 hidden 时才设 display
+ * 参见 css/views/project.css 与 css/views/reminder.css 的现有写法。
+ */
+const VIEW_CSS_DIR = path.join(FE, 'css/views');
+const stripCssComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
+
+const displayClasses = new Map();   // 类名 -> 哪个文件里给了它 display
+const guarded = new Set();          // 已按上面两种写法加固的类
+
+fs.readdirSync(VIEW_CSS_DIR).filter(f => f.endsWith('.css')).forEach(f => {
+    const raw = stripCssComments(fs.readFileSync(path.join(VIEW_CSS_DIR, f), 'utf8'));
+    [...raw.matchAll(/([^{}]+)\{([^{}]*)\}/g)].forEach(([, sel, body]) => {
+        sel.split(',').forEach(one => {
+            one = one.trim();
+            if (!one) return;
+            const hasDisplay = /(?:^|[\s;{])display\s*:/.test(body);
+
+            const g = one.match(/^\.([\w-]+)(?:\.hidden|:not\(\.hidden\))$/);
+            if (g && hasDisplay) guarded.add(g[1]);
+
+            const single = one.match(/^\.([\w-]+)$/);
+            if (single && hasDisplay) {
+                if (!displayClasses.has(single[1])) displayClasses.set(single[1], new Set());
+                displayClasses.get(single[1]).add(f);
+            }
+        });
+    });
+});
+
+// 收集模板里「同一个 class 属性同时带 hidden 和某个 display 类」的情况
+const htmlFiles = fs.readdirSync(path.join(FE, 'views'))
+    .filter(f => f.endsWith('.html'))
+    .map(f => 'views/' + f);
+const contentDir = path.join(FE, 'pages/content');
+if (fs.existsSync(contentDir)) {
+    fs.readdirSync(contentDir).filter(f => f.endsWith('.html'))
+        .forEach(f => htmlFiles.push('pages/content/' + f));
+}
+
+const hiddenClashes = [];
+let riskyCount = 0;
+displayClasses.forEach((_, cls) => { if (!guarded.has(cls)) riskyCount++; });
+
+htmlFiles.forEach(rel => {
+    const src = fs.readFileSync(path.join(FE, rel), 'utf8');
+    [...src.matchAll(/class\s*=\s*"([^"]*)"/g)].forEach(m => {
+        const tokens = m[1].trim().split(/\s+/);
+        if (tokens.indexOf('hidden') === -1) return;
+        tokens.forEach(tok => {
+            if (!displayClasses.has(tok) || guarded.has(tok)) return;
+            hiddenClashes.push(rel + ' → .' + tok +
+                '（display 定义在 ' + [...displayClasses.get(tok)].join('/') + '）');
+        });
+    });
+});
+
+ok('模板里没有「CSS 设了 display 又指望 hidden 生效」的组合',
+    hiddenClashes.length === 0,
+    hiddenClashes.length ? [...new Set(hiddenClashes)].join(' | ') : '无');
+
+if (riskyCount > 0) {
+    console.log('INFO  以下类由视图 CSS 设了 display 且未加固（以后给它加 hidden 会失效）：');
+    let buf = [];
+    displayClasses.forEach((files, cls) => {
+        if (!guarded.has(cls)) buf.push('.' + cls);
+    });
+    console.log('      ' + buf.join(', '));
+}
+
 console.log('');
 console.log('路由清单（' + routes.length + ' 条）：');
 routes.forEach(r => console.log('  ' + r));

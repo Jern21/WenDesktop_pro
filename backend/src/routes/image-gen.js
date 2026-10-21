@@ -22,9 +22,11 @@ var path = require('path');
 var https = require('https');
 var http = require('http');
 var resp = require('../utils/response');
+var secretBox = require('../utils/secret-box');
+var dataPaths = require('../utils/data-paths');
 
-var DATA_DIR = path.join(__dirname, '..', '..', 'data');
-var SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+var DATA_DIR = dataPaths.DATA_DIR;
+var SETTINGS_FILE = dataPaths.file('settings.json');
 
 var DEFAULT_CONFIG = {
     apiUrl: '',
@@ -83,17 +85,36 @@ function formatResponsePreview(response) {
 }
 
 // ========== 读写 settings.json ==========
+//
+// apiKey 在磁盘上是密文（AES-256-GCM，见 utils/secret-box.js），
+// 内存里是明文，所以调用第三方 API 时不用做任何特殊处理。
+// 返回给前端时一律走 apiKeyMasked（见 GET /config），不会把明文送出去。
 
 function readSettings() {
+    var settings;
     try {
-        return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
     } catch (e) {
         return {};
     }
+    if (settings && settings.imageGen && typeof settings.imageGen.apiKey === 'string') {
+        settings.imageGen.apiKey = secretBox.decryptField(settings.imageGen.apiKey);
+    }
+    return settings;
 }
 
 function writeSettings(settings) {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+    var toWrite = settings;
+    if (settings && settings.imageGen && typeof settings.imageGen.apiKey === 'string') {
+        toWrite = Object.assign({}, settings, {
+            imageGen: Object.assign({}, settings.imageGen, {
+                apiKey: secretBox.encrypt(settings.imageGen.apiKey)
+            })
+        });
+    }
+    var tmp = SETTINGS_FILE + '.' + process.pid + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(toWrite, null, 2), 'utf-8');
+    fs.renameSync(tmp, SETTINGS_FILE);
 }
 
 function getConfig() {

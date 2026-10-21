@@ -15,7 +15,7 @@ var TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'wt-auth-test-'));
 process.env.AUTH_DATA_DIR = TMP_DIR;
 delete process.env.APP_PASSWORD;
 process.env.AUTH_ENABLED = '1';
-process.env.AUTH_TRUST_LOCALHOST = '1';
+process.env.AUTH_TRUST_LOCALHOST = '0';
 
 var auth = require('../src/utils/auth');
 
@@ -53,6 +53,19 @@ test('auth.json 已落盘且不含明文密码', function () {
 console.log('\n[2] 密码校验');
 test('正确密码通过', function () {
     assert.strictEqual(auth.verifyPassword(init1.password), true);
+});
+test('正确用户名+密码通过', function () {
+    assert.strictEqual(auth.verifyCredentials(init1.username || 'admin', init1.password), true);
+});
+test('错误用户名拒绝', function () {
+    assert.strictEqual(auth.verifyCredentials('not-admin', init1.password), false);
+});
+test('试用账号免密通过', function () {
+    assert.strictEqual(auth.isTrialLogin('trial'), true);
+    assert.strictEqual(auth.verifyCredentials('trial', ''), true);
+});
+test('非试用用户仍需密码', function () {
+    assert.strictEqual(auth.verifyCredentials('admin', ''), false);
 });
 test('错误密码拒绝', function () {
     assert.strictEqual(auth.verifyPassword('wrong-password'), false);
@@ -129,8 +142,8 @@ test('本机请求被识别为 loopback', function () {
 test('局域网 IP 不算 loopback', function () {
     assert.strictEqual(auth.isLoopback(fakeReq({ ip: '192.168.1.20' })), false);
 });
-test('本机免登录生效', function () {
-    assert.strictEqual(auth.isAuthenticated(fakeReq({ ip: '127.0.0.1' })), true);
+test('本机无 token 也需登录（默认不信任本机）', function () {
+    assert.strictEqual(auth.isAuthenticated(fakeReq({ ip: '127.0.0.1' })), false);
 });
 test('外部 IP 无 token 被拒', function () {
     assert.strictEqual(auth.isAuthenticated(fakeReq({ ip: '192.168.1.20' })), false);

@@ -1,0 +1,199 @@
+/* 矢量柴犬叠在 canvas 场景之上 */
+#shiba-dog-mount {
+    z-index: 2;
+}
+
+#shiba-dog-entity {
+    transform-origin: center bottom;
+}
+
+.shiba-dialogue-bubble.shiba-bubble-visible {
+    box-shadow: 0 4px 14px rgba(28, 25, 23, 0.12);
+}
+
+.shiba-dialogue-bubble[data-kind="agent"] {
+    border-color: #d97706;
+}
+
+.shiba-dialogue-bubble[data-kind="thinking"] #shiba-bubble-text {
+    opacity: 0.85;
+}
+
+/* —— 对话浮窗（挂到 body，向左锚定桌宠、向右展开）—— */
+.shiba-chat-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: min(32rem, 62vh);
+    background: #fffbeb;
+    border: 2px solid #292524;
+    border-radius: 0.75rem;
+    box-shadow: 0 12px 40px rgba(28, 25, 23, 0.2);
+    overflow: hidden;
+    pointer-events: auto;
+    font-family: Inter, system-ui, sans-serif;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px) scale(0.97);
+    transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s;
+}
+
+.shiba-chat-panel--portal {
+    position: fixed;
+    z-index: 80;
+    right: auto;
+}
+
+.shiba-chat-panel--open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.shiba-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+    border-bottom: 1px solid #d6d3d1;
+    flex-shrink: 0;
+}
+
+.shiba-chat-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #92400e;
+    letter-spacing: 0.02em;
+}
+
+.shiba-chat-close {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    border-radius: 0.4rem;
+    background: rgba(255, 255, 255, 0.65);
+    color: #57534e;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shiba-chat-close:hover {
+    background: #fff;
+    color: #1c1917;
+}
+
+.shiba-chat-log {
+    flex: 1;
+    min-height: 7rem;
+    max-height: min(18rem, 42vh);
+    overflow-y: auto;
+    padding: 0.65rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    background: #fff;
+}
+
+.shiba-chat-msg {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 100%;
+}
+
+.shiba-chat-msg-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+    opacity: 0.8;
+}
+
+.shiba-chat-msg--user .shiba-chat-msg-label {
+    color: #0369a1;
+    text-align: right;
+}
+
+.shiba-chat-msg--user .shiba-chat-msg-text {
+    margin: 0;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.55rem 0.55rem 0.2rem 0.55rem;
+    background: #e0f2fe;
+    color: #0c4a6e;
+    white-space: pre-wrap;
+    word-break: break-word;
+    text-align: right;
+    font-size: 0.875rem;
+}
+
+.shiba-chat-msg--bot .shiba-chat-msg-label {
+    color: #b45309;
+}
+
+.shiba-chat-msg--bot .shiba-chat-msg-text {
+    margin: 0;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.55rem 0.55rem 0.55rem 0.2rem;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #431407;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.875rem;
+}
+
+.shiba-chat-typing {
+    font-size: 0.8125rem;
+    color: #78716c;
+    padding: 0 0.35rem;
+}
+
+.shiba-chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem 0.65rem;
+    border-top: 1px solid #e7e5e4;
+    background: #fafaf9;
+    flex-shrink: 0;
+}
+
+.shiba-chat-input {
+    width: 100%;
+    resize: vertical;
+    min-height: 3.25rem;
+    border: 1px solid #d6d3d1;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: #1c1917;
+    background: #fff;
+    outline: none;
+}
+
+.shiba-chat-input:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+}
+
+.shiba-chat-send {
+    align-self: flex-end;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.45rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+}
+
+.shiba-chat-send:hover {
+    filter: brightness(1.05);
+}
+
+.shiba-chat-send:active {
+    transform: translateY(1px);
+}

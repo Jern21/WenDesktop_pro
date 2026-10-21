@@ -18,7 +18,8 @@ var fs = require('fs');
 var path = require('path');
 var resp = require('../utils/response');
 
-var DATA_DIR = path.join(__dirname, '..', '..', 'data');
+var dataPaths = require('../utils/data-paths');
+var DATA_DIR = dataPaths.DATA_DIR;
 var BOOKMARKS_FILE = path.join(DATA_DIR, 'bookmarks.json');
 
 // 默认分类列表

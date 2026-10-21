@@ -2,9 +2,10 @@
 
 var fs = require('fs');
 var path = require('path');
+var dataPaths = require('./data-paths');
 
-var DATA_DIR = path.join(__dirname, '..', '..', 'data');
-var BACKUP_DIR = path.join(DATA_DIR, 'backups');
+var DATA_DIR = dataPaths.DATA_DIR;
+var BACKUP_DIR = dataPaths.BACKUP_DIR;
 var MAX_BACKUPS_PER_FILE = 50;
 
 function ensureDir(dir) {

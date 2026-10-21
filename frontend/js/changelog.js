@@ -1,55 +1,23 @@
 /**
- * 应用更新日志（顶栏「更新日志」按钮）
+ * 应用更新日志（顶栏「更新日志」）
  *
- * 维护方式：在 CHANGELOG 数组顶部追加新版本条目，并更新 LATEST_VERSION。
+ * 数据源：仓库根目录 CHANGELOG.json（本地 /CHANGELOG.json，线上 GitHub Raw）
+ * 维护：只改 CHANGELOG.json 里的 latestVersion 与 entries，push 到 GitHub 后
+ *       其他环境打开应用即可对比「当前运行版本」与「线上最新版本」。
  */
 (function (global) {
     'use strict';
 
-    var LATEST_VERSION = '2.0.0';
-    var STORAGE_KEY = 'wt_changelog_seen_version';
+    var LOCAL_URL = '/CHANGELOG.json';
+    var STORAGE_KEY = 'wt_changelog_seen';
 
-    /** @type {Array<{version:string,date:string,title:string,tag?:string,highlights:string[]}>} */
-    var CHANGELOG = [
-        {
-            version: '2.0.0',
-            date: '2026-10-21',
-            title: '真 SPA 架构优化',
-            tag: '重大更新',
-            highlights: [
-                '单一入口 app.html：全局脚本与样式只维护一份，加资源不用改 18 个页面',
-                'core 框架层：统一路由（History API）、视图生命周期 mount/unmount、自动清理定时器与监听',
-                '18 个业务页全部迁入 js/views，支持刷新、深链接、浏览器前进后退',
-                '三平台内容页合并为一套模板 + 配置工厂（抖音 / 闲鱼 / 小红书）',
-                '公共能力收敛：App.dom 安全转义、App.ui 统一 Toast / 弹窗',
-                '后端鉴权：本机可免登录，局域网/公网需密码；API 与页面访问统一守卫',
-                '自动化验收：路由对账、冒烟与表单模块测试，降低迁移回归风险'
-            ]
-        },
-        {
-            version: '1.2.0',
-            date: '2026-07',
-            title: '业务能力与体验',
-            tag: '功能',
-            highlights: [
-                '智能仪表盘：收入统计、订单趋势、平台发布与待办聚合',
-                '订单 / 客户 / 报价全流程与多维筛选、回收站',
-                '宣传素材库、画布、数据统计与项目看板',
-                '待办提醒、备忘、账号书签、简历与系统设置（备份 / 导出）'
-            ]
-        },
-        {
-            version: '1.0.0',
-            date: '2026-03',
-            title: '项目工作台首发',
-            tag: '首发',
-            highlights: [
-                'Node.js + Express 本地服务，JSON 文件存储与自动备份',
-                '多平台发帖台账（小红书 / 闲鱼 / 抖音）',
-                '原生 JavaScript + Tailwind + ECharts，无构建工具，改完刷新即生效'
-            ]
-        }
-    ];
+    var state = {
+        local: null,
+        remote: null,
+        remoteError: null,
+        loading: false,
+        loaded: false
+    };
 
     function escapeHtml(value) {
         if (global.App && global.App.dom && global.App.dom.escapeHtml) {
@@ -63,27 +31,220 @@
             .replace(/'/g, '&#39;');
     }
 
+    function parseVersion(v) {
+        var parts = String(v || '0').replace(/^v/i, '').split('.');
+        var out = [];
+        for (var i = 0; i < 3; i++) {
+            out.push(parseInt(parts[i], 10) || 0);
+        }
+        return out;
+    }
+
+    function compareVersion(a, b) {
+        var pa = parseVersion(a);
+        var pb = parseVersion(b);
+        for (var i = 0; i < 3; i++) {
+            if (pa[i] > pb[i]) return 1;
+            if (pa[i] < pb[i]) return -1;
+        }
+        return 0;
+    }
+
+    function getLocalVersion() {
+        return (state.local && state.local.latestVersion) || '0.0.0';
+    }
+
+    function getRemoteVersion() {
+        return (state.remote && state.remote.latestVersion) || null;
+    }
+
+    function getRemoteUrl() {
+        if (state.local && state.local.changelogRawUrl) return state.local.changelogRawUrl;
+        if (state.remote && state.remote.changelogRawUrl) return state.remote.changelogRawUrl;
+        return '';
+    }
+
+    function readSeen() {
+        try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return { local: '', remote: '' };
+            return JSON.parse(raw);
+        } catch (e) {
+            return { local: '', remote: '' };
+        }
+    }
+
+    function writeSeen(localVer, remoteVer) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                local: localVer || '',
+                remote: remoteVer || ''
+            }));
+        } catch (e) { /* ignore */ }
+    }
+
+    function fetchJson(url) {
+        return fetch(url, { cache: 'no-store', credentials: 'same-origin' }).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        });
+    }
+
+    function loadRemote() {
+        var url = getRemoteUrl();
+        if (!url) {
+            state.remoteError = '未配置 changelogRawUrl';
+            return Promise.resolve(null);
+        }
+        return fetch(url, { cache: 'no-store', mode: 'cors' })
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function (data) {
+                state.remote = data;
+                state.remoteError = null;
+                return data;
+            })
+            .catch(function (err) {
+                state.remote = null;
+                state.remoteError = err && err.message ? err.message : 'fetch failed';
+                return null;
+            });
+    }
+
+    function ensureData() {
+        if (state.loaded && !state.loading) return Promise.resolve(state);
+        if (state.loading) {
+            return new Promise(function (resolve) {
+                var tick = function () {
+                    if (!state.loading) resolve(state);
+                    else setTimeout(tick, 50);
+                };
+                tick();
+            });
+        }
+        state.loading = true;
+        return fetchJson(LOCAL_URL)
+            .then(function (data) {
+                state.local = data;
+                return loadRemote();
+            })
+            .catch(function () {
+                state.local = {
+                    latestVersion: '0.0.0',
+                    entries: [],
+                    repository: '',
+                    changelogRawUrl: ''
+                };
+                return loadRemote();
+            })
+            .then(function () {
+                state.loaded = true;
+                state.loading = false;
+                syncBadge();
+                return state;
+            });
+    }
+
     function tagClass(tag) {
         if (tag === '重大更新') return 'bg-brand-50 text-brand-700';
         if (tag === '首发') return 'bg-purple-50 text-purple-700';
         return 'bg-gray-100 text-gray-600';
     }
 
-    function buildContentHtml() {
+    function pickDisplayEntries() {
+        var source = state.remote && state.remote.entries && state.remote.entries.length
+            ? state.remote
+            : state.local;
+        return (source && source.entries) ? source.entries.slice() : [];
+    }
+
+    function buildSyncStatusHtml() {
+        var localV = getLocalVersion();
+        var remoteV = getRemoteVersion();
+        var repo = (state.local && state.local.repository) || (state.remote && state.remote.repository) || '';
+        var rawUrl = getRemoteUrl();
         var parts = [
-            '<p class="text-sm text-gray-500 mb-4">当前版本 <span class="font-semibold text-gray-800">v' +
-                escapeHtml(LATEST_VERSION) + '</span>。以下为各版本主要变化，新条目会出现在最上方。</p>',
+            '<div class="mb-4 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600 space-y-2">',
+            '<div class="flex flex-wrap items-center gap-x-3 gap-y-1">',
+            '<span>当前运行 <strong class="text-gray-900">v' + escapeHtml(localV) + '</strong></span>'
+        ];
+
+        if (remoteV) {
+            parts.push('<span>GitHub 线上 <strong class="text-gray-900">v' + escapeHtml(remoteV) + '</strong></span>');
+            var cmp = compareVersion(remoteV, localV);
+            if (cmp > 0) {
+                parts.push(
+                    '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800">线上较新，建议 pull / 重新部署</span>'
+                );
+            } else if (cmp < 0) {
+                parts.push(
+                    '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-800">本地 changelog 未 push，请提交 CHANGELOG.json</span>'
+                );
+            } else {
+                parts.push(
+                    '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800">与线上一致</span>'
+                );
+            }
+        } else if (state.remoteError) {
+            parts.push(
+                '<span class="text-xs text-gray-400">未能拉取 GitHub（' + escapeHtml(state.remoteError) + '），仅显示本地日志</span>'
+            );
+        }
+
+        parts.push('</div>');
+
+        if (remoteV && compareVersion(remoteV, localV) > 0) {
+            var pending = (state.remote.entries || []).filter(function (entry) {
+                return compareVersion(entry.version, localV) > 0;
+            });
+            if (pending.length) {
+                parts.push('<p class="text-xs text-amber-800">相对本机，线上另有 ' + pending.length + ' 个版本更新：</p>');
+                parts.push('<ul class="text-xs list-disc pl-4 text-amber-900/90">');
+                pending.forEach(function (entry) {
+                    parts.push('<li>v' + escapeHtml(entry.version) + ' · ' + escapeHtml(entry.title) + '</li>');
+                });
+                parts.push('</ul>');
+            }
+        }
+
+        if (repo || rawUrl) {
+            parts.push('<p class="text-xs text-gray-400 flex flex-wrap gap-3">');
+            if (repo) {
+                parts.push('<a href="' + escapeHtml(repo) + '" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:underline">打开 GitHub 仓库</a>');
+            }
+            if (rawUrl) {
+                parts.push('<a href="' + escapeHtml(rawUrl) + '" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:underline">线上 CHANGELOG.json</a>');
+            }
+            parts.push('</p>');
+        }
+
+        parts.push('</div>');
+        return parts.join('');
+    }
+
+    function buildContentHtml() {
+        var entries = pickDisplayEntries();
+        var localV = getLocalVersion();
+        var parts = [
+            buildSyncStatusHtml(),
+            '<p class="text-sm text-gray-500 mb-4">维护说明：在仓库根目录编辑 <code class="px-1 bg-gray-100 rounded text-xs">CHANGELOG.json</code> 并 push 到 GitHub，应用将通过 Raw 链接同步对比。</p>',
             '<div class="space-y-5">'
         ];
 
-        CHANGELOG.forEach(function (entry, index) {
+        entries.forEach(function (entry, index) {
             var isLatest = index === 0;
+            var newerThanLocal = compareVersion(entry.version, localV) > 0;
             parts.push(
                 '<section class="relative pl-4 border-l-2 ' + (isLatest ? 'border-brand-500' : 'border-gray-200') + '">',
                 '<div class="flex flex-wrap items-center gap-2 mb-1">',
                 '<span class="text-sm font-bold text-gray-900">v' + escapeHtml(entry.version) + '</span>',
                 '<span class="text-xs text-gray-400">' + escapeHtml(entry.date) + '</span>'
             );
+            if (newerThanLocal && getRemoteVersion()) {
+                parts.push('<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">仅线上</span>');
+            }
             if (entry.tag) {
                 parts.push(
                     '<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ' +
@@ -105,19 +266,19 @@
         return parts.join('');
     }
 
-    function markSeen() {
-        try {
-            localStorage.setItem(STORAGE_KEY, LATEST_VERSION);
-        } catch (e) { /* ignore */ }
-        syncBadge();
+    function hasUnread() {
+        var seen = readSeen();
+        var localV = getLocalVersion();
+        if (!state.loaded) return seen.local !== localV;
+        if (seen.local !== localV) return true;
+        var remoteV = getRemoteVersion();
+        if (remoteV && compareVersion(remoteV, localV) > 0 && seen.remote !== remoteV) return true;
+        return false;
     }
 
-    function hasUnread() {
-        try {
-            return localStorage.getItem(STORAGE_KEY) !== LATEST_VERSION;
-        } catch (e) {
-            return true;
-        }
+    function markSeen() {
+        writeSeen(getLocalVersion(), getRemoteVersion() || '');
+        syncBadge();
     }
 
     function syncBadge() {
@@ -126,7 +287,7 @@
         badge.style.display = hasUnread() ? 'block' : 'none';
     }
 
-    function openFallbackModal() {
+    function openFallbackModal(html) {
         var overlay = document.createElement('div');
         overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[100000]';
         overlay.innerHTML =
@@ -135,7 +296,7 @@
             '<h3 class="text-base font-medium text-gray-900">更新日志</h3>' +
             '<button type="button" id="changelog-fallback-close" class="text-gray-400 hover:text-gray-600">' +
             '<i class="ph ph-x text-lg"></i></button></div>' +
-            '<div class="flex-1 overflow-y-auto px-5 py-4">' + buildContentHtml() + '</div></div>';
+            '<div class="flex-1 overflow-y-auto px-5 py-4 changelog-modal-body">' + html + '</div></div>';
         document.body.appendChild(overlay);
         document.body.style.overflow = 'hidden';
         function close() {
@@ -150,26 +311,36 @@
     }
 
     function open() {
-        var title = '更新日志';
-        if (global.App && global.App.ui && typeof global.App.ui.modal === 'function') {
-            global.App.ui.modal({
-                title: title,
-                width: 'max-w-2xl',
-                content: buildContentHtml(),
-                onClose: syncBadge
-            });
-            markSeen();
-            return;
-        }
-        openFallbackModal();
+        ensureData().then(function () {
+            var html = buildContentHtml();
+            if (global.App && global.App.ui && typeof global.App.ui.modal === 'function') {
+                global.App.ui.modal({
+                    title: '更新日志',
+                    width: 'max-w-2xl',
+                    content: html,
+                    onClose: syncBadge
+                });
+                markSeen();
+                return;
+            }
+            openFallbackModal(html);
+        });
     }
 
+    ensureData();
+
     global.AppChangelog = {
-        version: LATEST_VERSION,
-        entries: CHANGELOG,
+        get version() { return getLocalVersion(); },
+        ensureData: ensureData,
+        compareVersion: compareVersion,
         open: open,
         hasUnread: hasUnread,
         markSeen: markSeen,
-        syncBadge: syncBadge
+        syncBadge: syncBadge,
+        refresh: function () {
+            state.loaded = false;
+            state.remote = null;
+            return ensureData();
+        }
     };
 })(typeof window !== 'undefined' ? window : this);

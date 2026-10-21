@@ -485,7 +485,8 @@
                 if (typeof window.spaNavigate === 'function') {
                     window.spaNavigate('reminder.html');
                 } else {
-                    window.location.href = 'pages/personal/reminder.html';
+                    // 旧页面已删除，兜底直接走新路由
+                    window.location.href = '/reminder';
                 }
             });
         }
@@ -575,12 +576,62 @@
         var name = profile.nickname || 'JERN';
         var avatar = profile.avatar || makeProfileAvatar(name);
         return [
-            '<div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 py-1.5 px-2 rounded-lg transition-colors border border-transparent hover:border-gray-200">',
+            '<div class="relative group" id="header-user-menu">',
+            '  <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 py-1.5 px-2 rounded-lg transition-colors border border-transparent hover:border-gray-200" id="header-user-trigger">',
             '    <img id="header-user-avatar" src="' + escapeHtml(avatar) + '" alt="User Avatar" class="w-8 h-8 rounded-full object-cover">',
             '    <span id="header-user-name" class="text-sm font-medium text-gray-700">' + escapeHtml(name) + '</span>',
             '    <i class="ph ph-caret-down text-gray-400 text-xs"></i>',
+            '  </div>',
+            '  <div class="absolute right-0 top-full mt-1 z-50 min-w-[8.5rem] rounded-lg border border-gray-100 bg-white py-1 shadow-lg shadow-gray-200/80 opacity-0 invisible pointer-events-none transition-all duration-150 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto header-user-dropdown" id="header-user-dropdown" role="menu">',
+            '    <button type="button" id="header-logout-btn" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors" role="menuitem">',
+            '      <i class="ph ph-sign-out text-base"></i>退出登录',
+            '    </button>',
+            '  </div>',
             '</div>'
         ].join('');
+    }
+
+    function bindHeaderUserMenu() {
+        var menu = document.getElementById('header-user-menu');
+        var dropdown = document.getElementById('header-user-dropdown');
+        var logoutBtn = document.getElementById('header-logout-btn');
+        var trigger = document.getElementById('header-user-trigger');
+        if (!menu || menu.dataset.bound === 'true') return;
+        menu.dataset.bound = 'true';
+
+        function doLogout() {
+            if (typeof window.wtLogout === 'function') {
+                window.wtLogout();
+                return;
+            }
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            }).catch(function () { /* ignore */ }).finally(function () {
+                var next = encodeURIComponent(location.pathname + location.search);
+                location.href = '/login.html?next=' + next;
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                doLogout();
+            });
+        }
+        if (trigger && dropdown) {
+            trigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('header-user-dropdown-open');
+            });
+            document.addEventListener('click', function (e) {
+                if (!menu.contains(e.target)) {
+                    dropdown.classList.remove('header-user-dropdown-open');
+                }
+            });
+        }
     }
 
     // ========== 组装标题栏 ==========
@@ -663,6 +714,7 @@
             bindStatsRangeButtons(header);
             syncStatsRangeButtons(header);
             bindChangelogButton();
+            bindHeaderUserMenu();
             loadBellNotifications();
             applyUserProfileToHeader(window.__userProfile || getDefaultUserProfile());
             loadHeaderProfile();
@@ -683,6 +735,7 @@
         bindStatsRangeButtons(header);
         syncStatsRangeButtons(header);
         bindChangelogButton();
+        bindHeaderUserMenu();
         loadBellNotifications();
         applyUserProfileToHeader(window.__userProfile || getDefaultUserProfile());
         loadHeaderProfile();

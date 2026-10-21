@@ -1,0 +1,54 @@
+{
+  "latestVersion": "2.0.1",
+  "repository": "https://github.com/Jern21/myProject_pro",
+  "changelogRawUrl": "https://raw.githubusercontent.com/Jern21/myProject_pro/main/CHANGELOG.json",
+  "entries": [
+    {
+      "version": "2.0.1",
+      "date": "2026-10-21",
+      "title": "桌宠对话与版本日志",
+      "tag": "功能",
+      "highlights": [
+        "小柴犬：点击打开对话浮窗，支持输入发送；浮窗可延伸到主内容区，字号与面板加大",
+        "小柴 Agent：registerAgentProvider 预留后端接入",
+        "电脑端登录页使用项目内 assets/gif/logo.gif",
+        "更新日志：以本文件为唯一数据源，应用内对比本地与 GitHub 线上版本差异"
+      ]
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-10-21",
+      "title": "真 SPA 架构优化",
+      "tag": "重大更新",
+      "highlights": [
+        "单一入口 app.html：全局脚本与样式只维护一份",
+        "core 框架层：History 路由、视图 mount/unmount、自动清理定时器与监听",
+        "18 个业务页迁入 js/views，支持刷新、深链接、前进后退",
+        "三平台内容页合并为一套模板 + 配置工厂",
+        "后端鉴权：本机策略可配置；API 与页面统一守卫"
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-07",
+      "title": "业务能力与体验",
+      "tag": "功能",
+      "highlights": [
+        "智能仪表盘、订单 / 客户 / 报价全流程",
+        "宣传素材库、画布、数据统计与项目看板",
+        "待办提醒、备忘、账号书签、简历与系统设置"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2026-03",
+      "title": "项目工作台首发",
+      "tag": "首发",
+      "highlights": [
+        "Node.js + Express 本地服务，JSON 存储与自动备份",
+        "多平台发帖台账（小红书 / 闲鱼 / 抖音）",
+        "原生 JavaScript + Tailwind + ECharts"
+      ]
+    }
+  ]
+}

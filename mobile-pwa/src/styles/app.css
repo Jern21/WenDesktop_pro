@@ -1,0 +1,214 @@
+:root {
+    color-scheme: light;
+    --brand: #2563eb;
+    --bg: #f9fafb;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+    min-height: 100dvh;
+    padding: calc(12px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.home-screen {
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.btn-text {
+    border: none;
+    background: transparent;
+    color: var(--brand);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 8px;
+}
+
+.app-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.app-title-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.app-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-title-caret {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.app-title-wrap:hover .title-dropdown,
+.app-title-wrap.title-menu-open .title-dropdown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.title-dropdown {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    min-width: 8.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    padding: 4px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    z-index: 20;
+}
+
+.title-dropdown-item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #dc2626;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.title-dropdown-item:active {
+    background: #fef2f2;
+}
+
+.app-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--brand);
+    background: #eff6ff;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.card h2 {
+    font-size: 0.875rem;
+    margin: 0 0 8px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #9ca3af;
+    flex-shrink: 0;
+}
+
+.dot.ok { background: #22c55e; }
+.dot.warn { background: #f59e0b; }
+.dot.err { background: #ef4444; }
+
+.muted {
+    color: var(--muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--brand);
+    color: #fff;
+    width: 100%;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.field {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.list {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.8125rem;
+    color: var(--muted);
+}
+
+.list li { margin-bottom: 4px; }

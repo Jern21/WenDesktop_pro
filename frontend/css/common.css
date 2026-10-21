@@ -19,10 +19,26 @@ aside a {
     text-decoration: none;
 }
 
+/* 侧栏标题 / 顶栏头像：触屏点击展开退出菜单（桌面仍可用 hover） */
+.sidebar-title-dropdown-open,
+.header-user-dropdown-open {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
 /* ========== 侧栏尺寸兜底 ==========
  * 侧栏由 JS 动态插入，部分页面 SPA 切换时 Tailwind 动态类会重新计算。
  * 显式锁定导航项尺寸，避免菜单高度在不同页面之间轻微漂移。
  */
+/* 侧栏标题 / 顶栏头像：触屏点击展开退出菜单（桌面仍可用 hover） */
+.sidebar-title-dropdown-open,
+.header-user-dropdown-open {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
 #sidebar-nav .nav-link {
     line-height: 1.25rem;
     min-height: 2.5rem;

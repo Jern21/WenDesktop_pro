@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>提醒页模态框回归</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">日期提醒：模态框回归（点日期不得弹删除框）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/reminder" style="width:1360px;height:820px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+/*
+ * 回归目标（用户报告的故障）：
+ *   「点日期提醒直接触发删除」
+ *
+ * 原因回顾：css/views/reminder.css 曾用孤立的单类选择器 `.modal-overlay { display:flex }`
+ * 给三个全屏遮罩设了 display，与 Tailwind 的 `.hidden { display:none }` 同优先级(0,1,0)，
+ * 而视图 CSS 是动态 append 到 <head> 的、位置在 Tailwind 之后 → `.hidden` 被压掉。
+ * 三个遮罩从打开页面起就全部可见并层叠，#delete-modal 在最上层，
+ * 于是页面上的每一次点击都先落到「确认删除」上。
+ *
+ * 本探针把「遮罩必须默认隐藏」「只有对应动作才显示」「取消后必须重新隐藏」
+ * 三件事都写成断言，任何一条不成立就报红。
+ */
+(function () {
+    'use strict';
+    var out = [];
+    var fails = [];
+    function log(s) { out.push(s); document.getElementById('result').textContent = out.join('\n'); }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    var frame = document.getElementById('frame');
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+        w.addEventListener('error', function (e) {
+            errors.push(e.message + ' @ ' + (e.filename ? String(e.filename).split('/').pop() : '?') + ':' + e.lineno);
+        });
+
+        function disp(id) {
+            var el = d.getElementById(id);
+            return el ? w.getComputedStyle(el).display : 'MISSING';
+        }
+        function isHidden(id) { return disp(id) === 'none'; }
+
+        function expect(title, cond, detail) {
+            log((cond ? '  ✓ ' : '  ✗ ') + title + (detail ? '  [' + detail + ']' : ''));
+            if (!cond) fails.push(title + (detail ? ' [' + detail + ']' : ''));
+        }
+
+        /** 断言：指定遮罩可见，其余遮罩都不可见 */
+        function expectOnly(visibleId) {
+            ['reminder-modal', 'category-modal', 'delete-modal'].forEach(function (id) {
+                if (id === visibleId) {
+                    expect('  ' + id + ' 应可见', disp(id) === 'flex', 'display=' + disp(id));
+                } else {
+                    expect('  ' + id + ' 应隐藏', isHidden(id), 'display=' + disp(id));
+                }
+            });
+        }
+
+        await sleep(2800);
+
+        log('=== 1. 初始状态：三个遮罩必须全部隐藏 ===');
+        expect('reminder-modal 默认隐藏', isHidden('reminder-modal'), 'display=' + disp('reminder-modal'));
+        expect('category-modal 默认隐藏', isHidden('category-modal'), 'display=' + disp('category-modal'));
+        expect('delete-modal 默认隐藏', isHidden('delete-modal'), 'display=' + disp('delete-modal'));
+        expect('empty-state 默认隐藏', isHidden('empty-state'), 'display=' + disp('empty-state'));
+
+        // 关键：确认 delete-modal 不挡在页面上（这正是「点哪都触发删除」的直接成因）
+        var dm = d.getElementById('delete-modal');
+        if (dm) {
+            var rect = dm.getBoundingClientRect();
+            expect('delete-modal 不占据可视区域（不再拦截点击）',
+                dm.getBoundingClientRect().width === 0 || isHidden('delete-modal'),
+                'w=' + Math.round(rect.width) + ' h=' + Math.round(rect.height));
+        }
+
+        log('');
+        log('=== 2. 点日历日期：不得弹出任何遮罩 ===');
+        var cells = d.querySelectorAll('.cal-day[data-date]');
+        log('  可点日期格: ' + cells.length + ' 个');
+        var cardsBefore = d.querySelectorAll('.reminder-card').length;
+        for (var i = 0; i < Math.min(3, cells.length); i++) {
+            var date = cells[i].getAttribute('data-date');
+            cells[i].click();
+            await sleep(500);
+            expect('点 ' + date + ' 后 无遮罩弹出',
+                isHidden('reminder-modal') && isHidden('category-modal') && isHidden('delete-modal'),
+                'reminder=' + disp('reminder-modal') + ' category=' + disp('category-modal') +
+                ' delete=' + disp('delete-modal'));
+        }
+        expect('点日期未改变列表数量（没被删）',
+            d.querySelectorAll('.reminder-card').length === cardsBefore,
+            cardsBefore + ' → ' + d.querySelectorAll('.reminder-card').length);
+
+        log('');
+        log('=== 3. 新建提醒弹窗：开 → 关 ===');
+        var addBtn = d.getElementById('add-reminder-btn');
+        if (addBtn) {
+            addBtn.click();
+            await sleep(500);
+            expectOnly('reminder-modal');
+            var closeBtn = d.getElementById('modal-close');
+            if (closeBtn) { closeBtn.click(); await sleep(400); }
+            expect('关闭后 reminder-modal 隐藏', isHidden('reminder-modal'), 'display=' + disp('reminder-modal'));
+        } else {
+            expect('找到 add-reminder-btn', false);
+        }
+
+        log('');
+        log('=== 4. 新建分类弹窗：开 → 关 ===');
+        var addCat = d.getElementById('add-category-btn');
+        if (addCat) {
+            addCat.click();
+            await sleep(500);
+            expectOnly('category-modal');
+            var catCancel = d.getElementById('cat-modal-cancel');
+            if (catCancel) { catCancel.click(); await sleep(400); }
+            expect('取消后 category-modal 隐藏', isHidden('category-modal'), 'display=' + disp('category-modal'));
+        } else {
+            expect('找到 add-category-btn', false);
+        }
+
+        log('');
+        log('=== 5. 删除确认弹窗：必须是「点删除按钮」才出现，且取消后不删数据 ===');
+        var delBtn = d.querySelector('.reminder-card .delete-btn');
+        if (delBtn) {
+            var n = d.querySelectorAll('.reminder-card').length;
+            delBtn.click();
+            await sleep(500);
+            expectOnly('delete-modal');
+            var cancel = d.getElementById('delete-cancel');
+            if (cancel) { cancel.click(); await sleep(600); }
+            expect('取消后 delete-modal 隐藏', isHidden('delete-modal'), 'display=' + disp('delete-modal'));
+            expect('取消后数据未被删除',
+                d.querySelectorAll('.reminder-card').length === n,
+                n + ' → ' + d.querySelectorAll('.reminder-card').length);
+        } else {
+            log('  （当前列表无删除按钮，跳过）');
+        }
+
+        log('');
+        log('=== 6. 关窗后不得残留遮罩 ===');
+        expect('reminder-modal 最终隐藏', isHidden('reminder-modal'), 'display=' + disp('reminder-modal'));
+        expect('category-modal 最终隐藏', isHidden('category-modal'), 'display=' + disp('category-modal'));
+        expect('delete-modal 最终隐藏', isHidden('delete-modal'), 'display=' + disp('delete-modal'));
+
+        log('');
+        log('=== JS 运行时错误 ===');
+        expect('无 JS 错误', errors.length === 0, errors.slice(0, 6).join(' | '));
+
+        log('');
+        log('================ 汇总 ================');
+        log(fails.length === 0 ? '全部通过' : '失败 ' + fails.length + ' 项：');
+        fails.forEach(function (f, i) { log('  ' + (i + 1) + '. ' + f); });
+        document.title = fails.length ? 'FAIL-' + fails.length : 'ALL-PASS';
+    };
+})();
+</script>
+</body>
+</html>

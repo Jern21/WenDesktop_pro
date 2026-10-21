@@ -21,6 +21,7 @@ var router = express.Router();
 var fs = require('fs');
 var resp = require('../utils/response');
 var dataBackups = require('../utils/data-backups');
+var secretBox = require('../utils/secret-box');
 
 var DEFAULT_SETTINGS = {
     profile: {
@@ -50,16 +51,16 @@ var DEFAULT_SETTINGS = {
 
 // ========== 读取设置 ==========
 router.get('/', resp.asyncHandler(function (req, res) {
-    return resp.success(res, readSettings());
+    return resp.success(res, maskSecrets(readSettings()));
 }));
 
 // ========== 更新设置 ==========
 router.put('/', resp.asyncHandler(function (req, res) {
     try {
         var current = readSettings();
-        var updated = deepMerge(current, req.body || {});
+        var updated = deepMerge(current, stripMaskedSecrets(req.body || {}));
         saveSettings(updated);
-        return resp.success(res, updated);
+        return resp.success(res, maskSecrets(updated));
     } catch (e) {
         return resp.error(res, '保存设置失败: ' + e.message, 500);
     }
@@ -68,7 +69,7 @@ router.put('/', resp.asyncHandler(function (req, res) {
 // ========== 重置为默认 ==========
 router.post('/reset', resp.asyncHandler(function (req, res) {
     saveSettings(DEFAULT_SETTINGS);
-    return resp.success(res, DEFAULT_SETTINGS);
+    return resp.success(res, maskSecrets(DEFAULT_SETTINGS));
 }));
 
 // ========== 本地备份历史 ==========
@@ -169,12 +170,56 @@ router.post('/restore', resp.asyncHandler(function (req, res) {
 
 // ========== 深度合并工具 ==========
 function readSettings() {
-    return deepMerge(DEFAULT_SETTINGS, dataBackups.readJsonFile('settings', DEFAULT_SETTINGS) || {});
+    var merged = deepMerge(DEFAULT_SETTINGS, dataBackups.readJsonFile('settings', DEFAULT_SETTINGS) || {});
+    // apiKey 在磁盘上是密文，内存里统一还原成明文；
+    // 返回给前端时再脱敏（见下面的 maskSecrets），避免明文出网。
+    if (merged.imageGen && typeof merged.imageGen.apiKey === 'string') {
+        merged.imageGen.apiKey = secretBox.decryptField(merged.imageGen.apiKey);
+    }
+    return merged;
 }
 
 function saveSettings(settings, options) {
-    dataBackups.writeJsonFile('settings', settings, options);
+    var toWrite = settings;
+    if (settings && settings.imageGen && typeof settings.imageGen.apiKey === 'string') {
+        toWrite = Object.assign({}, settings, {
+            imageGen: Object.assign({}, settings.imageGen, {
+                apiKey: secretBox.encrypt(settings.imageGen.apiKey)
+            })
+        });
+    }
+    dataBackups.writeJsonFile('settings', toWrite, options);
     return settings;
+}
+
+/**
+ * 出网前脱敏：接口只暴露「有没有配」「首尾各四位」，不返回明文。
+ * 与 image-gen 的 apiKeyMasked 保持一致风格。
+ */
+function maskSecrets(settings) {
+    var copy = JSON.parse(JSON.stringify(settings || {}));
+    if (copy.imageGen) {
+        var key = String(copy.imageGen.apiKey || '');
+        copy.imageGen.apiKeyConfigured = !!key;
+        copy.imageGen.apiKey = key
+            ? (key.slice(0, 4) + '****' + key.slice(-4))
+            : '';
+    }
+    return copy;
+}
+
+/**
+ * 前端拿到的 apiKey 是脱敏的，如果它把整份设置原样 PUT 回来，
+ * 不能拿 'sk-a****1234' 把真实密钥覆盖掉 —— 带 **** 的字段直接丢弃。
+ */
+function stripMaskedSecrets(body) {
+    if (!body || !body.imageGen) return body;
+    var incoming = body.imageGen.apiKey;
+    if (typeof incoming !== 'string' || incoming.indexOf('****') === -1) return body;
+
+    var imageGen = Object.assign({}, body.imageGen);
+    delete imageGen.apiKey;
+    return Object.assign({}, body, { imageGen: imageGen });
 }
 
 function deepMerge(target, source) {

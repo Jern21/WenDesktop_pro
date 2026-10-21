@@ -48,33 +48,12 @@
     // ========== 兼容层：旧 spaNavigate ==========
 
     /**
-     * 旧页面文件 → 物理路径（仅用于「尚未迁移」页面的整页跳转兜底）
-     */
-    var LEGACY_ROUTES = {
-        'index.html': 'index.html',
-        'orders.html': 'pages/business/orders.html',
-        'quote.html': 'pages/business/quote.html',
-        'customer.html': 'pages/business/customer.html',
-        'platform.html': 'pages/platform/platform.html',
-        'xianyu.html': 'pages/platform/xianyu.html',
-        'xiaohongshu.html': 'pages/platform/xiaohongshu.html',
-        'douyin.html': 'pages/platform/douyin.html',
-        'posters.html': 'pages/content/posters.html',
-        'canvas.html': 'pages/content/canvas.html',
-        'stats.html': 'pages/content/stats.html',
-        'project.html': 'pages/content/project.html',
-        'accounts.html': 'pages/personal/accounts.html',
-        'bookmarks.html': 'pages/personal/bookmarks.html',
-        'resume.html': 'pages/personal/resume.html',
-        'memo.html': 'pages/personal/memo.html',
-        'reminder.html': 'pages/personal/reminder.html',
-        'settings.html': 'pages/personal/settings.html'
-    };
-
-    /**
      * 旧代码里形如 `window.spaNavigate('settings.html')` 的调用点
-     * （header.js 通知跳转、canvas.html 的「去配置」）在新入口里没有实现，
-     * 这里补上：已迁移走 SPA，未迁移整页跳旧页面。
+     * （header.js 的通知跳转、canvas 的「去配置」）需要这个函数名，
+     * 内部统一转成新路由。
+     *
+     * 旧版这里还有一张「页面名 → pages/xxx.html」的兜底表。
+     * 旧页面文件已经全部删除，那张表只会把人送到 404，所以整张去掉了。
      */
     global.spaNavigate = function (pageName) {
         if (!pageName) return;
@@ -83,8 +62,7 @@
             App.router.navigate(found.definition.path);
             return;
         }
-        var legacy = LEGACY_ROUTES[pageName];
-        if (legacy) global.location.href = '/' + legacy;
+        console.warn('[app] spaNavigate 找不到对应视图:', pageName);
     };
 
     // ========== 导航桥接 ==========
@@ -101,7 +79,7 @@
 
         var found = findViewByNav(page);
         if (found) {
-            // 已迁移 → SPA 内切，不整页刷新
+            // 已注册视图 → SPA 内切，不整页刷新
             e.preventDefault();
             App.router.navigate(found.definition.path).catch(function (err) {
                 console.error('[app] SPA 导航失败，回退整页跳转:', err);
@@ -110,7 +88,8 @@
             return;
         }
 
-        // 未迁移 → 不拦截，按原 href 正常跳转到旧页面（迁移期正常现象）
+        // 没找到视图就不拦截，交给浏览器按 href 走（最终会落到 SPA 入口）
+        console.warn('[app] 侧边栏导航项没有对应视图:', page);
     });
 
     // ========== 启动 ==========

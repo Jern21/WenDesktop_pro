@@ -17,9 +17,11 @@ var router = express.Router();
 var fs = require('fs');
 var path = require('path');
 var resp = require('../utils/response');
+var secretBox = require('../utils/secret-box');
+var dataPaths = require('../utils/data-paths');
 
-var DATA_DIR = path.join(__dirname, '..', '..', 'data');
-var ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
+var DATA_DIR = dataPaths.DATA_DIR;
+var ACCOUNTS_FILE = dataPaths.file('accounts.json');
 
 // 默认平台列表
 var DEFAULT_PLATFORMS = [
@@ -44,20 +46,47 @@ function ensureDataFile() {
 }
 
 // 读取账号数据
+//
+// 密码在磁盘上是密文（AES-256-GCM，见 utils/secret-box.js），
+// 内存里始终是明文 —— 上层路由、返回给前端的字段完全不用改，
+// 加密/解密只集中在这两个函数里。
+// 兼容老数据：没有 enc: 前缀的明文会被原样读出来，下次保存时自动变成密文。
 function readAccounts() {
     ensureDataFile();
+    var list;
     try {
-        var raw = fs.readFileSync(ACCOUNTS_FILE, 'utf-8');
-        return JSON.parse(raw);
+        list = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf-8'));
     } catch (e) {
         return [];
     }
+    if (!Array.isArray(list)) return [];
+
+    return list.map(function (a) {
+        if (!a || typeof a !== 'object') return a;
+        var copy = Object.assign({}, a);
+        if (typeof copy.password === 'string') {
+            copy.password = secretBox.decryptField(copy.password);
+        }
+        return copy;
+    });
 }
 
-// 保存账号数据
+// 保存账号数据（写盘前加密；临时文件 + rename 原子写，防写一半断电损坏）
 function saveAccounts(accounts) {
     ensureDataFile();
-    fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2), 'utf-8');
+
+    var toWrite = (accounts || []).map(function (a) {
+        if (!a || typeof a !== 'object') return a;
+        var copy = Object.assign({}, a);
+        if (typeof copy.password === 'string') {
+            copy.password = secretBox.encrypt(copy.password);
+        }
+        return copy;
+    });
+
+    var tmp = ACCOUNTS_FILE + '.' + process.pid + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(toWrite, null, 2), 'utf-8');
+    fs.renameSync(tmp, ACCOUNTS_FILE);
 }
 
 // ========== 获取所有账号 ==========

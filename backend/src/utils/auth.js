@@ -3,14 +3,14 @@
  *
  * 设计目标（对应文总的需求：手机/电脑都能用，后续要部署服务器）：
  *   1. 默认开启准入控制，不再让 /api/* 裸奔
- *   2. **本机访问免登录**（AUTH_TRUST_LOCALHOST，默认开）—— 桌面日常使用完全无感，
- *      只有从局域网或公网来的请求才要求密码
+ *   2. **用户名 + 密码**登录；旧版仅密码的配置自动视为用户 admin
+ *   3. 本机免登录默认**关闭**（AUTH_TRUST_LOCALHOST=1 可恢复旧行为）
  *   3. 不引入 express-session 等依赖：用 HMAC 签名的无状态 token 放在 httpOnly cookie
  *   4. 密码不落地明文：scrypt + 随机 salt 存哈希
  *   5. 密码一旦修改，已签发的 token 立即全部失效（签名密钥派生自密码哈希）
  *
- * 密码来源优先级：
- *   环境变量 APP_PASSWORD  >  data/auth.json  >  首次启动自动生成并打印到控制台
+ * 账号来源优先级：
+ *   用户名 APP_USERNAME（默认 admin）+ 密码 APP_PASSWORD  >  auth.json  >  首次启动自动生成并打印
  *
  * 关闭准入控制：AUTH_ENABLED=0（仅建议在完全可信的本机环境临时使用）
  */
@@ -19,18 +19,33 @@
 var crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
+var dataPaths = require('./data-paths');
 
-// 支持用 AUTH_DATA_DIR 覆盖数据目录，便于测试时隔离，不污染真实配置
-var DATA_DIR = process.env.AUTH_DATA_DIR || path.join(__dirname, '..', '..', 'data');
+// 支持用 AUTH_DATA_DIR 单独覆盖认证数据目录（测试时隔离用），
+// 否则跟随全局的 APP_DATA_DIR / backend/data
+var DATA_DIR = process.env.AUTH_DATA_DIR || dataPaths.DATA_DIR;
 var AUTH_FILE = path.join(DATA_DIR, 'auth.json');
 
 var COOKIE_NAME = 'wt_auth';
 var DEFAULT_TTL_MS = 30 * 24 * 60 * 60 * 1000;   // 30 天
 
 var AUTH_ENABLED = process.env.AUTH_ENABLED !== '0';
-var TRUST_LOCALHOST = process.env.AUTH_TRUST_LOCALHOST !== '0';
+/** 仅当显式设为 1 时本机免登录；默认本机也需账号密码 */
+var TRUST_LOCALHOST = process.env.AUTH_TRUST_LOCALHOST === '1';
 
-var state = null;   // { salt, hash, createdAt, updatedAt, generated }
+var DEFAULT_USERNAME = 'admin';
+
+/** 试用账号：仅用户名、免密码；生产环境可设 TRIAL_LOGIN=0 关闭 */
+var TRIAL_LOGIN_ENABLED = process.env.TRIAL_LOGIN !== '0';
+var TRIAL_USERNAME = normalizeUsernameStatic(process.env.TRIAL_USERNAME || 'trial');
+var TRIAL_TTL_MS = 8 * 60 * 60 * 1000;   // 试用会话 8 小时
+
+var state = null;   // { username, salt, hash, createdAt, updatedAt, source }
+
+function normalizeUsernameStatic(name) {
+    var s = String(name == null ? '' : name).trim().toLowerCase();
+    return s || DEFAULT_USERNAME;
+}
 
 // ========== 存储 ==========
 
@@ -46,6 +61,7 @@ function readAuthFile() {
         var raw = fs.readFileSync(AUTH_FILE, 'utf-8');
         var data = JSON.parse(raw);
         if (!data || !data.salt || !data.hash) return null;
+        if (!data.username) data.username = DEFAULT_USERNAME;
         return data;
     } catch (e) {
         console.error('[auth] 读取 auth.json 失败:', e.message);
@@ -74,6 +90,26 @@ function timingSafeEqualStr(a, b) {
     return crypto.timingSafeEqual(bufA, bufB);
 }
 
+function normalizeUsername(name) {
+    return normalizeUsernameStatic(name);
+}
+
+function trialLoginEnabled() {
+    return TRIAL_LOGIN_ENABLED;
+}
+
+function getTrialUsername() {
+    return TRIAL_USERNAME;
+}
+
+function isTrialLogin(username) {
+    return TRIAL_LOGIN_ENABLED && normalizeUsername(username) === TRIAL_USERNAME;
+}
+
+function resolveUsernameFromEnv() {
+    return normalizeUsername(process.env.APP_USERNAME || DEFAULT_USERNAME);
+}
+
 function generatePassword(length) {
     // 去掉容易混淆的 0/O/1/l/I
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -95,10 +131,14 @@ function init() {
     // 1. 环境变量优先（部署时用这个）
     if (process.env.APP_PASSWORD) {
         var envPassword = process.env.APP_PASSWORD;
-        // 环境变量与文件不一致时以环境变量为准，并回写
-        if (!existing || !verifyAgainst(envPassword, existing)) {
+        var envUser = resolveUsernameFromEnv();
+        var needWrite = !existing
+            || !verifyAgainst(envPassword, existing)
+            || normalizeUsername(existing.username) !== envUser;
+        if (needWrite) {
             var salt = crypto.randomBytes(16).toString('hex');
             existing = {
+                username: envUser,
                 salt: salt,
                 hash: hashPassword(envPassword, salt),
                 createdAt: existing ? existing.createdAt : new Date().toISOString(),
@@ -106,21 +146,30 @@ function init() {
                 source: 'env'
             };
             writeAuthFile(existing);
+        } else if (existing && !existing.username) {
+            existing.username = envUser;
+            writeAuthFile(existing);
         }
         state = existing;
-        return { generated: false, password: null };
+        return { generated: false, password: null, username: state.username };
     }
 
     // 2. 已有配置文件
     if (existing) {
+        if (!existing.username) {
+            existing.username = DEFAULT_USERNAME;
+            writeAuthFile(existing);
+        }
         state = existing;
-        return { generated: false, password: null };
+        return { generated: false, password: null, username: state.username };
     }
 
     // 3. 首次启动：生成随机密码
     var newSalt = crypto.randomBytes(16).toString('hex');
     var password = generatePassword(12);
+    var username = resolveUsernameFromEnv();
     var data = {
+        username: username,
         salt: newSalt,
         hash: hashPassword(password, newSalt),
         createdAt: new Date().toISOString(),
@@ -129,7 +178,7 @@ function init() {
     };
     writeAuthFile(data);
     state = data;
-    return { generated: true, password: password };
+    return { generated: true, password: password, username: username };
 }
 
 function verifyAgainst(password, record) {
@@ -143,6 +192,21 @@ function verifyPassword(password) {
     return verifyAgainst(password, state);
 }
 
+function verifyCredentials(username, password) {
+    if (isTrialLogin(username)) return true;
+    if (!state) return false;
+    if (!password) return false;
+    var expectedUser = normalizeUsername(state.username || DEFAULT_USERNAME);
+    var givenUser = normalizeUsername(username);
+    if (!timingSafeEqualStr(givenUser, expectedUser)) return false;
+    return verifyAgainst(password, state);
+}
+
+function getUsername() {
+    if (!state) return DEFAULT_USERNAME;
+    return normalizeUsername(state.username || DEFAULT_USERNAME);
+}
+
 /**
  * 修改密码
  * @returns {boolean} 是否成功
@@ -153,6 +217,7 @@ function changePassword(oldPassword, newPassword) {
 
     var salt = crypto.randomBytes(16).toString('hex');
     state = {
+        username: state ? (state.username || DEFAULT_USERNAME) : DEFAULT_USERNAME,
         salt: salt,
         hash: hashPassword(newPassword, salt),
         createdAt: state ? state.createdAt : new Date().toISOString(),
@@ -335,6 +400,13 @@ function apiGuard() {
 module.exports = {
     init: init,
     verifyPassword: verifyPassword,
+    verifyCredentials: verifyCredentials,
+    getUsername: getUsername,
+    normalizeUsername: normalizeUsername,
+    trialLoginEnabled: trialLoginEnabled,
+    getTrialUsername: getTrialUsername,
+    isTrialLogin: isTrialLogin,
+    TRIAL_TTL_MS: TRIAL_TTL_MS,
     changePassword: changePassword,
     issueToken: issueToken,
     verifyToken: verifyToken,

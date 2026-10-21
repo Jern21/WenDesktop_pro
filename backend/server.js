@@ -26,12 +26,36 @@ var PORT = process.env.PORT || 3456;
 // ========== 认证初始化（必须在挂载路由前完成） ==========
 var authInit = auth.init();
 
+// ========== 存量敏感字段加密迁移 ==========
+// 把账号密码、AI 生图 API Key 从明文转成密文。幂等，每次启动跑一遍没有副作用。
+// 放在路由挂载之前，保证任何一次请求读到的都已经是加密后的数据。
+require('./src/utils/secret-migration').runAll();
+
 // ========== 中间件 ==========
 
 // CORS 跨域
-// 说明：跨站请求虽然能发起，但 SameSite=Lax 的 cookie 不会随跨站 POST 携带，
-// 加上下面的 token 校验，数据不会被跨站读取。若后续要更严格，可改为 origin 白名单。
-app.use(cors());
+// 默认放开（桌面本机开发）。移动端 PWA 在独立端口 / 真机调试时，可设置：
+//   CORS_ORIGINS=http://localhost:3460,http://127.0.0.1:3460,http://192.168.x.x:3460
+// 白名单模式会启用 credentials，便于 Cookie + Bearer 并存。
+(function () {
+    var raw = process.env.CORS_ORIGINS;
+    if (!raw || !String(raw).trim()) {
+        app.use(cors());
+        return;
+    }
+    var allowed = String(raw).split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    app.use(cors({
+        origin: function (origin, callback) {
+            // 非浏览器客户端（无 Origin）或白名单内
+            if (!origin || allowed.indexOf(origin) !== -1) {
+                return callback(null, true);
+            }
+            return callback(new Error('CORS: Origin not allowed: ' + origin));
+        },
+        credentials: true
+    }));
+    console.log('[CORS] 已启用白名单: ' + allowed.join(', '));
+})();
 
 // JSON body 解析（文件上传走 multipart/form-data，JSON 仅存 URL 引用）
 app.use(express.json({ limit: '2mb' }));
@@ -92,14 +116,23 @@ var frontendDir = path.join(__dirname, '..', 'frontend');
 // 静态资源（/assets /css /js）在守卫内部放行，否则登录页无法加载样式
 app.use(auth.pageGuard());
 
-// ========== 首页入口分流（见上方注释）==========
-var SPA_AS_HOME = process.env.SPA_AS_HOME !== '0';
+// ========== 首页入口 ==========
+// 旧多页文档（frontend/index.html + pages/**.html）已全部删除，现在只认 app.html。
+// `/index.html` 继续分流的唯一原因是老书签别 404。
 var spaEntryPath = path.join(frontendDir, 'app.html');
 
 app.get(['/', '/index.html'], function (req, res, next) {
-    if (!SPA_AS_HOME) return next();
-    if (!fs.existsSync(spaEntryPath)) return next();   // 没有新入口就退回旧逻辑
+    if (!fs.existsSync(spaEntryPath)) return next();
     res.sendFile(spaEntryPath);
+});
+
+// 版本日志（仓库根目录 CHANGELOG.json，与 GitHub Raw 同源）
+app.get('/CHANGELOG.json', function (req, res) {
+    var changelogPath = path.join(__dirname, '..', 'CHANGELOG.json');
+    res.type('json');
+    res.sendFile(changelogPath, function (err) {
+        if (err) res.status(404).json({ error: 'CHANGELOG.json not found' });
+    });
 });
 
 // 托管 frontend 下的静态资源
@@ -112,11 +145,10 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-// SPA 路由回退：所有非 /api 的 GET 请求都返回对应 HTML 文件
-// 支持 pages/business/、pages/platform/ 等子目录路径
+// SPA 路由回退：所有非 /api 的 GET 请求都返回对应文件，找不到就回退到 app.html
 //
 // 回退目标说明（重要）：
-//   旧架构下这里回退到 index.html —— 那是个完整的旧页面。
+//   以前这里回退到 index.html —— 那是个完整的旧页面。
 //   新架构的 SPA 路由是 /orders /settings 这种「一层路径」，
 //   它们既不是真实文件、也没有 .html，若还回退到 index.html，
 //   用户刷新 /orders 会看到「旧版首页」，而不是订单页。
@@ -155,8 +187,9 @@ app.get('*', function (req, res, next) {
         return res.sendFile(spaEntry);
     }
 
-    // app.html 不存在时兜底回旧首页，保证服务不会因缺文件而 500
-    return res.sendFile(path.join(frontendDir, 'index.html'));
+    // 连 app.html 都没有 —— 前端产物没部署全，明确报 404 而不是 500
+    return res.status(404).type('text/plain; charset=utf-8')
+        .send('前端入口 app.html 不存在，请检查 frontend 目录是否完整');
 });
 
 // ========== 全局错误处理 ==========
@@ -186,21 +219,25 @@ app.listen(PORT, function () {
     } else {
         console.log('  认证: 已开启');
         console.log('  本机免登录: ' + (auth.trustLocalhost
-            ? '是（127.0.0.1 直接可用；局域网/公网访问需输入密码）'
-            : '否（所有访问都需密码）'));
+            ? '是（AUTH_TRUST_LOCALHOST=1）'
+            : '否（本机也需用户名+密码，默认）'));
 
         if (authInit.generated && authInit.password) {
             console.log('');
-            console.log('  ★ 首次启动，已自动生成访问密码：');
+            console.log('  ★ 首次启动，已自动生成登录账号：');
             console.log('');
-            console.log('        ' + authInit.password);
+            console.log('    用户名: ' + (authInit.username || 'admin'));
+            console.log('    密码:   ' + authInit.password);
             console.log('');
             console.log('    已保存到 backend/data/auth.json');
-            console.log('    也可通过环境变量 APP_PASSWORD 指定自己的密码');
+            console.log('    也可用环境变量 APP_USERNAME / APP_PASSWORD 指定');
         }
         console.log('');
-        console.log('  关闭认证: 设置环境变量 AUTH_ENABLED=0');
-        console.log('  关闭本机免登录: 设置环境变量 AUTH_TRUST_LOCALHOST=0');
+        console.log('  关闭认证: AUTH_ENABLED=0');
+        console.log('  恢复本机免登录: AUTH_TRUST_LOCALHOST=1');
+        if (auth.trialLoginEnabled && auth.trialLoginEnabled()) {
+            console.log('  试用免密登录: 用户名 ' + auth.getTrialUsername() + '（关闭: TRIAL_LOGIN=0）');
+        }
     }
 
     console.log('========================================');

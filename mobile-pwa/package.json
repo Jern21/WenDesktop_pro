@@ -1,0 +1,16 @@
+{
+  "name": "wen-workbench-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "description": "文的项目工作台 — 移动端 PWA（独立端口，共享 backend API）",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 3460 --strictPort"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3",
+    "vite-plugin-pwa": "^0.21.1"
+  }
+}
