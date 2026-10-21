@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>平台页迁移验证</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">平台页迁移验证（抖音 / 闲鱼 / 小红书共用一个模板）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/app.html" style="width:1280px;height:760px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+(function () {
+    'use strict';
+    var results = [];
+    var frame = document.getElementById('frame');
+
+    function check(name, ok, extra) {
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : ''));
+        return ok;
+    }
+
+    function sleep(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+    }
+
+    async function goto(w, path, waitMs) {
+        await w.App.router.render(path);
+        await sleep(waitMs || 900);
+    }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+        w.addEventListener('error', function (e) { errors.push(e.message); });
+
+        await sleep(1500);
+
+        // 视图是否都注册了
+        var names = ['platform-douyin', 'platform-xianyu', 'platform-xiaohongshu'];
+        names.forEach(function (n) {
+            check('视图已注册：' + n, !!w.App.views.get(n));
+        });
+
+        // ---- 抖音 ----
+        await goto(w, '/douyin', 1200);
+        check('抖音：统计卡片已渲染', d.querySelectorAll('#pm-stats > div').length > 0,
+            d.querySelectorAll('#pm-stats > div').length + ' 个');
+        check('抖音：分类按钮已渲染', d.querySelectorAll('#pm-categories button').length > 0,
+            d.querySelectorAll('#pm-categories button').length + ' 个');
+        check('抖音：内容卡片已渲染', d.querySelectorAll('#pm-posts > div').length > 0,
+            d.querySelectorAll('#pm-posts > div').length + ' 个');
+
+        // ---- 闲鱼 ----
+        await goto(w, '/xianyu', 1200);
+        check('闲鱼：分类按钮已渲染', d.querySelectorAll('#pm-categories button').length > 0,
+            d.querySelectorAll('#pm-categories button').length + ' 个');
+        check('闲鱼：页面标题为闲鱼', (d.title || '').indexOf('闲鱼') !== -1, d.title);
+
+        // ---- 小红书 ----
+        await goto(w, '/xiaohongshu', 1200);
+        check('小红书：分类按钮已渲染', d.querySelectorAll('#pm-categories button').length > 0,
+            d.querySelectorAll('#pm-categories button').length + ' 个');
+        check('小红书：页面标题为小红书', (d.title || '').indexOf('小红书') !== -1, d.title);
+
+        // ---- 来回切，验证无残留 ----
+        await goto(w, '/douyin', 1000);
+        await goto(w, '/xiaohongshu', 1000);
+        await goto(w, '/douyin', 1000);
+        check('反复切换后容器只有一个', d.querySelectorAll('#pm-posts').length === 1,
+            d.querySelectorAll('#pm-posts').length + ' 个');
+        check('反复切换后内容仍正常渲染', d.querySelectorAll('#pm-posts > div').length > 0,
+            d.querySelectorAll('#pm-posts > div').length + ' 个');
+        check('无残留表单浮层',
+            d.querySelectorAll('#pm-form-modal').length === 0 &&
+            d.querySelectorAll('#pm-data-modal').length === 0);
+
+        // ---- 与备忘页互切（跨模块）----
+        await goto(w, '/memo', 1000);
+        check('切到备忘页正常', !!d.querySelector('#quick-add-input'));
+        await goto(w, '/douyin', 1000);
+        check('切回平台页正常', d.querySelectorAll('#pm-posts > div').length > 0);
+
+        // ---- 侧边栏导航桥接 ----
+        var link = d.querySelector('a[data-page="xianyu.html"]');
+        if (link) {
+            link.click();
+            await sleep(1200);
+            check('侧边栏点击已迁移页面走 SPA（URL 变为 /xianyu）',
+                w.location.pathname === '/xianyu', w.location.pathname);
+        } else {
+            check('找到闲鱼侧边栏链接', false);
+        }
+
+        check('无运行期 JS 错误', errors.length === 0, errors.join(' | ') || '无');
+
+        var failed = results.filter(function (r) { return r.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0
+            ? '>>> ALL PASS (' + results.filter(function (r) { return r.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

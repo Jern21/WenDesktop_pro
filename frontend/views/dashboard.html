@@ -1,0 +1,346 @@
+<!-- Dashboard Scrollable Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1400px] mx-auto space-y-6">
+
+                <!-- Top Metrics Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <!-- Card 1: 今日新增订单 -->
+                    <div class="card flex items-center gap-3 p-4">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-blue-200">
+                            <i class="ph ph-calendar-plus text-xl"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-500 mb-0.5 truncate">今日新增订单</p>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h3 id="metric-today-orders" class="text-xl font-bold text-gray-800">--</h3>
+                                <span id="metric-today-orders-rate-wrap" class="text-[10px] text-gray-400 flex items-center whitespace-nowrap"><i class="ph ph-minus mr-0.5"></i>较昨日 <span id="metric-today-orders-rate">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2: 进行中订单 -->
+                    <div class="card flex items-center gap-3 p-4">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-400 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-emerald-200 relative overflow-hidden">
+                             <div class="absolute -right-2 -bottom-2 w-6 h-6 bg-white/20 rounded-full"></div>
+                             <i class="ph ph-arrows-clockwise text-xl relative z-10"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-500 mb-0.5 truncate">进行中订单</p>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h3 id="metric-active-orders" class="text-xl font-bold text-gray-800">--</h3>
+                                <span class="text-[10px] text-emerald-500 flex items-center whitespace-nowrap">进行中</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3: 今日成交金额 -->
+                    <div class="card flex items-center gap-3 p-4">
+                        <div class="w-10 h-10 rounded-xl bg-orange-400 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-orange-200 relative overflow-hidden">
+                             <div class="absolute inset-0 border-[3px] border-white/30 rounded-xl m-1"></div>
+                             <i class="ph ph-check-circle text-xl relative z-10"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-500 mb-0.5 truncate">今日成交金额</p>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h3 id="metric-today-revenue" class="text-lg font-bold text-gray-800">--</h3>
+                                <span id="metric-today-revenue-rate-wrap" class="text-[10px] text-gray-400 flex items-center whitespace-nowrap"><i class="ph ph-minus mr-0.5"></i>较昨日 <span id="metric-today-revenue-rate">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 4: 本月总收入 -->
+                    <div class="card flex items-center gap-3 p-4">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-indigo-200 relative overflow-hidden">
+                             <svg class="absolute inset-0 w-full h-full text-white/20" viewBox="0 0 100 100"><path d="M50 10 L90 50 L50 90 L10 50 Z" fill="currentColor"/></svg>
+                             <i class="ph-fill ph-star text-xl relative z-10"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-500 mb-0.5 truncate">本月总收入</p>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h3 id="metric-month-revenue" class="text-lg font-bold text-gray-800">--</h3>
+                                <span id="metric-month-revenue-rate-wrap" class="text-[10px] text-gray-400 flex items-center whitespace-nowrap"><i class="ph ph-minus mr-0.5"></i>较上月 <span id="metric-month-revenue-rate">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 5: 今年总收入 -->
+                    <div class="card flex items-center gap-3 p-4">
+                        <div class="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-brand-200 relative overflow-hidden">
+                             <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                             <i class="ph-fill ph-currency-cny text-xl relative z-10"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-500 mb-0.5 truncate">今年总收入</p>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h3 id="metric-year-revenue" class="text-lg font-bold text-brand-600">--</h3>
+                                <span id="metric-year-revenue-rate-wrap" class="text-[10px] text-gray-400 flex items-center whitespace-nowrap"><i class="ph ph-minus mr-0.5"></i>较去年 <span id="metric-year-revenue-rate">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Row: Chart, Platform Status, To-Do -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    
+                    <!-- Line Chart -->
+                    <div class="card xl:col-span-1 h-[280px] flex flex-col">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold text-gray-800 text-base">订单趋势</h3>
+                            <select id="trend-range-select" class="text-sm border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-600 outline-none">
+                                <option value="7">近7天</option>
+                                <option value="30">近30天</option>
+                            </select>
+                        </div>
+                        <div id="trendChart" class="flex-1 w-full -ml-2"></div>
+                    </div>
+
+                    <!-- Platform Status -->
+                    <div class="card xl:col-span-1 h-[280px]">
+                        <h3 class="font-semibold text-gray-800 text-base mb-4">平台发布状态</h3>
+                        <div class="space-y-1">
+                            <!-- Xianyu -->
+                            <div class="grid grid-cols-[5.75rem_1fr_auto] items-center gap-1 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors cursor-pointer" data-link data-path="/xianyu">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-8 h-8 flex-shrink-0 bg-yellow-400 rounded-lg flex items-center justify-center text-white font-bold text-lg leading-none">
+                                        <span class="transform -rotate-12 block mt-0.5 text-black">闲鱼</span>
+                                    </div>
+                                    <span class="font-medium text-gray-800 truncate text-sm">闲鱼</span>
+                                </div>
+                                <div class="flex items-center justify-start gap-3 min-w-0 pl-1">
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">已发布</p><p id="platform-xianyu-published" class="font-semibold text-gray-700 truncate">--</p></div>
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">点赞量</p><p id="platform-xianyu-likes" class="font-semibold text-gray-700 truncate">--</p></div>
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">浏览量</p><p id="platform-xianyu-views" class="font-semibold text-gray-700 truncate">--</p></div>
+                                </div>
+                                <button class="px-3 py-1 text-sm border border-gray-200 rounded text-gray-600 hover:bg-gray-100 transition flex-shrink-0">查看</button>
+                            </div>
+                            
+                            <!-- Xiaohongshu -->
+                            <div class="grid grid-cols-[5.75rem_1fr_auto] items-center gap-1 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors cursor-pointer" data-link data-path="/xiaohongshu">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-8 h-8 flex-shrink-0 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold text-xs leading-none">
+                                        小红书
+                                    </div>
+                                    <span class="font-medium text-gray-800 truncate text-sm">小红书</span>
+                                </div>
+                                <div class="flex items-center justify-start gap-3 min-w-0 pl-1">
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">已发布</p><p id="platform-xiaohongshu-published" class="font-semibold text-gray-700 truncate">--</p></div>
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">点赞量</p><p id="platform-xiaohongshu-likes" class="font-semibold text-gray-700 truncate">--</p></div>
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">浏览量</p><p id="platform-xiaohongshu-views" class="font-semibold text-gray-700 truncate">--</p></div>
+                                </div>
+                                <button class="px-3 py-1 text-sm border border-gray-200 rounded text-gray-600 hover:bg-gray-100 transition flex-shrink-0">查看</button>
+                            </div>
+
+                            <!-- Douyin -->
+                            <div class="grid grid-cols-[5.75rem_1fr_auto] items-center gap-1 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors cursor-pointer" data-link data-path="/douyin">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-8 h-8 flex-shrink-0 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg leading-none">
+                                        <i class="ph-fill ph-tiktok-logo text-xl"></i>
+                                    </div>
+                                    <span class="font-medium text-gray-800 truncate text-sm">抖音</span>
+                                </div>
+                                <div class="flex items-center justify-start gap-3 min-w-0 pl-1">
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">已发布</p><p id="platform-douyin-published" class="font-semibold text-gray-700 truncate">--</p></div>
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">点赞量</p><p id="platform-douyin-likes" class="font-semibold text-gray-700 truncate">--</p></div>
+                                    <div class="w-[3.25rem] text-center flex-shrink-0"><p class="text-xs text-gray-400">浏览量</p><p id="platform-douyin-views" class="font-semibold text-gray-700 truncate">--</p></div>
+                                </div>
+                                <button class="px-3 py-1 text-sm border border-gray-200 rounded text-gray-600 hover:bg-gray-100 transition flex-shrink-0">查看</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- To Do List -->
+                    <div class="card xl:col-span-1 h-[280px] flex flex-col">
+                        <h3 class="font-semibold text-gray-800 text-base mb-3">待办事项</h3>
+                        <div class="grid grid-cols-2 gap-2 flex-1 content-start" id="todo-list">
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-blue-50/50 rounded-lg border border-blue-100/50 cursor-pointer hover:bg-blue-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                        <i class="ph-fill ph-chat-circle-dots text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">待回复消息</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-pending-reply">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-orange-50/50 rounded-lg border border-orange-100/50 cursor-pointer hover:bg-orange-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 flex-shrink-0">
+                                        <i class="ph-fill ph-currency-cny text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">待报价订单</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-pending-quote">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 flex-shrink-0">
+                                        <i class="ph-fill ph-clipboard-text text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">平台审核中</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-platform-reviewing">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-red-50/50 rounded-lg border border-red-100/50 cursor-pointer hover:bg-red-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-500 flex-shrink-0">
+                                        <i class="ph-fill ph-calendar-x text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">即将到期</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-expiring-soon">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/50 cursor-pointer hover:bg-emerald-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                                        <i class="ph-fill ph-seal-check text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">待验收订单</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-pending-acceptance">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-rose-50/50 rounded-lg border border-rose-100/50 cursor-pointer hover:bg-rose-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 flex-shrink-0">
+                                        <i class="ph-fill ph-warning-circle text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">逾期订单</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-overdue-orders">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-violet-50/50 rounded-lg border border-violet-100/50 cursor-pointer hover:bg-violet-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center text-violet-500 flex-shrink-0">
+                                        <i class="ph-fill ph-bell text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">今日提醒</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-today-reminders">--</span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-1.5 p-2 bg-indigo-50/50 rounded-lg border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-colors min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 flex-shrink-0">
+                                        <i class="ph-fill ph-kanban text-xs"></i>
+                                    </div>
+                                    <span class="text-gray-700 text-xs truncate">进行中项目</span>
+                                </div>
+                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-active-projects">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Orders Table, Posters, Calendar -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    
+                    <!-- Recent Orders -->
+                    <div class="card xl:col-span-1 h-[420px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-semibold text-gray-800 text-base">最新订单</h3>
+                                <span id="orderLiveDot" class="hidden items-center gap-1 text-[10px] text-gray-400">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>轮播中
+                                </span>
+                            </div>
+                            <a href="#" data-page="orders.html" class="text-sm text-brand-500 hover:text-brand-600">查看全部</a>
+                        </div>
+                        <div class="overflow-hidden flex-1 -mx-2 px-2 relative">
+                            <table class="w-full text-left border-collapse table-fixed">
+                                <thead>
+                                    <tr class="text-gray-400 text-xs border-b border-gray-100">
+                                        <th class="pb-3 font-normal w-[28%]">订单信息</th>
+                                        <th class="pb-3 font-normal w-[12%]">客户</th>
+                                        <th class="pb-3 font-normal w-[18%]">服务内容</th>
+                                        <th class="pb-3 font-normal w-[16%]">金额</th>
+                                        <th class="pb-3 font-normal w-[8%]">状态</th>
+                                        <th class="pb-3 font-normal w-[14%]">时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentOrdersBody">
+                                    <!-- 动态渲染 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Posters -->
+                    <div class="card xl:col-span-1 h-[420px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-gray-800 text-base">宣传海报</h3>
+                            <a href="#" data-page="posters.html" class="text-sm text-brand-500 hover:text-brand-600">查看全部</a>
+                        </div>
+                        <div id="home-posters-grid" class="grid grid-cols-3 gap-3 flex-1 content-start">
+                            <div class="col-span-3 py-10 text-center text-gray-400 text-sm">加载中...</div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Schedule -->
+                    <div class="card xl:col-span-1 h-[420px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-gray-800 text-base">日程提醒</h3>
+                            <a href="#" data-page="reminder.html" class="text-sm text-brand-500 hover:text-brand-600">查看全部</a>
+                        </div>
+                        
+                        <!-- Mini Calendar -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2 px-2 text-sm">
+                                <button type="button" id="home-cal-prev" class="text-gray-400 hover:text-gray-800"><i class="ph ph-caret-left"></i></button>
+                                <span id="home-cal-title" class="font-medium text-gray-800">--</span>
+                                <button type="button" id="home-cal-next" class="text-gray-400 hover:text-gray-800"><i class="ph ph-caret-right"></i></button>
+                            </div>
+                            <div class="grid grid-cols-7 text-center text-xs text-gray-400 mb-2">
+                                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                            </div>
+                            <div id="home-cal-grid" class="grid grid-cols-7 text-center text-sm gap-y-1"></div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="flex-1 overflow-y-auto relative pl-2 pr-1">
+                            <div class="absolute left-3.5 top-2 bottom-0 w-px bg-gray-100 z-0"></div>
+                            <div id="home-reminder-timeline" class="space-y-4 relative z-10">
+                                <p class="text-sm text-gray-400 pl-6 py-2">加载中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Data Overview -->
+                <div class="card mb-6">
+                    <h3 class="font-semibold text-gray-800 text-base mb-4">数据概览 (本月)</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 divide-x divide-gray-100" id="monthly-overview">
+                        <div class="px-2">
+                            <p class="text-xs text-gray-400 mb-1">订单总数</p>
+                            <h4 class="text-xl font-bold text-gray-800 mb-1" id="overview-order-count" data-count-up="0" data-duration="1400">-</h4>
+                            <p id="overview-order-growth-wrap" class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i>较上月 <span id="overview-order-growth">--</span></p>
+                        </div>
+                        <div class="px-4">
+                            <p class="text-xs text-gray-400 mb-1">成交金额</p>
+                            <h4 class="text-xl font-bold text-gray-800 mb-1" id="overview-revenue" data-count-up="0" data-prefix="¥ " data-duration="1600">-</h4>
+                            <p id="overview-revenue-growth-wrap" class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i>较上月 <span id="overview-revenue-growth">--</span></p>
+                        </div>
+                        <div class="px-4">
+                            <p class="text-xs text-gray-400 mb-1">今年总收入</p>
+                            <h4 class="text-xl font-bold text-brand-600 mb-1" id="overview-year-revenue" data-count-up="0" data-prefix="¥ " data-duration="1800" data-delay="150">-</h4>
+                            <p id="overview-year-growth-wrap" class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i>较去年 <span id="overview-year-growth">--</span></p>
+                        </div>
+                        <div class="px-4">
+                            <p class="text-xs text-gray-400 mb-1">客户数量</p>
+                            <h4 class="text-xl font-bold text-gray-800 mb-1" id="overview-customers" data-count-up="0" data-duration="1400" data-delay="100">-</h4>
+                            <p id="overview-customer-growth-wrap" class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i>较上月 <span id="overview-customer-growth">--</span></p>
+                        </div>
+                        <div class="px-4">
+                            <p class="text-xs text-gray-400 mb-1">好评率</p>
+                            <h4 class="text-xl font-bold text-gray-800 mb-1" id="overview-good-rate" data-count-up="0" data-suffix="%" data-duration="1400" data-delay="200">-</h4>
+                            <p id="overview-good-rate-growth-wrap" class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i>较上月 <span id="overview-good-rate-growth">--</span></p>
+                        </div>
+                        <div class="px-4">
+                            <p class="text-xs text-gray-400 mb-1">复购率</p>
+                            <h4 class="text-xl font-bold text-gray-800 mb-1" id="overview-repeat-rate" data-count-up="0" data-suffix="%" data-duration="1400" data-delay="300">-</h4>
+                            <p id="overview-repeat-rate-growth-wrap" class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i>较上月 <span id="overview-repeat-rate-growth">--</span></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>

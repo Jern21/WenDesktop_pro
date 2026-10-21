@@ -1,0 +1,199 @@
+<!-- Editor & Preview Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-6 items-start">
+                
+                <!-- LEFT COLUMN: Editor Form -->
+                <div class="w-full lg:w-[55%] flex flex-col gap-5">
+                    
+                    <!-- Basic Info Section -->
+                    <div class="card">
+                        <div class="flex items-center gap-2 mb-4 border-b border-gray-50 pb-3">
+                            <i class="ph-fill ph-info text-brand-500 text-lg"></i>
+                            <h3 class="font-semibold text-gray-800 text-base">基础信息</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label">项目名称</label>
+                                <input type="text" data-field="projectName" value="" class="form-input" placeholder="请输入项目名称">
+                            </div>
+                            <div>
+                                <label class="form-label">客户名称</label>
+                                <input type="text" data-field="customerName" value="" class="form-input" placeholder="请输入客户名称">
+                            </div>
+                            <div>
+                                <label class="form-label">报价日期</label>
+                                <input type="date" data-field="quoteDate" value="" class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">预计周期 (天)</label>
+                                <input type="number" data-field="cycle" value="" class="form-input" placeholder="如：15">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quoation Items Section -->
+                    <div class="card">
+                        <div class="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
+                            <div class="flex items-center gap-2">
+                                <i class="ph-fill ph-list-numbers text-orange-500 text-lg"></i>
+                                <h3 class="font-semibold text-gray-800 text-base">报价明细</h3>
+                            </div>
+                            <div class="relative">
+                                <button id="template-btn" type="button" class="text-brand-600 hover:text-brand-700 text-sm font-medium flex items-center gap-1">
+                                    <i class="ph ph-squares-four"></i> 从模板导入
+                                </button>
+                                <div id="template-dropdown" class="hidden absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-30 max-h-80 overflow-y-auto">
+                                    <div id="template-list" class="space-y-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- List of items (Dynamic) -->
+                        <div id="quote-items-container" class="space-y-4">
+                            <!-- Items rendered by JS -->
+                        </div>
+
+                        <!-- Add Button -->
+                        <button id="add-item-btn" class="w-full mt-4 py-2.5 border border-dashed border-brand-300 text-brand-600 bg-brand-50/50 rounded-lg hover:bg-brand-50 transition-colors text-sm flex items-center justify-center gap-2">
+                            <i class="ph ph-plus-circle text-lg"></i> 添加明细行
+                        </button>
+                    </div>
+
+                    <!-- Additional Terms -->
+                    <div class="card">
+                        <div class="flex items-center gap-2 mb-4 border-b border-gray-50 pb-3">
+                            <i class="ph-fill ph-file-text text-purple-500 text-lg"></i>
+                            <h3 class="font-semibold text-gray-800 text-base">附加条款与备注</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="form-label">优惠折扣 (减免 ¥)</label>
+                                <input type="number" data-field="discount" value="0" class="form-input text-red-500 font-medium">
+                            </div>
+                            <div>
+                                <label class="form-label">付款方式 (默认推荐 5-4-1)</label>
+                                <select data-field="paymentMethod" class="form-input">
+                                    <option value="">请选择付款方式</option>
+                                    <option value="50%预付定金启动项目，40%测试上线无误后支付，10%为尾款交付源码时支付。">50%预付，40%上线，10%尾款</option>
+                                    <option value="40%预付定金启动项目，60%上线交付无误后一次性支付。">40%预付，60%上线交付</option>
+                                    <option value="全额预付（九折优惠），项目完成后交付全部源码。">全额预付 (九折优惠)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">补充说明 (将显示在报价单底部)</label>
+                            <textarea data-field="notes" rows="3" class="form-input resize-none" placeholder="报价有效期、售后范围、额外说明等"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Sticky Preview -->
+                <div class="w-full lg:w-[45%] lg:sticky lg:top-8 flex flex-col gap-4">
+                    
+                    <!-- Action Bar -->
+                    <div class="flex items-center gap-3 bg-white p-3 rounded-xl shadow-soft border border-gray-100">
+                        <button id="save-quote-btn" class="flex-1 bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+                            <i class="ph ph-floppy-disk text-lg"></i> 保存报价单
+                        </button>
+                        <button id="copy-quote-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+                            <i class="ph ph-copy text-lg"></i> 复制为文本
+                        </button>
+                        <button id="export-pdf-btn" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors shadow-sm shadow-brand-500/30">
+                            <i class="ph ph-file-pdf text-lg"></i> 导出 PDF
+                        </button>
+                        <button id="export-png-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors shadow-sm shadow-green-500/30">
+                            <i class="ph ph-file-image text-lg"></i> 导出 PNG
+                        </button>
+                    </div>
+
+                    <!-- Actual A4 Preview -->
+                    <div class="paper-preview overflow-hidden" id="quote-preview-content">
+                        <!-- Watermark/Brand element -->
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-bl-full -z-10 opacity-50"></div>
+                        
+                        <!-- Header -->
+                        <div class="flex justify-between items-end mb-6">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900 tracking-wide mb-1">开发报价单</h2>
+                                <p class="text-xs text-gray-400 font-mono">NO: QUO-20250703-001</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="w-8 h-8 bg-brand-600 rounded flex items-center justify-center text-white ml-auto mb-1">
+                                    <i class="ph-fill ph-bag text-sm"></i>
+                                </div>
+                                <p class="text-xs font-semibold text-gray-800">JERN工作室</p>
+                            </div>
+                        </div>
+
+                        <!-- Meta Info -->
+                        <div class="bg-gray-50/80 rounded-md p-4 mb-6 grid grid-cols-2 gap-y-2 text-sm border border-gray-100/50">
+                            <div class="flex">
+                                <span class="text-gray-500 w-16">项目名称：</span>
+                                <span class="text-gray-800 font-medium truncate" id="pv-projectName">—</span>
+                            </div>
+                            <div class="flex">
+                                <span class="text-gray-500 w-16">报价日期：</span>
+                                <span class="text-gray-800" id="pv-quoteDate">—</span>
+                            </div>
+                            <div class="flex">
+                                <span class="text-gray-500 w-16">客户名称：</span>
+                                <span class="text-gray-800" id="pv-customerName">—</span>
+                            </div>
+                            <div class="flex">
+                                <span class="text-gray-500 w-16">预计周期：</span>
+                                <span class="text-gray-800" id="pv-cycle">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Table Headers -->
+                        <div class="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 mb-2 px-2">
+                            <div class="col-span-7">服务明细 (内容描述)</div>
+                            <div class="col-span-2 text-center">数量</div>
+                            <div class="col-span-3 text-right">金额 (¥)</div>
+                        </div>
+                        <div class="h-px bg-gray-800 mb-3"></div>
+
+                        <!-- Items (Dynamic) -->
+                        <div class="space-y-4 text-sm px-2 min-h-[200px]" id="pv-items">
+                            <!-- Preview items rendered by JS -->
+                        </div>
+
+                        <div class="paper-dash-line"></div>
+
+                        <!-- Totals -->
+                        <div class="w-full flex justify-end mb-8">
+                            <div class="w-1/2 space-y-2">
+                                <div class="flex justify-between text-sm text-gray-600">
+                                    <span>小计：</span>
+                                    <span id="pv-subtotal">¥ 0.00</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-red-500">
+                                    <span>优惠折扣：</span>
+                                    <span id="pv-discount">- ¥ 0.00</span>
+                                </div>
+                                <div class="h-px bg-gray-200 my-1"></div>
+                                <div class="flex justify-between items-end">
+                                    <span class="font-medium text-gray-800">总计金额：</span>
+                                    <span class="text-xl font-bold text-gray-900 font-mono" id="pv-total">¥ 0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer notes -->
+                        <div class="bg-blue-50/50 rounded p-4 border border-blue-100/50">
+                            <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
+                                <i class="ph-fill ph-warning-circle text-blue-500"></i> 补充说明及付款方式
+                            </h4>
+                            <div class="text-[11px] text-gray-600 leading-relaxed space-y-1" id="pv-notes">
+                                <!-- Notes rendered by JS -->
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-8 text-[10px] text-gray-400">
+                            生成自 文的项目工作台 - 科技赋能自由开发
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>

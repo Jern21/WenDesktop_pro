@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>深链接与刷新验证</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">深链接与刷新验证（直接访问 /orders 这类路径，必须渲染对应页面）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/orders" style="width:1280px;height:700px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+/**
+ * 这一页守的是一个曾经真实发生过的 bug：
+ *   app.js 的 bootstrap 在 router.start() 之前就调用了 router.match()，
+ *   而路由表要到 start() 内部才从已注册视图收集 —— 那时表是空的，
+ *   于是任何路径都匹配不到，一律兜底到「第一个视图」（dashboard）。
+ *   表现就是：刷新 /orders 会看到首页。
+ * 现在 match() 会惰性收集路由表，本测试确保这个行为不回退。
+ */
+(function () {
+    'use strict';
+
+    var results = [];
+    var frame = document.getElementById('frame');
+
+    function check(name, ok, extra) {
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : ''));
+        return ok;
+    }
+
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+        w.addEventListener('error', function (e) { errors.push(e.message); });
+
+        await sleep(2500);
+
+        check('地址栏保持深链接路径', w.location.pathname === '/orders', w.location.pathname);
+
+        // 首页入口必须是新 SPA（服务端 / 与 /index.html 都分流到 app.html）
+        // 用 iframe 直接请求 / 验证：拿到的是 SPA 外壳而不是旧 index.html
+        var homeRes = await w.fetch('/', { headers: { 'Accept': 'text/html' } });
+        var homeHtml = await homeRes.text();
+        check('服务端 / 返回的是新 SPA 入口', homeHtml.indexOf('core/router.js') !== -1, 'code ' + homeRes.status);
+        check('服务端 / 不再返回旧多页应用', homeHtml.indexOf('spa-router.js'), -1);
+
+        var idxRes = await w.fetch('/index.html', { headers: { 'Accept': 'text/html' } });
+        var idxHtml = await idxRes.text();
+        check('老书签 /index.html 也进新 SPA', idxHtml.indexOf('core/router.js') !== -1, 'code ' + idxRes.status);
+
+        var routes = w.App.router.getRoutes();
+        check('路由表在首次 match 前就已收集', routes.length >= 17, routes.length + ' 条');
+
+        var cur = w.App.views.current();
+        check('当前视图是 orders 而不是兜底页', cur.name === 'orders', cur.name);
+
+        check('页面标题为订单页', d.title.indexOf('我的订单') === 0, d.title);
+
+        var html = d.documentElement.innerHTML;
+        check('订单页标志元素存在（orders-tbody）', html.indexOf('orders-tbody') !== -1);
+        check('没有误渲染成 dashboard', html.indexOf('Top Metrics Row') === -1);
+        check('没有渲染 404 视图', html.indexOf('页面不存在') === -1);
+        check('侧边栏已注入', !!d.querySelector('#sidebar-nav'));
+        check('无运行期 JS 错误', errors.length === 0, errors.slice(0, 3).join(' | ') || '无');
+
+        // 再验证一个二级验证：切走再前进/后退，仍能回到 orders
+        await w.App.router.navigate('/settings');
+        await sleep(800);
+        check('SPA 内切到 /settings 成功', w.App.views.current().name === 'settings',
+            w.App.views.current().name);
+
+        await w.App.router.navigate('/orders');
+        await sleep(800);
+        check('再切回 /orders 成功', w.App.views.current().name === 'orders',
+            w.App.views.current().name);
+
+        var failed = results.filter(function (x) { return x.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0
+            ? '>>> ALL PASS (' + results.filter(function (x) { return x.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

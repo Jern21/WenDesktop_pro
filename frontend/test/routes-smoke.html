@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>全路由冒烟</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">全路由冒烟测试（遍历所有已注册路由，跑两轮）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/app.html" style="width:1280px;height:700px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+(function () {
+    'use strict';
+    var results = [];
+    var frame = document.getElementById('frame');
+
+    // 支持 URL 参数，便于无头环境加速跑（默认仍是完整的两轮）
+    var QS = new URLSearchParams(location.search);
+    var ROUNDS = parseInt(QS.get('rounds'), 10) || 2;
+    var SETTLE = parseInt(QS.get('settle'), 10) || 700;
+
+    function log(name, ok, extra) {
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : ''));
+        return ok;
+    }
+
+    function sleep(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+    }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+
+        w.addEventListener('error', function (e) { errors.push(e.message); });
+
+        await sleep(1600);
+
+        var routes = w.App.router.getRoutes();
+        log('已注册路由数量', routes.length > 0, routes.length + ' 条');
+
+        // 逐条路由渲染，跑两轮（第二轮验证二次进入无残留）
+        for (var round = 1; round <= ROUNDS; round++) {
+            for (var i = 0; i < routes.length; i++) {
+                var r = routes[i];
+                var before = errors.length;
+                try {
+                    await w.App.router.render(r.path);
+                    await sleep(SETTLE);
+
+                    var view = d.getElementById('page-view');
+                    var hasContent = view && view.innerHTML.trim().length > 50;
+                    var no404 = view && view.innerHTML.indexOf('页面不存在') === -1;
+                    var newErrors = errors.length - before;
+
+                    log('R' + round + ' ' + r.path + ' (' + r.name + ')：渲染正常',
+                        hasContent && no404 && newErrors === 0,
+                        hasContent ? (newErrors ? '有' + newErrors + '个错误' : 'ok') : '内容为空');
+                } catch (e) {
+                    log('R' + round + ' ' + r.path + '：渲染抛错', false, e.message);
+                }
+            }
+        }
+
+        // 侧边栏不重复
+        log('侧边栏未重复插入', d.querySelectorAll('#sidebar-nav').length === 1,
+            d.querySelectorAll('#sidebar-nav').length + ' 个');
+
+        // 全局无残留浮层
+        var overlays = d.querySelectorAll('#pm-form-modal, #pm-data-modal, .detail-drawer.active');
+        log('无残留浮层', overlays.length === 0, overlays.length + ' 个');
+
+        log('全程无运行期 JS 错误', errors.length === 0, errors.slice(0, 3).join(' | ') || '无');
+
+        var failed = results.filter(function (x) { return x.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0
+            ? '>>> ALL PASS (' + results.filter(function (x) { return x.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

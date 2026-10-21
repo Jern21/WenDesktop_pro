@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>收藏页交互验证</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">收藏页交互验证</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/app.html" style="width:1280px;height:720px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+(function () {
+    'use strict';
+    var out = [];
+    var frame = document.getElementById('frame');
+    function check(n, ok, extra) {
+        out.push((ok ? 'PASS  ' : 'FAIL  ') + n + (extra ? '  [' + extra + ']' : ''));
+    }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+        w.addEventListener('error', function (e) { errors.push(e.message); });
+
+        await sleep(1500);
+        await w.App.router.render('/bookmarks');
+        await sleep(1200);
+
+        var cards = d.querySelectorAll('.bookmark-card');
+        check('收藏卡片已渲染', cards.length > 0, cards.length + ' 张');
+        check('分类下拉已加载', d.querySelectorAll('#filter-category option').length > 1,
+            d.querySelectorAll('#filter-category option').length + ' 项');
+        check('无 XSS 注入残留', d.querySelectorAll('#bookmarks-grid script').length === 0);
+
+        // 打开新建表单
+        var newBtn = d.querySelector('[data-act="new"]');
+        newBtn.click();
+        await sleep(400);
+        var drawer = d.querySelector('#bookmark-drawer');
+        check('点击添加打开抽屉', !drawer.classList.contains('hidden'));
+        check('抽屉标题为添加收藏', d.querySelector('#drawer-title').textContent === '添加收藏',
+            d.querySelector('#drawer-title').textContent);
+
+        // 取消关闭
+        d.querySelector('[data-act="close"]').click();
+        await sleep(400);
+        check('点击取消关闭抽屉', drawer.classList.contains('hidden'));
+
+        // 编辑
+        var editBtn = d.querySelector('.bookmark-card [data-act="edit"]');
+        if (editBtn) {
+            editBtn.click();
+            await sleep(400);
+            check('点击编辑打开抽屉', !drawer.classList.contains('hidden'));
+            check('抽屉标题为编辑收藏', d.querySelector('#drawer-title').textContent === '编辑收藏',
+                d.querySelector('#drawer-title').textContent);
+            check('表单已回填标题', (d.querySelector('#bookmark-title').value || '').length > 0,
+                d.querySelector('#bookmark-title').value);
+            d.querySelector('[data-act="close"]').click();
+            await sleep(400);
+        } else {
+            check('找到编辑按钮', false);
+        }
+
+        // 搜索过滤
+        var search = d.querySelector('#search-input');
+        search.value = '不存在的关键词zzz';
+        search.dispatchEvent(new w.Event('input'));
+        await sleep(400);
+        check('搜索无结果时显示空状态',
+            !d.querySelector('#empty-state').classList.contains('hidden'));
+        search.value = '';
+        search.dispatchEvent(new w.Event('input'));
+        await sleep(400);
+        check('清空搜索后卡片恢复', d.querySelectorAll('.bookmark-card').length > 0);
+
+        // 文字图标联动
+        d.querySelector('[data-act="new"]').click();
+        await sleep(350);
+        var cb = d.querySelector('#use-bookmark-text-icon');
+        cb.checked = true;
+        cb.dispatchEvent(new w.Event('change'));
+        await sleep(250);
+        check('勾选文字图标后显示预览',
+            !d.querySelector('#bookmark-text-icon-preview').classList.contains('hidden'));
+        d.querySelector('[data-act="close"]').click();
+        await sleep(350);
+
+        // 反复进出
+        await w.App.router.render('/memo'); await sleep(600);
+        await w.App.router.render('/bookmarks'); await sleep(900);
+        check('反复进出后抽屉为关闭态', d.querySelector('#bookmark-drawer').classList.contains('hidden'));
+        check('反复进出后卡片仍正常', d.querySelectorAll('.bookmark-card').length > 0);
+
+        check('无运行期 JS 错误', errors.length === 0, errors.slice(0, 3).join(' | ') || '无');
+
+        var failed = out.filter(function (x) { return x.indexOf('FAIL') === 0; }).length;
+        out.push('');
+        out.push(failed === 0
+            ? '>>> ALL PASS (' + out.filter(function (x) { return x.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = out.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

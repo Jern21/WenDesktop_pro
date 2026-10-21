@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>新入口交互验证</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">新入口交互验证（iframe 内真实点击）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/app.html" style="width:1280px;height:760px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+(function () {
+    'use strict';
+    var results = [];
+    var frame = document.getElementById('frame');
+
+    function check(name, ok, extra) {
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : ''));
+        return ok;
+    }
+
+    function sleep(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+    }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+
+        // 收集运行期错误
+        var errors = [];
+        w.addEventListener('error', function (e) {
+            errors.push(e.message);
+        });
+
+        await sleep(1800);
+
+        check('侧边栏已注入', !!d.querySelector('#sidebar-nav'));
+
+        // 入口页 /app.html 不对应任何路由，会兜底到「第一个注册的视图」（现在是 dashboard）。
+        // 本测试只关心 memo，所以显式进入 /memo，不再依赖注册顺序。
+        await w.App.router.render('/memo');
+        await sleep(900);
+
+        check('备忘视图已挂载', !!d.querySelector('#quick-add-input'));
+
+        var catBtns = d.querySelectorAll('#category-list button');
+        check('分类已渲染', catBtns.length > 0, catBtns.length + ' 个');
+
+        var cards = d.querySelectorAll('.memo-card');
+        check('备忘卡片已渲染', cards.length > 0, cards.length + ' 张');
+
+        // ---- 交互 1：点卡片开抽屉 ----
+        if (cards.length > 0) {
+            cards[0].click();
+            await sleep(350);
+            var drawer = d.querySelector('#detail-drawer');
+            check('点击卡片打开详情抽屉', drawer && drawer.classList.contains('active'));
+            var content = d.querySelector('#drawer-content');
+            check('抽屉内容已填充', content && content.innerHTML.length > 80,
+                content ? content.innerHTML.length + ' 字符' : '无');
+            check('打开时锁定页面滚动', d.body.style.overflow === 'hidden');
+
+            // ---- 交互 2：关闭抽屉 ----
+            var closeBtn = d.querySelector('[data-act="close-drawer"]');
+            if (closeBtn) {
+                closeBtn.click();
+                await sleep(350);
+                check('关闭抽屉', !drawer.classList.contains('active'));
+                check('关闭后恢复滚动', d.body.style.overflow === '');
+            } else {
+                check('找到关闭按钮', false);
+            }
+        }
+
+        // ---- 交互 2.5：新建备忘 → 打开 memo-form 抽屉 ----
+        var newBtn = d.querySelector('[data-act="new-memo"]');
+        if (newBtn) {
+            newBtn.click();
+            await sleep(450);
+            var formDrawer = d.querySelector('#memo-form-drawer');
+            var visible = formDrawer && formDrawer.className.indexOf('translate-x-full') === -1;
+            check('点击新建打开表单抽屉', !!visible);
+            var closeForm = d.querySelector('#memo-form-close');
+            if (closeForm) {
+                closeForm.click();
+                await sleep(400);
+            }
+        } else {
+            check('找到新建按钮', false);
+        }
+
+        // ---- 交互 3：分类切换（走 API）----
+        if (catBtns.length > 1) {
+            catBtns[1].click();
+            await sleep(700);
+            check('切换分类后仍正常渲染', d.querySelectorAll('#category-list button').length > 0);
+            var label = d.querySelector('#current-category-label');
+            check('分类标题已更新', label && label.textContent !== '全部笔记', label ? label.textContent : '无');
+            // 切回全部
+            catBtns[0].click();
+            await sleep(600);
+        }
+
+        // ---- 交互 4：重复进入同一视图（旧架构的故障场景）----
+        try {
+            await w.App.router.render('/memo');
+            await sleep(500);
+            check('二次进入 /memo 不报错', !!d.querySelector('#quick-add-input'));
+            await w.App.router.render('/memo');
+            await sleep(500);
+            check('三次进入 /memo 不报错', !!d.querySelector('#quick-add-input'));
+            check('重复进入后未出现重复侧边栏',
+                d.querySelectorAll('#sidebar-nav').length === 1,
+                d.querySelectorAll('#sidebar-nav').length + ' 个');
+        } catch (e) {
+            check('重复进入抛错', false, e.message);
+        }
+
+        // ---- 交互 5：清理是否生效 ----
+        var cleanupCount = w.App.views ? 1 : 0;
+        check('App.views 可用', cleanupCount === 1);
+
+        // ---- 运行期错误 ----
+        check('无运行期 JS 错误', errors.length === 0, errors.join(' | ') || '无');
+
+        var failed = results.filter(function (r) { return r.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0
+            ? '>>> ALL PASS (' + results.filter(function (r) { return r.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

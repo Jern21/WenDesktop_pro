@@ -1,0 +1,125 @@
+<!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1600px] mx-auto">
+
+                <!-- Two Column Layout -->
+                <div class="flex flex-col xl:flex-row gap-6">
+
+                    <!-- Left Column: Content List -->
+                    <div class="flex-1 bg-white rounded-xl border border-gray-100 shadow-soft overflow-hidden flex flex-col">
+
+                        <!-- Filter & Action Bar -->
+                        <div class="p-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4">
+                            <!-- Tabs -->
+                            <div id="platform-tabs" class="flex items-center gap-6">
+                                <!-- 动态渲染 -->
+                            </div>
+
+                            <!-- Filters & Button -->
+                            <div class="flex items-center gap-3">
+                                <select id="filter-status" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-gray-50 outline-none focus:border-brand-500 text-gray-600">
+                                    <option value="">全部状态</option>
+                                    <option value="draft">草稿</option>
+                                    <option value="pending">待发布</option>
+                                    <option value="published">已发布</option>
+                                    <option value="offline">已下线</option>
+                                </select>
+                                <select id="filter-category" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-gray-50 outline-none focus:border-brand-500 text-gray-600">
+                                    <option value="">全部类目</option>
+                                </select>
+                                <div class="relative">
+                                    <input type="text" id="search-input" placeholder="搜索内容..." class="border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 text-sm bg-gray-50 outline-none focus:border-brand-500 text-gray-600 w-40">
+                                    <i class="ph ph-magnifying-glass absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- List Header -->
+                        <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50/50 border-b border-gray-100 text-gray-500 text-xs font-medium">
+                            <div class="col-span-5">内容信息</div>
+                            <div class="col-span-2">发布类目</div>
+                            <div class="col-span-2">发布时间</div>
+                            <div class="col-span-1">状态</div>
+                            <div class="col-span-2 text-center">操作</div>
+                        </div>
+
+                        <!-- List Body -->
+                        <div id="post-list" class="flex-1 overflow-y-auto striped-table-rows min-h-[300px]">
+                            <!-- 动态渲染 -->
+                        </div>
+
+                        <!-- Pagination -->
+                        <div id="pagination-bar" class="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500 bg-white">
+                            <!-- 动态渲染 -->
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Sidebar Widgets -->
+                    <div class="w-full xl:w-[320px] space-y-6 flex-shrink-0">
+
+                        <!-- Widget 1: Overview Stats -->
+                        <div class="bg-white rounded-xl shadow-widget border border-gray-100 p-5">
+                            <h3 class="font-bold text-gray-800 text-base mb-4">平台概览</h3>
+                            <div id="overview-stats" class="space-y-3">
+                                <!-- 动态渲染 -->
+                            </div>
+                        </div>
+
+                        <!-- Widget 2: Quick Actions -->
+                        <div class="bg-white rounded-xl shadow-widget border border-gray-100 p-5">
+                            <h3 class="font-bold text-gray-800 text-base mb-4">快捷操作</h3>
+                            <div class="grid grid-cols-3 gap-y-4 gap-x-2">
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group" data-path="/xianyu">
+                                    <div class="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:-translate-y-1 transition-transform">
+                                        <img src="../../assets/svg/闲鱼.svg" alt="闲鱼" class="block w-full h-full" loading="lazy">
+                                    </div>
+                                    <span class="text-xs text-gray-600 text-center">新建闲鱼发布</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group" data-path="/xiaohongshu">
+                                    <div class="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:-translate-y-1 transition-transform">
+                                        <img src="../../assets/svg/小红书.svg" alt="小红书" class="block w-full h-full" style="object-fit:cover;transform:scale(1.2)" loading="lazy">
+                                    </div>
+                                    <span class="text-xs text-gray-600 text-center">新建小红书发布</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group" data-path="/douyin">
+                                    <div class="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center shadow-sm group-hover:-translate-y-1 transition-transform">
+                                        <img src="../../assets/svg/抖音.svg" alt="抖音" class="block w-full h-full" loading="lazy">
+                                    </div>
+                                    <span class="text-xs text-gray-600 text-center">新建抖音发布</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group" data-path="/posters">
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-sm group-hover:-translate-y-1 transition-transform">
+                                        <i class="ph-fill ph-file-text text-2xl"></i>
+                                    </div>
+                                    <span class="text-xs text-gray-600 text-center">文案模板</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group" data-path="/posters">
+                                    <div class="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-sm group-hover:-translate-y-1 transition-transform">
+                                        <i class="ph-fill ph-image text-2xl"></i>
+                                    </div>
+                                    <span class="text-xs text-gray-600 text-center">素材库</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group" data-path="/reminder">
+                                    <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-sm group-hover:-translate-y-1 transition-transform">
+                                        <i class="ph-fill ph-calendar-plus text-2xl"></i>
+                                    </div>
+                                    <span class="text-xs text-gray-600 text-center">发布计划</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Widget 3: Schedule -->
+                        <div class="bg-white rounded-xl shadow-widget border border-gray-100 p-5">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-gray-800 text-base">计划发布</h3>
+                                <a href="#" class="text-xs text-brand-600 hover:underline">全部计划</a>
+                            </div>
+                            <div id="schedule-list" class="space-y-4">
+                                <!-- 动态渲染 -->
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>

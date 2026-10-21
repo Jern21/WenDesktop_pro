@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新架构验证样例</title>
+    <script src="../assets/tailwind.min.js"></script>
+    <link rel="stylesheet" href="../assets/fonts/phosphor-regular.css">
+    <link rel="stylesheet" href="../assets/fonts/inter.css">
+    <style>
+        body { font-family: Inter, system-ui, sans-serif; }
+    </style>
+</head>
+<body class="bg-[#f9fafb] text-gray-800">
+
+<div class="max-w-5xl mx-auto p-6">
+    <header class="mb-5">
+        <h1 class="text-xl font-medium">新架构验证样例</h1>
+        <p class="mt-1 text-sm text-gray-500">
+            单一入口 + 客户端路由 + 视图生命周期。本页不影响现有系统，仅用于验证 core 层。
+        </p>
+    </header>
+
+    <div class="rounded-xl bg-white border border-gray-100 overflow-hidden">
+        <nav class="flex gap-1 p-2 border-b border-gray-100 bg-gray-50/60">
+            <button data-nav="/demo-a" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-white">视图 A · 订单</button>
+            <button data-nav="/demo-b" class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-white">视图 B · 客户</button>
+            <button data-nav="/demo-b" class="ml-auto px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-white">重复进入 B（测二次挂载）</button>
+            <button data-nav="/not-exist" class="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-white">404 测试</button>
+        </nav>
+
+        <main id="page-view" class="min-h-[320px]"></main>
+    </div>
+
+    <section class="mt-5 rounded-xl bg-white border border-gray-100">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <h2 class="text-sm font-medium text-gray-700">生命周期日志</h2>
+            <button id="clear-log" class="text-xs text-gray-400 hover:text-gray-600">清空</button>
+        </div>
+        <ul id="log" class="p-4 space-y-1.5 text-xs text-gray-500 font-mono max-h-48 overflow-y-auto"></ul>
+    </section>
+
+    <p class="mt-4 text-xs text-gray-400 leading-relaxed">
+        关键验证点：切到视图 B 后再切回 A，日志里应出现「视图 A 计时器已清理」——
+        说明 <code>ctx.onCleanup</code> 生效，定时器没有泄漏。旧的 spa-router 靠手工枚举清理，漏掉的就会一直跑。
+    </p>
+</div>
+
+<script src="../js/core/dom.js"></script>
+<script src="../js/core/ui.js"></script>
+<script src="../js/core/view.js"></script>
+<script src="../js/core/router.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var App = window.App;
+    var logList = document.getElementById('log');
+    var mountCountB = 0;
+
+    function log(text, type) {
+        var li = document.createElement('li');
+        var time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        li.textContent = '[' + time + '] ' + text;
+        if (type === 'warn') li.className = 'text-amber-600';
+        if (type === 'ok') li.className = 'text-green-600';
+        logList.appendChild(li);
+        logList.scrollTop = logList.scrollHeight;
+    }
+
+    document.getElementById('clear-log').addEventListener('click', function () {
+        logList.innerHTML = '';
+    });
+
+    // ========== 视图 A ==========
+    App.view('demoA', {
+        path: '/demo-a',
+        template: 'test/views/demo-a.html',
+
+        async mount(root, ctx) {
+            log('视图 A 已挂载', 'ok');
+            var startedAt = Date.now();
+
+            // 定时器：如果 view 卸载时不清理，它会一直跑下去（经典泄漏）
+            var timer = setInterval(function () {
+                var node = root.querySelector('[data-count]');
+                if (node) node.textContent = Math.floor((Date.now() - startedAt) / 1000);
+            }, 1000);
+
+            ctx.onCleanup(function () {
+                clearInterval(timer);
+                log('视图 A 计时器已清理', 'warn');
+            });
+
+            // 展示转义效果
+            var escaped = root.querySelector('[data-escaped]');
+            if (escaped) {
+                escaped.textContent = App.dom.escapeHtml('<img src=x onerror=alert(1)>');
+            }
+
+            // 事件委托：不用 onclick 内联属性
+            ctx.onCleanup(App.dom.delegate(root, '[data-action]', 'click', function (e, btn) {
+                var action = btn.getAttribute('data-action');
+
+                if (action === 'toast') {
+                    App.ui.toast('统一 toast 生效了', 'success');
+                    log('触发 App.ui.toast');
+                }
+
+                if (action === 'confirm') {
+                    App.ui.confirm({ message: '确认删除这条订单吗？此操作不可撤销。' })
+                        .then(function (ok) {
+                            App.ui.toast(ok ? '你点了确定' : '你取消了', ok ? 'success' : 'info');
+                            log('confirm 返回：' + ok);
+                        });
+                }
+            }));
+        },
+
+        unmount() {
+            log('视图 A 已卸载');
+        }
+    });
+
+    // ========== 视图 B ==========
+    App.view('demoB', {
+        path: '/demo-b',
+        template: 'test/views/demo-b.html',
+
+        async mount(root, ctx) {
+            mountCountB++;
+            log('视图 B 已挂载（第 ' + mountCountB + ' 次）', 'ok');
+
+            var node = root.querySelector('[data-mounts]');
+            if (node) node.textContent = mountCountB;
+
+            // 验证二次进入不报错：旧架构这里会抛
+            // SyntaxError: Identifier 'xxx' has already been declared
+            ctx.onCleanup(function () {
+                log('视图 B 已清理');
+            });
+        },
+
+        unmount() {
+            log('视图 B 已卸载');
+        }
+    });
+
+    // ========== 导航 ==========
+    document.querySelectorAll('[data-nav]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = btn.getAttribute('data-nav');
+            log('导航 → ' + target);
+            App.router.render(target).catch(function (err) {
+                log('渲染失败：' + err.message, 'warn');
+            });
+        });
+    });
+
+    // ========== 启动 ==========
+    App.router.start({ initial: '/demo-a', base: '/' });
+    log('router 已启动');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1200px] mx-auto">
+
+                <!-- Filter & Search Bar -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <select id="filter-platform" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-brand-500">
+                            <option value="">全部平台</option>
+                            <option value="github">GitHub</option>
+                            <option value="gitee">Gitee</option>
+                            <option value="coding">Coding</option>
+                            <option value="leetcode">LeetCode</option>
+                            <option value="juejin">掘金</option>
+                            <option value="csdn">CSDN</option>
+                            <option value="zhihu">知乎</option>
+                            <option value="other">其他</option>
+                        </select>
+                        <div class="relative">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="search-input" placeholder="搜索账号、平台..." class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 outline-none focus:border-brand-500">
+                        </div>
+                    </div>
+                    <button data-act="openAccountForm" class="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-plus"></i> 添加账号
+                    </button>
+                </div>
+
+                <!-- Accounts Grid -->
+                <div id="accounts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 动态渲染 -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="ph ph-key text-3xl text-gray-400"></i>
+                    </div>
+                    <p class="text-gray-500 mb-2">暂无账号记录</p>
+                    <p class="text-gray-400 text-xs">点击右上角添加第一个账号</p>
+                </div>
+
+            </div>
+        </div>
+    <!-- Account Form Drawer -->
+    <div id="account-drawer" class="fixed inset-0 z-[1000] hidden">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-act="closeAccountForm"></div>
+        <div class="absolute right-0 top-0 h-full w-[480px] bg-white shadow-2xl transform translate-x-full transition-transform duration-300" id="account-drawer-panel">
+            <div class="flex flex-col h-full">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800" id="drawer-title">添加账号</h3>
+                    <button data-act="closeAccountForm" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="ph ph-x text-gray-500"></i>
+                    </button>
+                </div>
+
+                <!-- Form Body -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <form id="account-form" class="space-y-5">
+                        <input type="hidden" id="account-id">
+
+                        <!-- 平台 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">平台 <span class="text-red-500">*</span></label>
+                            <select id="account-platform" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500 bg-white" required>
+                                <option value="">选择平台</option>
+                                <option value="github">GitHub</option>
+                                <option value="gitee">Gitee</option>
+                                <option value="coding">Coding</option>
+                                <option value="leetcode">LeetCode</option>
+                                <option value="juejin">掘金</option>
+                                <option value="csdn">CSDN</option>
+                                <option value="zhihu">知乎</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </div>
+
+                        <!-- 自定义平台名称（当选择其他时显示） -->
+                        <div id="custom-platform-wrapper" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">平台名称 <span class="text-red-500">*</span></label>
+                            <input type="text" id="custom-platform" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="请输入平台名称">
+                        </div>
+
+                        <!-- 平台图标上传 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">平台图标</label>
+                            <div class="flex items-center gap-4">
+                                <div id="icon-preview" class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                                    <i class="ph ph-image text-xl text-gray-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <input type="file" id="account-icon-upload" accept="image/*" class="hidden" onchange="handleIconUpload(event)">
+                                    <button type="button" data-act="pick-icon" class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        上传图标
+                                    </button>
+                                    <p class="text-xs text-gray-400 mt-1">支持 JPG、PNG、SVG 格式，建议 64x64 像素</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 使用自定义名称作为图标 -->
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="use-text-icon" class="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" onchange="toggleTextIcon()">
+                            <label for="use-text-icon" class="text-sm text-gray-700">使用平台名称首字作为图标</label>
+                        </div>
+                        <div id="text-icon-preview" class="hidden">
+                            <div class="w-12 h-12 rounded-lg bg-brand-500 text-white flex items-center justify-center text-xl font-bold" id="text-icon-display">
+                                平
+                            </div>
+                        </div>
+
+                        <!-- 账号/用户名 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">账号/用户名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="account-username" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="请输入账号或用户名" required>
+                        </div>
+
+                        <!-- 邮箱 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">注册邮箱</label>
+                            <input type="email" id="account-email" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="example@email.com">
+                        </div>
+
+                        <!-- 密码 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                            <div class="relative">
+                                <input type="password" id="account-password" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500 pr-10" placeholder="请输入密码">
+                                <button type="button" data-act="togglePasswordVisibility" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <i class="ph ph-eye" id="password-eye"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">密码仅在本地存储，请妥善保管</p>
+                        </div>
+
+                        <!-- 个人主页链接 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">个人主页链接</label>
+                            <input type="url" id="account-url" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="https://...">
+                        </div>
+
+                        <!-- 备注 -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">备注</label>
+                            <textarea id="account-notes" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500 resize-none" placeholder="添加备注信息..."></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-6 border-t border-gray-100 flex gap-3">
+                    <button type="button" data-act="closeAccountForm" class="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">取消</button>
+                    <button type="button" data-act="saveAccount" class="flex-1 px-4 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>

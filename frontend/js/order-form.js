@@ -34,6 +34,7 @@
 
     var drawer = null;
     var overlay = null;
+    var closeTimer = null; // 关闭动画的销毁定时器，切页清理时要能取消它
     var selectedTags = [];
     var isOpen = false;
     var editMode = false;
@@ -934,19 +935,26 @@
             selectCustomerBtn.addEventListener('click', openCustomerSelector);
         }
 
-        // ESC 关闭
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && isOpen) closeOrderForm();
-        });
+        // ESC 关闭改由模块级的单次监听处理（见文件末尾）。
+        // 原来写在这里，每开一次抽屉就往 document 上挂一个 keydown，
+        // 开五次就是五个，属于纯泄漏。
     }
 
     // ========== 打开 / 关闭 ==========
 
     function openOrderForm(data, options) {
         if (isOpen) {
-            console.log('[OrderForm] 表单已打开，跳过');
-            return;
+            // 关闭动画进行中（closeTimer 还挂着）时别当成「已打开」跳过，
+            // 直接把旧抽屉销毁、继续打开新的 —— 否则用户关掉后立刻再点，
+            // 会什么都不发生，看起来就是「打不开」。
+            if (!closeTimer) {
+                console.log('[OrderForm] 表单已打开，跳过');
+                return;
+            }
+            destroyDrawer();
         }
+        // 上一次关闭的销毁定时器如果还挂着，会把这次新建的节点一起干掉
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
         options = options || {};
         var createMode = options.mode === 'create' || options.create === true || (data && data.__mode === 'create');
 
@@ -975,10 +983,15 @@
         // 编辑模式填充数据
         if (data) fillData(data, { preserveDefaults: !editMode });
 
-        // 动画打开
+        // 动画打开。rAF 回调是异步的，等它真正执行时抽屉可能已经被
+        // spa:cleanup-forms（切页）或关闭动画销毁掉了 —— 所以这里必须用局部引用
+        // 加 isConnected 判断，不能直接去吃模块级的 overlay / drawer。
+        var openingOverlay = overlay;
+        var openingDrawer = drawer;
         requestAnimationFrame(function () {
-            overlay.classList.remove('opacity-0');
-            drawer.classList.remove('translate-x-full');
+            if (!isOpen) return;
+            if (openingOverlay && openingOverlay.isConnected) openingOverlay.classList.remove('opacity-0');
+            if (openingDrawer && openingDrawer.isConnected) openingDrawer.classList.remove('translate-x-full');
         });
 
         // 锁定 body 滚动
@@ -986,18 +999,29 @@
         isOpen = true;
     }
 
+    // 统一的销毁入口：关闭动画结束、SPA 切页清理，两条路径都只走这里。
+    // 以前两处各写一遍「置 null + 复位 isOpen」，先跑的那条把引用置空、
+    // 后跑的那条就可能拿着 null 去点 classList，抛出
+    // "Cannot read properties of null (reading 'classList')"。
+    function destroyDrawer() {
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+        // 只有自己确实开着锁的时候才去复位 body.overflow，
+        // 否则会把别的模块（如 memo 表单）锁住的滚动一起解锁掉
+        var wasOpen = isOpen || overlay || drawer;
+        if (overlay) { overlay.remove(); overlay = null; }
+        if (drawer) { drawer.remove(); drawer = null; }
+        if (wasOpen) document.body.style.overflow = '';
+        isOpen = false;
+    }
+
     function closeOrderForm() {
         if (!isOpen) return;
 
-        overlay.classList.add('opacity-0');
-        drawer.classList.add('translate-x-full');
+        if (overlay) overlay.classList.add('opacity-0');
+        if (drawer) drawer.classList.add('translate-x-full');
 
-        setTimeout(function () {
-            if (overlay) { overlay.remove(); overlay = null; }
-            if (drawer) { drawer.remove(); drawer = null; }
-            document.body.style.overflow = '';
-            isOpen = false;
-        }, 300);
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(destroyDrawer, 300);
     }
 
     // ========== 客户选择器 ==========
@@ -1195,14 +1219,12 @@
         }
     });
 
-    // SPA 切换页面时清理：重置内部状态，防止 isOpen 卡死导致表单打不开
-    window.addEventListener('spa:cleanup-forms', function () {
-        if (isOpen) {
-            if (overlay) { overlay.remove(); overlay = null; }
-            if (drawer) { drawer.remove(); drawer = null; }
-            document.body.style.overflow = '';
-            isOpen = false;
-        }
+    // 统一销毁入口：切页时不管抽屉开没开、动画跑到哪一步，都直接清干净
+    window.addEventListener('spa:cleanup-forms', destroyDrawer);
+
+    // ESC 关闭（模块级只挂一次，避免每次开抽屉都往 document 上叠一个监听）
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && isOpen) closeOrderForm();
     });
 
     // 暴露全局 API

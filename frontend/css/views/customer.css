@@ -1,0 +1,48 @@
+/**
+ * customer 视图样式
+ * 提取自 frontend/pages/business/customer.html
+ */
+
+/* 客户表单模态框 */
+        .cust-modal-overlay {
+            position: fixed; inset: 0; z-index: 60;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.4);
+        }
+        .cust-modal-panel {
+            background: #fff; border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            width: 100%; max-width: 560px; max-height: 92vh;
+            overflow-y: auto;
+        }
+        /* 下拉菜单 */
+        .cust-action-menu {
+            position: fixed; z-index: 55; background: #fff;
+            border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border: 1px solid #f1f5f9; padding: 0.25rem 0;
+            width: 9rem; opacity: 0; transform: scale(0.95);
+            transform-origin: top right;
+            transition: all 0.15s ease;
+            pointer-events: none;
+        }
+        .cust-action-menu.show {
+            opacity: 1; transform: scale(1); pointer-events: auto;
+        }
+        .cust-action-item {
+            width: 100%; padding: 0.5rem 0.75rem;
+            text-align: left; font-size: 0.875rem; color: #4b5563;
+            display: flex; align-items: center; gap: 0.5rem;
+            transition: background 0.15s ease;
+        }
+        .cust-action-item:hover { background: #f9fafb; }
+        /* 表单输入 */
+        .cust-form-input {
+            width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;
+            transition: border-color 0.15s ease;
+        }
+        .cust-form-input:focus { border-color: #3b82f6; }
+        .cust-form-label {
+            display: block; font-size: 0.75rem; color: #6b7280;
+            margin-bottom: 0.375rem;
+        }

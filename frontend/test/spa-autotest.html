@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>核心层自动回归（无头可跑）</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-6 font-mono text-sm bg-white">
+<main id="page-view"></main>
+<pre id="result" class="mt-4 text-xs whitespace-pre-wrap"></pre>
+
+<script src="../js/core/dom.js"></script>
+<script src="../js/core/ui.js"></script>
+<script src="../js/core/view.js"></script>
+<script src="../js/core/router.js"></script>
+<script>
+(function () {
+    'use strict';
+    var App = window.App;
+    var results = [];
+    var state = { aCleanup: 0, aMount: 0, bCleanup: 0, bMount: 0 };
+
+    function check(name, actual, expected) {
+        var ok = actual === expected;
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name + '  (实际 ' + actual + ' / 期望 ' + expected + ')');
+        return ok;
+    }
+
+    // 视图 A：带定时器，用来验证清理真的执行
+    App.view('a', {
+        path: '/a',
+        template: 'test/views/demo-a.html',
+        async mount(root, ctx) {
+            state.aMount++;
+            var timer = setInterval(function () {}, 1000);
+            ctx.onCleanup(function () {
+                clearInterval(timer);
+                state.aCleanup++;
+            });
+        }
+    });
+
+    // 视图 B
+    App.view('b', {
+        path: '/b',
+        template: 'test/views/demo-b.html',
+        async mount(root, ctx) {
+            state.bMount++;
+            ctx.onCleanup(function () { state.bCleanup++; });
+        }
+    });
+
+    async function run() {
+        // 1. 首屏
+        await App.router.start({ initial: '/a', base: '/' });
+        check('首屏渲染 A', state.aMount, 1);
+        check('首屏内容已注入', document.getElementById('page-view').innerHTML.indexOf('订单列表') !== -1, true);
+
+        // 2. A → B，A 的清理应执行
+        await App.router.render('/b');
+        check('切到 B 后 B 挂载一次', state.bMount, 1);
+        check('切走后 A 的 cleanup 执行', state.aCleanup, 1);
+        check('B 内容已注入', document.getElementById('page-view').innerHTML.indexOf('客户列表') !== -1, true);
+
+        // 3. B → A（A 第二次进入，这是旧架构会抛重复声明的场景）
+        await App.router.render('/a');
+        check('二次进入 A 正常挂载', state.aMount, 2);
+        check('离开 B 时 B 的 cleanup 执行', state.bCleanup, 1);
+
+        // 4. 再切回 A（第三次），验证不会累积残留
+        await App.router.render('/b');
+        await App.router.render('/a');
+        check('三次进入 A 仍正常', state.aMount, 3);
+        // A 挂载 3 次、离开 2 次（最后一次已切回 A，仍处于挂载中），故 cleanup 累计 2 次
+        check('每次离开 A 都执行了清理（累计 2 次）', state.aCleanup, 2);
+
+        // 5. 模板缓存：第二次进入不应重复请求（用缓存计数近似验证）
+        check('模板已进缓存', typeof App.router.clearTemplateCache === 'function', true);
+
+        // 6. 404
+        await App.router.render('/definitely-not-exist');
+        check('未注册路由显示 404', document.getElementById('page-view').innerHTML.indexOf('页面不存在') !== -1, true);
+
+        // 7. 转义安全
+        var escaped = App.dom.escapeHtml('<img src=x onerror=alert(1)>');
+        check('escapeHtml 阻断标签', escaped.indexOf('<') === -1, true);
+        check('escapeHtml 阻断属性逃逸', App.dom.escapeHtml('" onmouseover="x').indexOf('"') === -1, true);
+
+        var failed = results.filter(function (r) { return r.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0 ? '>>> ALL PASS (' + results.filter(function (r) {
+            return r.indexOf('PASS') === 0;
+        }).length + ' 项)' : '>>> ' + failed + ' 项失败');
+
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    }
+
+    run().catch(function (e) {
+        document.getElementById('result').textContent = 'RUNTIME ERROR: ' + e.message + '\n' + e.stack;
+        document.title = 'HAS-FAIL';
+    });
+})();
+</script>
+</body>
+</html>

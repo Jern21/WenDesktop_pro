@@ -1,0 +1,339 @@
+<!-- Dashboard Scrollable Area -->
+        <div class="flex-1 overflow-y-auto pr-[380px]"> <!-- Added padding right to accommodate the fixed drawer -->
+            <div class="p-6 lg:p-8">
+                
+                <!-- Filters -->
+                <div class="flex items-end gap-3 mb-6 flex-wrap">
+                    <div class="w-36">
+                        <label class="block text-xs text-gray-500 mb-1.5">项目类型</label>
+                        <select id="filter-projectType" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                            <option value="全部类型">全部类型</option>
+                        </select>
+                    </div>
+                    <div class="w-36">
+                        <label class="block text-xs text-gray-500 mb-1.5">订单状态</label>
+                        <select id="filter-status" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                            <option value="">全部状态</option>
+                            <option value="pending">待确认需求</option>
+                            <option value="processing">开发/设计中</option>
+                            <option value="acceptance">待验收</option>
+                            <option value="completed">已完成</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                    </div>
+                    <div class="w-36">
+                        <label class="block text-xs text-gray-500 mb-1.5">付款状态</label>
+                        <select id="filter-paymentStatus" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                            <option value="全部付款状态">全部付款状态</option>
+                            <option value="未付款">未付款</option>
+                            <option value="部分付款">部分付款</option>
+                            <option value="已结清">已结清</option>
+                        </select>
+                    </div>
+                    <div class="w-36">
+                        <label class="block text-xs text-gray-500 mb-1.5">客户来源</label>
+                        <select id="filter-customerSource" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                            <option value="全部来源">全部来源</option>
+                        </select>
+                    </div>
+                    <div class="w-36">
+                        <label class="block text-xs text-gray-500 mb-1.5">客户标签</label>
+                        <select id="filter-customerTag" class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                            <option value="全部标签">全部标签</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs text-gray-500 mb-1.5">关键词搜索</label>
+                        <input id="filter-keyword" type="text" placeholder="搜索订单号 / 项目名 / 客户名..." class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                    </div>
+                    
+                    <div class="flex gap-2 ml-auto">
+                        <button id="filter-reset" class="px-5 py-1.5 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                            重置
+                        </button>
+                        <button id="filter-apply" class="px-5 py-1.5 border border-brand-100 text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 transition-colors text-sm font-medium flex items-center gap-1.5">
+                            <i class="ph ph-funnel"></i> 筛选
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-4 gap-5 mb-6">
+                    <!-- Card 1 -->
+                    <div class="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-white p-5 relative overflow-hidden shadow-sm">
+                        <p class="text-brand-600 font-medium text-sm">全部订单</p>
+                        <h3 id="stat-total" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
+                        <p class="text-xs text-gray-400" id="stat-total-sub">加载中...</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-blue-100 bg-white flex items-center justify-center text-blue-500 shadow-sm">
+                            <i class="ph ph-bag text-2xl"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Card 2 -->
+                    <div class="rounded-xl border border-green-100 bg-gradient-to-br from-green-50/50 to-white p-5 relative overflow-hidden shadow-sm">
+                        <p class="text-green-600 font-medium text-sm">进行中</p>
+                        <h3 id="stat-processing" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
+                        <p class="text-xs text-gray-400" id="stat-processing-sub">占比 0%</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-green-100 bg-white flex items-center justify-center text-green-500 shadow-sm">
+                            <i class="ph ph-arrows-clockwise text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50/50 to-white p-5 relative overflow-hidden shadow-sm">
+                        <p class="text-orange-500 font-medium text-sm">待验收</p>
+                        <h3 id="stat-acceptance" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
+                        <p class="text-xs text-gray-400" id="stat-acceptance-sub">占比 0%</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-orange-100 bg-white flex items-center justify-center text-orange-400 shadow-sm">
+                            <i class="ph ph-hourglass-high text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50/50 to-white p-5 relative overflow-hidden shadow-sm">
+                        <p class="text-purple-600 font-medium text-sm">已完成</p>
+                        <h3 id="stat-completed" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
+                        <p class="text-xs text-gray-400" id="stat-completed-sub">占比 0%</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-purple-100 bg-white flex items-center justify-center text-purple-500 shadow-sm">
+                            <i class="ph ph-check-circle text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Area -->
+                <div class="border border-gray-100 rounded-xl shadow-sm bg-white overflow-hidden mb-6">
+                    <!-- Tabs -->
+                    <div id="order-tabs" class="flex border-b border-gray-100 px-2 pt-2 items-center">
+                        <button class="order-tab px-6 py-3 border-b-2 border-brand-600 text-brand-600 font-medium text-sm" data-tab="all">全部订单</button>
+                        <button class="order-tab px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-sm transition-colors" data-tab="processing">进行中</button>
+                        <button class="order-tab px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-sm transition-colors" data-tab="dueToday">今日到期</button>
+                        <button class="order-tab px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 font-medium text-sm transition-colors" data-tab="overdue">已逾期</button>
+                        <button class="ml-auto mr-2 mb-2 px-4 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition text-sm font-medium flex items-center gap-1.5 shadow-sm shadow-brand-500/30">
+                            <i class="ph ph-plus"></i>新建订单
+                        </button>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[900px]">
+                            <thead>
+                                <tr class="bg-gray-50/50 text-gray-500 text-xs border-b border-gray-100">
+                                    <th class="py-3 px-4 w-12 font-medium"><input type="checkbox" class="rounded border-gray-300 text-brand-600 focus:ring-brand-500"></th>
+                                    <th class="py-3 px-2 font-medium">订单信息</th>
+                                    <th class="py-3 px-2 font-medium">客户信息</th>
+                                    <th class="py-3 px-2 font-medium">项目类型</th>
+                                    <th class="py-3 px-2 font-medium">金额</th>
+                                    <th class="py-3 px-2 font-medium">状态</th>
+                                    <th class="py-3 px-2 font-medium">交付周期</th>
+                                    <th class="py-3 px-2 font-medium flex items-center gap-1 cursor-pointer hover:text-gray-700">接单时间 <i class="ph ph-caret-up-down"></i></th>
+                                    <th class="py-3 px-4 font-medium text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-tbody" class="text-gray-800"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="orders-pagination" class="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+                        <div id="pagination-info">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Drawer (Fixed Order Details) -->
+        <div class="fixed right-0 top-20 bottom-0 w-[380px] bg-white shadow-drawer border-l border-gray-100 z-20 flex flex-col">
+            <!-- Header -->
+            <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800 text-base">订单详情</h3>
+                <button class="text-gray-400 hover:text-gray-700 transition"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto p-5">
+                <!-- Title & Status -->
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="detail-status-badge" class="status-badge text-[10px] py-0.5 bg-gray-100 text-gray-500">未选择</span>
+                        <span id="detail-order-no" class="text-gray-400 text-xs">暂无订单</span>
+                    </div>
+                    <h2 id="detail-order-name" class="text-xl font-bold text-gray-900">暂无订单数据</h2>
+                </div>
+
+                <!-- Inner Tabs -->
+                <div id="detail-tabs" class="flex border-b border-gray-100 mb-6">
+                    <button type="button" class="detail-tab-btn pb-2 border-b-2 border-brand-600 text-brand-600 font-medium text-sm mr-6" data-detail-tab="basic">基本信息</button>
+                    <button type="button" class="detail-tab-btn pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 text-sm transition mr-6" data-detail-tab="progress">跟进记录</button>
+                    <button type="button" class="detail-tab-btn pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 text-sm transition" data-detail-tab="assets">附件关联</button>
+                </div>
+
+                <div class="detail-tab-panel space-y-6" data-detail-panel="basic">
+                    <!-- Customer Info section -->
+                    <section>
+                        <p class="text-xs text-gray-400 mb-3">客户信息</p>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                <i class="ph-fill ph-user text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p id="detail-customer-name" class="font-medium text-gray-800 text-sm truncate">未选择客户</p>
+                                <p id="detail-customer-phone" class="text-xs text-gray-500 flex items-center gap-1 mt-0.5 cursor-pointer hover:text-brand-600 transition-colors" title="点击复制号码">
+                                    <span id="detail-customer-phone-text">暂无号码</span>
+                                    <i class="ph ph-copy text-xs opacity-60"></i>
+                                    <i class="ph-fill ph-wechat-logo text-green-500"></i>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">真实姓名</span>
+                                <span id="detail-real-name" class="text-sm text-gray-800">—</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">客户来源</span>
+                                <span id="detail-source" class="px-2 py-0.5 bg-gray-50 text-gray-500 rounded text-xs font-medium">—</span>
+                            </div>
+                            <div class="flex justify-between items-start border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500 mt-0.5">客户标签</span>
+                                <div id="detail-tags" class="flex gap-1.5 flex-wrap justify-end">
+                                    <span class="text-xs text-gray-300">暂无标签</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Project Info section -->
+                    <section>
+                        <p class="text-xs text-gray-400 mb-3">项目信息</p>
+                        <div class="grid grid-cols-2 gap-y-4 gap-x-4 mb-3">
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">项目类型</p>
+                                <p id="detail-project-type" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">项目名称</p>
+                                <p id="detail-project-name" class="text-sm font-medium text-gray-800 truncate">—</p>
+                            </div>
+                        </div>
+                        <div class="border-b border-gray-50 pb-3">
+                            <p class="text-xs text-gray-400 mb-1">需求简述</p>
+                            <p id="detail-project-desc" class="text-sm text-gray-700 leading-relaxed">暂无订单数据，创建订单后这里会显示完整详情。</p>
+                        </div>
+                    </section>
+
+                    <!-- Business Info section -->
+                    <section>
+                        <p class="text-xs text-gray-400 mb-3">商务信息</p>
+                        <div class="grid grid-cols-2 gap-y-4 gap-x-4">
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">成交金额</p>
+                                <p id="detail-amount" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">实际成本</p>
+                                <p id="detail-cost" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">预计利润</p>
+                                <p id="detail-profit" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">实际耗时</p>
+                                <p id="detail-hours" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">净利率</p>
+                                <p id="detail-margin" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1">时薪</p>
+                                <p id="detail-rate" class="text-sm font-medium text-gray-800">—</p>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+                <div class="detail-tab-panel hidden space-y-6" data-detail-panel="progress">
+                    <!-- Time section -->
+                    <section>
+                        <p class="text-xs text-gray-400 mb-3">时间节点</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">接单时间</span>
+                                <span id="detail-order-date" class="text-sm text-gray-800">—</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">需求确认日</span>
+                                <span id="detail-confirm-date" class="text-sm text-gray-800">—</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">初稿交付日</span>
+                                <span id="detail-draft-date" class="text-sm text-gray-800">—</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">终稿交付日</span>
+                                <span id="detail-delivery-date" class="text-sm text-gray-800 font-medium">—</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">交付周期</span>
+                                <span id="detail-cycle" class="text-sm text-gray-800">—</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Status section -->
+                    <section>
+                        <p class="text-xs text-gray-400 mb-3">状态管理</p>
+                        <div class="mb-3">
+                            <div class="flex justify-between items-end mb-2">
+                                <p class="text-xs text-gray-400">付款状态</p>
+                                <p class="text-xs font-medium"><span id="detail-payment-status" class="text-gray-700">—</span> <span id="detail-payment-ratio" class="text-red-500">—</span> <span class="text-gray-400">/ <span id="detail-payment-amount">—</span></span></p>
+                            </div>
+                            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
+                                <div id="detail-payment-bar" class="bg-brand-500 w-0 h-full"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                            <span class="text-sm text-gray-500">预计回款日</span>
+                            <span id="detail-pay-date" class="text-sm text-gray-800">—</span>
+                        </div>
+                        <div id="detail-payment-records" class="space-y-2 mt-3"></div>
+                    </section>
+
+                </div>
+
+                <div class="detail-tab-panel hidden space-y-6" data-detail-panel="assets">
+                    <!-- Attachments section -->
+                    <section>
+                        <p class="text-xs text-gray-400 mb-3">附件与关联</p>
+                        <div class="space-y-3">
+                            <div class="border-b border-gray-50 pb-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm text-gray-500 flex-shrink-0">Git 仓库链接</span>
+                                    <button id="detail-copy-git-btn" type="button" class="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">
+                                        <i class="ph ph-copy"></i>复制
+                                    </button>
+                                </div>
+                                <p id="detail-git-url" class="text-xs text-gray-700 mt-1 break-all">未填写</p>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span class="text-sm text-gray-500">关联报价单</span>
+                                <span id="detail-quote-ref" class="text-sm text-gray-800">—</span>
+                            </div>
+                            <div id="detail-attachments" class="space-y-2"></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="p-5 border-t border-gray-100 bg-gray-50/50 flex gap-3">
+                <button id="order-detail-edit-btn" class="flex-1 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
+                    编辑订单
+                </button>
+                <button id="order-detail-quote-btn" class="flex-1 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition shadow-sm shadow-brand-500/30">
+                    查看报价单
+                </button>
+            </div>
+        </div>

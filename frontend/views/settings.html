@@ -1,0 +1,859 @@
+<!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1200px] mx-auto">
+
+                <div class="flex gap-6">
+
+                    <!-- Left: Settings Nav -->
+                    <div class="w-56 flex-shrink-0">
+                        <div class="bg-white rounded-xl border border-gray-100 shadow-soft p-3 sticky top-0">
+                            <nav class="space-y-1" id="settings-nav">
+                                <a href="#account" class="settings-nav-item active" data-section="account">
+                                    <i class="ph ph-user-circle sn-icon"></i> 账号信息
+                                </a>
+                                <a href="#appearance" class="settings-nav-item" data-section="appearance">
+                                    <i class="ph ph-palette sn-icon"></i> 外观设置
+                                </a>
+                                <a href="#security" class="settings-nav-item" data-section="security">
+                                    <i class="ph ph-lock-key sn-icon"></i> 安全设置
+                                </a>
+                                <a href="#notification" class="settings-nav-item" data-section="notification">
+                                    <i class="ph ph-bell-ringing sn-icon"></i> 通知设置
+                                </a>
+                                <a href="#ai-image" class="settings-nav-item" data-section="ai-image">
+                                    <i class="ph ph-robot sn-icon"></i> AI生图配置
+                                </a>
+                                <a href="#export" class="settings-nav-item" data-section="export">
+                                    <i class="ph ph-export sn-icon"></i> 数据导出
+                                </a>
+                                <a href="#backup" class="settings-nav-item" data-section="backup">
+                                    <i class="ph ph-database sn-icon"></i> 数据备份
+                                </a>
+                                <a href="#bug-reports" class="settings-nav-item" data-section="bug-reports">
+                                    <i class="ph ph-bug sn-icon"></i> Bug记录
+                                </a>
+                                <a href="#cleanup" class="settings-nav-item" data-section="cleanup">
+                                    <i class="ph ph-broom sn-icon"></i> 数据清理
+                                </a>
+                                <a href="#recycle" class="settings-nav-item" data-section="recycle">
+                                    <i class="ph ph-trash-simple sn-icon"></i> 回收站
+                                </a>
+                                <a href="#about" class="settings-nav-item" data-section="about">
+                                    <i class="ph ph-info sn-icon"></i> 关于系统
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+
+                    <!-- Right: Settings Content -->
+                    <div class="flex-1 min-w-0 space-y-6">
+
+                        <!-- ====== 账号信息 ====== -->
+                        <div id="account" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-user-circle text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">账号信息</h3>
+                            </div>
+                            <div id="profile-status-bar" class="hidden items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-4 border"></div>
+                            <div class="flex items-center gap-5 mb-6">
+                                <div class="relative">
+                                    <img id="profile-avatar-img" src="" alt="Avatar" class="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover">
+                                    <input id="profile-avatar-input" type="file" accept="image/*" class="hidden">
+                                    <button id="profile-avatar-btn" type="button" class="absolute bottom-0 right-0 w-7 h-7 bg-brand-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-brand-700 transition-colors">
+                                        <i class="ph ph-camera text-xs"></i>
+                                    </button>
+                                </div>
+                                <div>
+                                    <h4 id="profile-display-name" class="text-lg font-bold text-gray-800">加载中...</h4>
+                                    <p id="profile-display-role" class="text-sm text-gray-500">读取账号信息</p>
+                                    <button id="profile-change-avatar-btn" type="button" class="text-xs text-brand-600 hover:underline mt-1">更换头像</button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="form-label">昵称</label>
+                                    <input id="profile-nickname" type="text" class="form-input" placeholder="请输入昵称">
+                                </div>
+                                <div>
+                                    <label class="form-label">真实姓名</label>
+                                    <input id="profile-real-name" type="text" class="form-input" placeholder="可选">
+                                </div>
+                                <div>
+                                    <label class="form-label">手机号</label>
+                                    <input id="profile-phone" type="text" class="form-input" placeholder="可选">
+                                </div>
+                                <div>
+                                    <label class="form-label">邮箱</label>
+                                    <input id="profile-email" type="email" class="form-input" placeholder="可选">
+                                </div>
+                                <div>
+                                    <label class="form-label">职业方向</label>
+                                    <select id="profile-role" class="form-input">
+                                        <option value="">请选择职业方向</option>
+                                        <option>全栈开发工程师</option>
+                                        <option>前端开发工程师</option>
+                                        <option>后端开发工程师</option>
+                                        <option>UI/UX设计师</option>
+                                        <option>自由开发者</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">所在城市</label>
+                                    <input id="profile-city" type="text" class="form-input" placeholder="可选">
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="form-label">个人简介</label>
+                                <textarea id="profile-bio" rows="3" class="form-input resize-none" placeholder="简单记录你的工作方向、技能偏好或对自己的备注"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-50">
+                                <button id="profile-cancel-btn" type="button" class="px-5 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">取消</button>
+                                <button id="profile-save-btn" type="button" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm shadow-brand-500/30">保存修改</button>
+                            </div>
+                        </div>
+
+                        <!-- ====== 外观设置 ====== -->
+                        <div id="appearance" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-palette text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">外观设置</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">选择你喜欢的主题配色方案，切换后即时生效并自动保存。</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- 纯白 -->
+                                <div class="theme-card relative rounded-xl border-2 p-5 cursor-pointer transition-all" data-theme-value="pure-white">
+                                    <!-- 预览 -->
+                                    <div class="rounded-lg overflow-hidden border border-gray-100 mb-3" style="height:100px;">
+                                        <div class="flex h-full">
+                                            <div class="w-1/3 bg-white border-r border-gray-100 flex flex-col items-center justify-center gap-1">
+                                                <div class="w-6 h-1.5 bg-blue-500 rounded-full"></div>
+                                                <div class="w-4 h-1 bg-gray-200 rounded-full"></div>
+                                                <div class="w-5 h-1 bg-gray-100 rounded-full"></div>
+                                            </div>
+                                            <div class="flex-1 bg-gray-50 p-3">
+                                                <div class="w-full h-2 bg-blue-500 rounded mb-1.5"></div>
+                                                <div class="w-3/4 h-1.5 bg-gray-200 rounded mb-1"></div>
+                                                <div class="w-2/3 h-1.5 bg-gray-100 rounded"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-semibold text-gray-800 text-sm flex items-center gap-1.5"><i class="ph ph-sun text-amber-500"></i> 纯白</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">经典明亮配色，清晰舒适</p>
+                                        </div>
+                                        <div class="theme-check w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center transition-all">
+                                            <i class="ph ph-check text-[10px] text-transparent"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 梦幻极光 -->
+                                <div class="theme-card relative rounded-xl border-2 p-5 cursor-pointer transition-all" data-theme-value="aurora">
+                                    <!-- 预览 -->
+                                    <div class="rounded-lg overflow-hidden border border-gray-100 mb-3" style="height:100px;">
+                                        <div class="flex h-full" style="background:#0f0e17;">
+                                            <div class="w-1/3 flex flex-col items-center justify-center gap-1" style="background:#1a1825;border-right:1px solid #2d2a40;">
+                                                <div class="w-6 h-1.5 rounded-full" style="background:#a78bfa;"></div>
+                                                <div class="w-4 h-1 rounded-full" style="background:#475569;"></div>
+                                                <div class="w-5 h-1 rounded-full" style="background:#334155;"></div>
+                                            </div>
+                                            <div class="flex-1 p-3 relative" style="background:#0f0e17;">
+                                                <div class="absolute inset-0" style="background:radial-gradient(ellipse at 80% 100%,rgba(240,171,252,0.08),transparent 50%);"></div>
+                                                <div class="relative">
+                                                    <div class="w-full h-2 rounded mb-1.5" style="background:#a78bfa;"></div>
+                                                    <div class="w-3/4 h-1.5 rounded mb-1" style="background:#a09bb8;"></div>
+                                                    <div class="w-2/3 h-1.5 rounded" style="background:#6b6786;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-semibold text-gray-800 text-sm flex items-center gap-1.5"><i class="ph ph-moon-stars text-purple-500"></i> 梦幻极光</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">深邃暗夜配极光紫，沉浸优雅</p>
+                                        </div>
+                                        <div class="theme-check w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center transition-all">
+                                            <i class="ph ph-check text-[10px] text-transparent"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 微光数字 -->
+                                <div class="theme-card relative rounded-xl border-2 p-5 cursor-pointer transition-all" data-theme-value="glow-digital">
+                                    <!-- 预览 -->
+                                    <div class="rounded-lg overflow-hidden border border-gray-100 mb-3 relative" style="height:100px;background:#f8fafc;">
+                                        <!-- 蓝色光晕 -->
+                                        <div class="absolute" style="top:-30%;left:-20%;width:80%;height:80%;border-radius:50%;background:rgba(56,189,248,0.30);filter:blur(20px);"></div>
+                                        <!-- 紫色光晕 -->
+                                        <div class="absolute" style="bottom:-30%;right:-20%;width:80%;height:80%;border-radius:50%;background:rgba(192,132,252,0.30);filter:blur(20px);"></div>
+                                        <div class="flex h-full relative">
+                                            <div class="w-1/3 flex flex-col items-center justify-center gap-1" style="background:rgba(255,255,255,0.65);backdrop-filter:blur(4px);border-right:1px solid rgba(148,163,184,0.25);">
+                                                <div class="w-6 h-1.5 rounded-full" style="background:#6366f1;"></div>
+                                                <div class="w-4 h-1 rounded-full" style="background:#94a3b8;"></div>
+                                                <div class="w-5 h-1 rounded-full" style="background:#cbd5e1;"></div>
+                                            </div>
+                                            <div class="flex-1 p-3">
+                                                <div class="w-full h-2 rounded mb-1.5" style="background:#6366f1;"></div>
+                                                <div class="w-3/4 h-1.5 rounded mb-1" style="background:#475569;"></div>
+                                                <div class="w-2/3 h-1.5 rounded" style="background:#94a3b8;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-semibold text-gray-800 text-sm flex items-center gap-1.5"><i class="ph ph-sparkle text-indigo-500"></i> 微光数字</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">亮底流光蓝紫，玻璃拟态质感</p>
+                                        </div>
+                                        <div class="theme-check w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center transition-all">
+                                            <i class="ph ph-check text-[10px] text-transparent"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 微光数字暗 -->
+                                <div class="theme-card relative rounded-xl border-2 p-5 cursor-pointer transition-all" data-theme-value="glow-digital-dark">
+                                    <!-- 预览 -->
+                                    <div class="rounded-lg overflow-hidden border border-gray-100 mb-3 relative" style="height:100px;background:#0b0f19;">
+                                        <!-- 蓝色光晕 -->
+                                        <div class="absolute" style="top:-30%;left:-20%;width:80%;height:80%;border-radius:50%;background:rgba(56,189,248,0.35);filter:blur(20px);"></div>
+                                        <!-- 紫色光晕 -->
+                                        <div class="absolute" style="bottom:-30%;right:-20%;width:80%;height:80%;border-radius:50%;background:rgba(192,132,252,0.35);filter:blur(20px);"></div>
+                                        <div class="flex h-full relative">
+                                            <div class="w-1/3 flex flex-col items-center justify-center gap-1" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(4px);border-right:1px solid rgba(99,102,241,0.18);">
+                                                <div class="w-6 h-1.5 rounded-full" style="background:#818cf8;"></div>
+                                                <div class="w-4 h-1 rounded-full" style="background:#64748b;"></div>
+                                                <div class="w-5 h-1 rounded-full" style="background:#475569;"></div>
+                                            </div>
+                                            <div class="flex-1 p-3">
+                                                <div class="w-full h-2 rounded mb-1.5" style="background:#818cf8;"></div>
+                                                <div class="w-3/4 h-1.5 rounded mb-1" style="background:#94a3b8;"></div>
+                                                <div class="w-2/3 h-1.5 rounded" style="background:#64748b;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-semibold text-gray-800 text-sm flex items-center gap-1.5"><i class="ph ph-moon text-indigo-400"></i> 微光数字暗</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">暗夜流光蓝紫，深邃玻璃拟态</p>
+                                        </div>
+                                        <div class="theme-check w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center transition-all">
+                                            <i class="ph ph-check text-[10px] text-transparent"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2">
+                                <i class="ph ph-info text-blue-500 text-base mt-0.5"></i>
+                                <p class="text-xs text-gray-500">主题设置保存在本地浏览器中，更换设备后需重新设置。梦幻极光 / 微光数字暗适合夜间使用，微光数字在亮色基础上叠加流光动效，适合追求层次感的场景。</p>
+                            </div>
+                        </div>
+
+                        <!-- ====== 安全设置 ====== -->
+                        <div id="security" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-lock-key text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">安全设置</h3>
+                            </div>
+                            <div class="space-y-5">
+                                <!-- 修改密码 -->
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-700 mb-3">修改密码</h4>
+                                    <form onsubmit="return false" autocomplete="off">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="form-label">当前密码</label>
+                                            <input type="password" placeholder="请输入当前密码" class="form-input">
+                                        </div>
+                                        <div>
+                                            <label class="form-label">新密码</label>
+                                            <input type="password" placeholder="请输入新密码" class="form-input">
+                                        </div>
+                                        <div>
+                                            <label class="form-label">确认新密码</label>
+                                            <input type="password" placeholder="再次输入新密码" class="form-input">
+                                        </div>
+                                    </div>
+                                    </form>
+                                    <div class="flex items-center gap-2 mt-3">
+                                        <button class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">更新密码</button>
+                                        <span class="text-xs text-gray-400">密码需8位以上，含大小写字母和数字</span>
+                                    </div>
+                                </div>
+                                <!-- 分隔线 -->
+                                <div class="border-t border-gray-50 pt-5">
+                                    <h4 class="text-sm font-semibold text-gray-700 mb-3">账号安全</h4>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
+                                                    <i class="ph-fill ph-shield-check text-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-800">手机绑定</p>
+                                                    <p class="text-xs text-gray-500">已绑定: 138****5678</p>
+                                                </div>
+                                            </div>
+                                            <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded font-medium">已启用</span>
+                                        </div>
+                                        <div class="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center">
+                                                    <i class="ph-fill ph-envelope-simple text-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-800">邮箱验证</p>
+                                                    <p class="text-xs text-gray-500">未绑定邮箱</p>
+                                                </div>
+                                            </div>
+                                            <button class="text-xs text-brand-600 hover:underline">去绑定</button>
+                                        </div>
+                                        <div class="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center">
+                                                    <i class="ph-fill ph-fingerprint text-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-800">两步验证</p>
+                                                    <p class="text-xs text-gray-500">增加账号安全性</p>
+                                                </div>
+                                            </div>
+                                            <button class="text-xs text-brand-600 hover:underline">开启</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== 通知设置 ====== -->
+                        <div id="notification" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-bell-ringing text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">通知设置</h3>
+                            </div>
+                            <div class="space-y-3">
+                                <!-- Toggle 1 -->
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-chat-circle-dots text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">客户消息提醒</p>
+                                            <p class="text-xs text-gray-500">收到客户私信咨询时通知</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-5"></div>
+                                    </label>
+                                </div>
+                                <!-- Toggle 2 -->
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-currency-cny text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">报价提醒</p>
+                                            <p class="text-xs text-gray-500">有待报价订单时通知</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-5"></div>
+                                    </label>
+                                </div>
+                                <!-- Toggle 3 -->
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-calendar-x text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">交付截止提醒</p>
+                                            <p class="text-xs text-gray-500">项目交付到期前1天通知</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-5"></div>
+                                    </label>
+                                </div>
+                                <!-- Toggle 4 -->
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-hand-coins text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">回款提醒</p>
+                                            <p class="text-xs text-gray-500">预计回款日到期时通知</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-5"></div>
+                                    </label>
+                                </div>
+                                <!-- Toggle 5 -->
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-wechat-logo text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">微信通知推送</p>
+                                            <p class="text-xs text-gray-500">通过微信接收重要提醒</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-5"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== AI生图配置 ====== -->
+                        <div id="ai-image" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-robot text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">AI生图配置</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">配置第三方 AI 图像生成服务的 API 地址和密钥，配置后可在「无限画布」中直接调用生图接口。兼容 OpenAI Images API 格式。</p>
+
+                            <!-- 配置状态提示 -->
+                            <div id="ai-image-status-bar" class="hidden items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-4 border">
+                                <i class="ph ph-info text-sm"></i>
+                                <span id="ai-image-status-text"></span>
+                            </div>
+
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="form-label">API 请求地址</label>
+                                    <input type="text" id="ai-image-api-url" placeholder="例如: https://api.openai.com/v1/images/generations" class="form-input font-mono text-xs">
+                                    <p class="text-xs text-gray-400 mt-1">完整的 API 接口 URL，需包含路径（如 /v1/images/generations）</p>
+                                </div>
+                                <div>
+                                    <label class="form-label">API 密钥</label>
+                                    <div class="relative">
+                                        <input type="password" id="ai-image-api-key" placeholder="sk-..." autocomplete="off" class="form-input font-mono text-xs pr-10">
+                                        <button type="button" id="ai-image-toggle-key" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                                            <i class="ph ph-eye text-sm"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">用于 Bearer 鉴权的密钥，将安全存储在服务端</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label class="form-label">模型名称</label>
+                                        <input type="text" id="ai-image-model" placeholder="dall-e-3" value="dall-e-3" class="form-input font-mono text-xs">
+                                        <p class="text-xs text-gray-400 mt-1">如 dall-e-3、dall-e-2、stable-diffusion-xl 等</p>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">请求超时（秒）</label>
+                                        <input type="number" id="ai-image-timeout" placeholder="90" value="90" min="10" max="300" class="form-input text-xs">
+                                        <p class="text-xs text-gray-400 mt-1">单次生图请求的最大等待时间</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-gray-50">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div id="ai-image-test-result" class="hidden items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border"></div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <button type="button" id="ai-image-save-btn" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center gap-1.5">
+                                        <i class="ph ph-floppy-disk"></i> 保存配置
+                                    </button>
+                                    <button type="button" id="ai-image-test-btn" class="px-5 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-plug"></i> 测试连接
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 p-4 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2">
+                                <i class="ph ph-info text-blue-500 text-base mt-0.5"></i>
+                                <div class="text-xs text-gray-500 space-y-1">
+                                    <p><strong>支持的 API 格式：</strong>OpenAI Images API（dall-e-3 等）、及任何兼容该格式的第三方服务。</p>
+                                    <p><strong>请求格式：</strong>POST JSON，Header 携带 <code class="px-1 bg-gray-100 rounded">Authorization: Bearer {密钥}</code></p>
+                                    <p><strong>响应解析：</strong>自动适配 <code class="px-1 bg-gray-100 rounded">data[0].url</code> / <code class="px-1 bg-gray-100 rounded">data[0].b64_json</code> / <code class="px-1 bg-gray-100 rounded">output</code> / <code class="px-1 bg-gray-100 rounded">images[0]</code> 等常见结构。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== 数据导出 ====== -->
+                        <div id="export" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-export text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">数据导出</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-file-xls text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">我的订单导出</p>
+                                            <p class="text-xs text-gray-500">导出全部订单数据为 Excel 文件</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-brand-100 text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-download-simple"></i> 导出 Excel
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-users-three text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">客户数据导出</p>
+                                            <p class="text-xs text-gray-500">导出全部客户信息为 Excel 文件</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-brand-100 text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-download-simple"></i> 导出 Excel
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-currency-cny text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">报价单导出</p>
+                                            <p class="text-xs text-gray-500">导出全部报价记录为 Excel 文件</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-brand-100 text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-download-simple"></i> 导出 Excel
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-chart-bar text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">统计报表导出</p>
+                                            <p class="text-xs text-gray-500">导出收支统计与数据分析报表</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-brand-100 text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-download-simple"></i> 导出 PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== 数据备份 ====== -->
+                        <div id="backup" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-gray-50">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph-fill ph-database text-brand-500 text-xl"></i>
+                                    <h3 class="font-bold text-gray-800 text-base">数据备份</h3>
+                                </div>
+                                <button id="backup-refresh-btn" class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 bg-white hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center justify-center" title="刷新备份状态">
+                                    <i class="ph ph-arrows-clockwise"></i>
+                                </button>
+                            </div>
+                            <div id="backup-status-alert" class="hidden items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-4 border"></div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50 text-center">
+                                    <p class="text-xs text-gray-400 mb-1">最近备份</p>
+                                    <p id="backup-last-time" class="text-sm font-bold text-gray-800">--</p>
+                                </div>
+                                <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50 text-center">
+                                    <p class="text-xs text-gray-400 mb-1">受保护文件</p>
+                                    <p class="text-sm font-bold text-gray-800"><span id="backup-file-count">--</span> 个</p>
+                                </div>
+                                <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50 text-center">
+                                    <p class="text-xs text-gray-400 mb-1">当前数据占用</p>
+                                    <p id="backup-total-size" class="text-sm font-bold text-gray-800">--</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button id="backup-now-btn" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm shadow-brand-500/30">
+                                    <i class="ph ph-database"></i> 立即备份
+                                </button>
+                                <button id="backup-export-btn" class="px-5 py-2.5 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-2 transition-colors">
+                                    <i class="ph ph-download-simple"></i> 下载当前数据
+                                </button>
+                                <button id="backup-import-btn" class="px-5 py-2.5 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-2 transition-colors">
+                                    <i class="ph ph-upload-simple"></i> 导入备份
+                                </button>
+                                <input type="file" id="backup-import-input" accept=".json,application/json" class="hidden">
+                            </div>
+                            <p class="text-xs text-gray-400 mt-3">本地 JSON 数据会在写入前自动留存快照，每个数据文件最多保留最近 50 份。</p>
+                            <div class="mt-6">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-semibold text-gray-700">备份历史</h4>
+                                    <span id="backup-retention-tip" class="text-xs text-gray-400">保留最近 50 份/文件</span>
+                                </div>
+                                <div id="backup-history-list" class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                                    <div class="py-8 text-center text-gray-400 text-sm">
+                                        <i class="ph ph-spinner-gap animate-spin text-xl block mb-2"></i>
+                                        正在加载备份历史
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== Bug记录 ====== -->
+                        <div id="bug-reports" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-gray-50">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph-fill ph-bug text-brand-500 text-xl"></i>
+                                    <h3 class="font-bold text-gray-800 text-base">Bug记录</h3>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button id="bug-copy-btn" type="button" class="h-8 px-3 rounded-lg border border-gray-200 text-gray-500 bg-white hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center gap-1 text-xs" title="复制全部Bug记录">
+                                        <i class="ph ph-copy"></i> 复制全部
+                                    </button>
+                                    <button id="bug-export-btn" type="button" class="h-8 px-3 rounded-lg border border-gray-200 text-gray-500 bg-white hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center gap-1 text-xs" title="导出Bug记录JSON">
+                                        <i class="ph ph-download-simple"></i> 导出
+                                    </button>
+                                    <button id="bug-refresh-btn" type="button" class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 bg-white hover:bg-gray-50 hover:text-brand-600 transition-colors flex items-center justify-center" title="刷新记录">
+                                        <i class="ph ph-arrows-clockwise"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="bug-status-alert" class="hidden items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-4 border"></div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-5">
+                                <div class="border border-gray-100 rounded-xl bg-gray-50/40 p-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="md:col-span-2">
+                                            <label class="form-label">Bug标题</label>
+                                            <input id="bug-title" type="text" class="form-input bg-white" placeholder="如：订单详情抽屉字段缺失">
+                                        </div>
+                                        <div>
+                                            <label class="form-label">所在页面</label>
+                                            <input id="bug-page" type="text" class="form-input bg-white" placeholder="如：我的订单">
+                                        </div>
+                                        <div>
+                                            <label class="form-label">严重程度</label>
+                                            <select id="bug-severity" class="form-input bg-white">
+                                                <option value="低">低</option>
+                                                <option value="中" selected>中</option>
+                                                <option value="高">高</option>
+                                                <option value="阻塞">阻塞</option>
+                                            </select>
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="form-label">问题描述</label>
+                                            <textarea id="bug-description" rows="4" class="form-input bg-white resize-none" placeholder="复现步骤、期望表现、实际表现..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <input id="bug-files-input" type="file" accept="image/*,.pdf,.mp4,.mov" multiple class="hidden">
+                                        <button id="bug-files-btn" type="button" class="w-full py-2.5 border border-dashed border-gray-300 text-gray-500 bg-white rounded-lg hover:text-brand-600 hover:border-brand-300 transition-colors text-sm flex items-center justify-center gap-2">
+                                            <i class="ph ph-upload-simple"></i> 上传截图或附件
+                                        </button>
+                                        <div id="bug-selected-files" class="mt-3 space-y-2"></div>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                                        <button id="bug-reset-btn" type="button" class="px-4 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">清空</button>
+                                        <button id="bug-submit-btn" type="button" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center gap-1.5">
+                                            <i class="ph ph-paper-plane-tilt"></i> 保存Bug
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-sm font-semibold text-gray-700">已记录的问题</h4>
+                                        <span id="bug-count" class="text-xs text-gray-400">0 条</span>
+                                    </div>
+                                    <div id="bug-report-list" class="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                                        <div class="py-10 text-center text-gray-400 text-sm">
+                                            <i class="ph ph-spinner-gap animate-spin text-xl block mb-2"></i>
+                                            正在加载Bug记录
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== 数据清理 ====== -->
+                        <div id="cleanup" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-broom text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">数据清理</h3>
+                            </div>
+                            <div class="bg-red-50/50 border border-red-100 rounded-lg p-4 mb-5 flex items-start gap-3">
+                                <i class="ph-fill ph-warning text-red-500 text-lg mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-red-600">清理操作不可恢复，请谨慎操作</p>
+                                    <p class="text-xs text-gray-500 mt-1">建议在清理前先进行数据备份。清理后的数据将移入回收站保留30天。</p>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-flask text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">清理测试数据</p>
+                                            <p class="text-xs text-gray-500">删除所有标记为"测试"的订单和客户记录</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 text-sm font-medium transition-colors">清理</button>
+                                </div>
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-clock-countdown text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">清理过期数据</p>
+                                            <p class="text-xs text-gray-500">删除超过1年的已关闭订单和流失客户数据</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 text-sm font-medium transition-colors">清理</button>
+                                </div>
+                                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-image text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">清理无用附件</p>
+                                            <p class="text-xs text-gray-500">删除未关联任何订单的海报和截图文件</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 text-sm font-medium transition-colors">清理</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== 回收站 ====== -->
+                        <div id="recycle" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-50">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph-fill ph-trash-simple text-brand-500 text-xl"></i>
+                                    <h3 class="font-bold text-gray-800 text-base">回收站</h3>
+                                </div>
+                                <span class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">已删除记录保留30天</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-[700px]">
+                                    <thead>
+                                        <tr class="bg-gray-50/50 text-gray-500 text-xs border-b border-gray-100">
+                                            <th class="py-3 px-4 font-medium">删除内容</th>
+                                            <th class="py-3 px-2 font-medium">类型</th>
+                                            <th class="py-3 px-2 font-medium">删除时间</th>
+                                            <th class="py-3 px-2 font-medium text-center">剩余天数</th>
+                                            <th class="py-3 px-4 font-medium text-center">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-gray-800 text-sm">
+                                        <tr class="border-b border-gray-50 hover:bg-gray-50/80 transition-colors">
+                                            <td class="py-3 px-4">旧版网站改版</td>
+                                            <td class="py-3 px-2"><span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">订单</span></td>
+                                            <td class="py-3 px-2 text-gray-500 text-xs">2025-06-20 16:30</td>
+                                            <td class="py-3 px-2 text-center"><span class="text-orange-500 font-medium">18天</span></td>
+                                            <td class="py-3 px-4 text-center">
+                                                <button class="text-xs text-green-600 hover:underline mr-3">恢复</button>
+                                                <button class="text-xs text-red-500 hover:underline">彻底删除</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-b border-gray-50 hover:bg-gray-50/80 transition-colors">
+                                            <td class="py-3 px-4">吴先生</td>
+                                            <td class="py-3 px-2"><span class="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs">客户</span></td>
+                                            <td class="py-3 px-2 text-gray-500 text-xs">2025-06-18 10:15</td>
+                                            <td class="py-3 px-2 text-center"><span class="text-orange-500 font-medium">15天</span></td>
+                                            <td class="py-3 px-4 text-center">
+                                                <button class="text-xs text-green-600 hover:underline mr-3">恢复</button>
+                                                <button class="text-xs text-red-500 hover:underline">彻底删除</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-b border-gray-50 hover:bg-gray-50/80 transition-colors">
+                                            <td class="py-3 px-4">Logo设计报价单</td>
+                                            <td class="py-3 px-2"><span class="px-2 py-0.5 bg-orange-50 text-orange-600 rounded text-xs">报价单</span></td>
+                                            <td class="py-3 px-2 text-gray-500 text-xs">2025-06-15 14:20</td>
+                                            <td class="py-3 px-2 text-center"><span class="text-red-500 font-medium">11天</span></td>
+                                            <td class="py-3 px-4 text-center">
+                                                <button class="text-xs text-green-600 hover:underline mr-3">恢复</button>
+                                                <button class="text-xs text-red-500 hover:underline">彻底删除</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50/80 transition-colors">
+                                            <td class="py-3 px-4">抖音封面图v1</td>
+                                            <td class="py-3 px-2"><span class="px-2 py-0.5 bg-cyan-50 text-cyan-600 rounded text-xs">海报</span></td>
+                                            <td class="py-3 px-2 text-gray-500 text-xs">2025-06-10 09:45</td>
+                                            <td class="py-3 px-2 text-center"><span class="text-red-500 font-medium">6天</span></td>
+                                            <td class="py-3 px-4 text-center">
+                                                <button class="text-xs text-green-600 hover:underline mr-3">恢复</button>
+                                                <button class="text-xs text-red-500 hover:underline">彻底删除</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
+                                <p class="text-xs text-gray-400">共 4 条已删除记录</p>
+                                <button class="px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-trash"></i> 清空回收站
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ====== 关于系统 ====== -->
+                        <div id="about" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-info text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">关于系统</h3>
+                            </div>
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg shadow-blue-200">
+                                    <img src="../../assets/gif/logo.gif" alt="Logo" class="w-full h-full object-cover">
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-bold text-gray-800">文的项目工作台</h4>
+                                    <p class="text-sm text-gray-500">大吉大利 · 今晚接单</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-xs text-gray-400">版本</span>
+                                        <span class="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded">v1.0.0 专业版</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                    <p class="text-xs text-gray-400 mb-1">授权状态</p>
+                                    <p class="text-sm font-medium text-green-600 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> 已授权</p>
+                                </div>
+                                <div class="p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                    <p class="text-xs text-gray-400 mb-1">到期时间</p>
+                                    <p class="text-sm font-medium text-gray-800">2025-12-31</p>
+                                </div>
+                                <div class="p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                    <p class="text-xs text-gray-400 mb-1">数据存储</p>
+                                    <p class="text-sm font-medium text-gray-800">本地存储 · 48.6 MB</p>
+                                </div>
+                                <div class="p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                    <p class="text-xs text-gray-400 mb-1">最近更新</p>
+                                    <p class="text-sm font-medium text-gray-800">2025-07-03</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-3 mt-6">
+                                <button class="px-4 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-2 transition-colors">
+                                    <i class="ph ph-arrows-clockwise"></i> 检查更新
+                                </button>
+                                <button class="px-4 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-2 transition-colors">
+                                    <i class="ph ph-question"></i> 使用帮助
+                                </button>
+                                <button class="px-4 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-2 transition-colors">
+                                    <i class="ph ph-chat-teardrop-text"></i> 反馈建议
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        // 新架构下所有路由都是「一层」路径（/orders、/settings…），
+        // 旧代码里大量 `(ROOT_URL || PAGE_BASE || '') + 'assets/...'` 的拼接
+        // 在两者为空时会退化成相对路径，在深路径下就会算错。
+        // 统一置成根路径，拼出来的都是 `/assets/...`、`/api/...`，与当前路由深度无关。
+        window.PAGE_BASE = '/';
+        window.ROOT_URL = '/';
+    </script>
+    <title>文的项目工作台</title>
+
+    <!-- 基础资源 -->
+    <script src="assets/tailwind.min.js"></script>
+    <script src="assets/echarts.min.js"></script>
+    <link rel="stylesheet" href="assets/fonts/phosphor-regular.css">
+    <link rel="stylesheet" href="assets/fonts/phosphor-fill.css">
+    <link rel="stylesheet" href="assets/fonts/inter.css">
+    <script src="js/tailwind-config.js"></script>
+    <script src="js/cdn-fallback.js"></script>
+    <link rel="stylesheet" href="css/common.css">
+    <script src="js/theme.js"></script>
+
+    <!-- 数据层 -->
+    <script src="js/api.js"></script>
+
+    <!-- 壳层：侧边栏 / 顶栏 / 头像 / 平台图标 -->
+    <script src="js/sidebar.js"></script>
+    <script src="js/header.js"></script>
+    <script src="js/avatar.js"></script>
+    <script src="js/platform-icons.js"></script>
+
+    <!-- 共享业务模块（页面视图按需调用）
+         这些模块自己管 DOM 的创建/销毁，并监听 spa:cleanup-forms 重置状态，
+         因此只加载一次即可，不随视图反复初始化。 -->
+    <script src="js/memo-form.js"></script>
+    <script src="js/order-form.js"></script>
+    <script src="js/poster-form.js"></script>
+    <script src="js/platform-manager.js"></script>
+
+    <!-- 核心层：顺序不可调换（dom → ui → view → router） -->
+    <script src="js/core/dom.js"></script>
+    <script src="js/core/ui.js"></script>
+    <script src="js/core/view.js"></script>
+    <script src="js/core/router.js"></script>
+    <script src="js/changelog.js"></script>
+
+    <!-- 视图（每个文件用 App.view() 自注册） -->
+    <script src="js/views/dashboard.js"></script>
+    <script src="js/views/orders.js"></script>
+    <script src="js/views/quote.js"></script>
+    <script src="js/views/customer.js"></script>
+    <script src="js/views/posters.js"></script>
+    <script src="js/views/canvas.js"></script>
+    <script src="js/views/stats.js"></script>
+    <script src="js/views/project.js"></script>
+    <script src="js/views/accounts.js"></script>
+    <script src="js/views/bookmarks.js"></script>
+    <script src="js/views/resume.js"></script>
+    <script src="js/views/memo.js"></script>
+    <script src="js/views/reminder.js"></script>
+    <script src="js/views/settings.js"></script>
+    <!-- 平台总览看板 + 三个平台详情页（共用一个模板 + 一个工厂，注册 4 条路由） -->
+    <script src="js/views/platform.js"></script>
+    <script src="js/views/platform-posts.js"></script>
+
+    <!-- 启动器放最后 -->
+    <script src="js/app.js"></script>
+</head>
+<body class="flex h-screen overflow-hidden text-sm font-sans">
+
+    <!-- 侧边栏由 sidebar.js 的 initSidebar() 自动插入到 body 最前面 -->
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-[#f9fafb]">
+        <div id="page-view" class="flex-1 flex flex-col overflow-hidden"></div>
+    </main>
+
+</body>
+</html>

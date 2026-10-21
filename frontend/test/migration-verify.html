@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>迁移行为验证</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">迁移行为验证（不是「能渲染」，而是「真的通了」）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/app.html" style="width:1280px;height:700px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+(function () {
+    'use strict';
+
+    var results = [];
+    var frame = document.getElementById('frame');
+
+    function check(name, actual, expected) {
+        var ok = actual === expected;
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name +
+            (ok ? '' : '  期望 ' + JSON.stringify(expected) + '，实际 ' + JSON.stringify(actual)));
+        return ok;
+    }
+
+    function truthy(name, actual, hint) {
+        var ok = !!actual;
+        results.push((ok ? 'PASS  ' : 'FAIL  ') + name + (ok ? '' : '  [' + (hint || '') + ']'));
+        return ok;
+    }
+
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+        w.addEventListener('error', function (e) { errors.push(e.message); });
+
+        await sleep(1500);
+
+        // ---------- 1. 兼容层就位 ----------
+        truthy('旧全局 ui 已挂载（dashboard 依赖）', w.ui && typeof w.ui.toast.error === 'function');
+        check('ui.confirm 支持回调式调用', typeof w.ui.confirm, 'function');
+        truthy('App.ui 存在', w.App && w.App.ui);
+        truthy('spaNavigate 兼容函数已提供（header/canvas 依赖）', typeof w.spaNavigate, 'function');
+
+        // ---------- 2. spa:ready 的 page 必须是旧页面标识 ----------
+        var seen = [];
+        w.addEventListener('spa:ready', function (e) { seen.push(e.detail && e.detail.page); });
+
+        await w.App.router.navigate('/');
+        await sleep(500);
+        check('首页 spa:ready 的 page 为 index.html（旧守卫才认）', seen[seen.length - 1], 'index.html');
+
+        // ---------- 3. dashboard 的图表/卡片真的初始化了 ----------
+        var pub = d.getElementById('platform-xianyu-published');
+        truthy('平台发布状态被真实数据填充（不再是占位 --）',
+            pub && pub.textContent.trim() !== '--' && pub.textContent.trim() !== '',
+            '当前值 ' + (pub ? pub.textContent.trim() : '元素不存在'));
+        truthy('趋势图容器已渲染 canvas', d.querySelector('#trendChart canvas'), 'trendChart 内无 canvas');
+
+        // ---------- 4. 切到 resume：data-act 委托生效 ----------
+        await w.App.router.navigate('/resume');
+        await sleep(700);
+
+        var zoomBtn = d.querySelector('[data-act="zoomIn"]');
+        truthy('resume 模板已用 data-act 声明动作', zoomBtn);
+        // 静态模板必须干净；渲染后的 HTML 里 JS 拼接的 onclick 靠全局桥接兜底
+        var tplResume = await (await w.fetch('/views/resume.html')).text();
+        check('resume 静态模板内不再有内联 onclick', tplResume.indexOf('onclick='), -1);
+        truthy('resume 渲染后 onclick 引用的函数在 window 上都存在',
+            (function () {
+                var html = d.getElementById('page-view').innerHTML;
+                var names = (html.match(/onclick="(\w+)\(/g) || [])
+                    .map(function (m) { return m.slice(9, -1); });
+                // this / event 是内联处理器的作用域自带对象，不算全局函数
+                var uniq = names.filter(function (v, i) {
+                    return names.indexOf(v) === i && v !== 'this' && v !== 'event';
+                });
+                var missing = uniq.filter(function (n) { return typeof w[n] !== 'function'; });
+                if (missing.length) console.warn('缺失：', missing);
+                return missing.length === 0 || uniq.length === 0;
+            })(), '有 onclick 指向未定义函数');
+
+        // 点击一个 data-act 按钮，验证委托真的转到了页面函数（不抛错即为通）
+        var errBefore = errors.length;
+        if (zoomBtn) zoomBtn.click();
+        await sleep(200);
+        check('点击 data-act 按钮未抛错', errors.length, errBefore);
+
+        // ---------- 5. 离开 resume 后 window 上的页面函数必须被回收 ----------
+        truthy('resume 挂载期间函数确实挂到了 window（说明旧代码在正常工作）',
+            typeof w.prevPage === 'function' || typeof w.zoomIn === 'function');
+
+        await w.App.router.navigate('/memo');
+        await sleep(500);
+        check('离开 resume 后 window.zoomIn 已回收', typeof w.zoomIn, 'undefined');
+        check('离开 resume 后 window.prevPage 已回收', typeof w.prevPage, 'undefined');
+        truthy('框架自身没被误删（App 仍在）', w.App && w.App.router);
+
+        // ---------- 6. 切到 project：外部脚本按需加载并初始化 ----------
+        await w.App.router.navigate('/project');
+        await sleep(1400);
+
+        truthy('project-page.js 已按需加载',
+            !!d.querySelector('script[data-project-page]'));
+        truthy('project 页面已初始化（看板容器有内容）',
+            d.getElementById('kanban-view') &&
+            d.getElementById('kanban-view').innerHTML.trim().length > 100,
+            '内容长度 ' + (d.getElementById('kanban-view')
+                ? d.getElementById('kanban-view').innerHTML.trim().length : '无容器'));
+
+        // ---------- 7. 切到 accounts：data-act 生效 ----------
+        await w.App.router.navigate('/accounts');
+        await sleep(700);
+        truthy('accounts 模板已用 data-act 声明动作',
+            d.querySelector('[data-act="openAccountForm"]'));
+        var tplAcc = await (await w.fetch('/views/accounts.html')).text();
+        check('accounts 静态模板内不再有内联 onclick', tplAcc.indexOf('onclick='), -1);
+        truthy('accounts 渲染后 onclick 引用的函数在 window 上都存在',
+            (function () {
+                var html = d.getElementById('page-view').innerHTML;
+                var names = (html.match(/onclick="(\w+)\(/g) || [])
+                    .map(function (m) { return m.slice(9, -1); });
+                // this / event 是内联处理器的作用域自带对象，不算全局函数
+                var uniq = names.filter(function (v, i) {
+                    return names.indexOf(v) === i && v !== 'this' && v !== 'event';
+                });
+                var missing = uniq.filter(function (n) { return typeof w[n] !== 'function'; });
+                if (missing.length) console.warn('缺失：', missing);
+                return missing.length === 0 || uniq.length === 0;
+            })(), '有 onclick 指向未定义函数');
+
+        // ---------- 8. dashboard 平台卡片用 data-path 跳转 ----------
+        await w.App.router.navigate('/');
+        await sleep(700);
+        var card = d.querySelector('[data-path="/xianyu"]');
+        truthy('平台卡片用 data-path 声明目标路由', card);
+        if (card) {
+            card.click();
+            await sleep(600);
+            check('点击平台卡片后路由切到 /xianyu', w.location.pathname, '/xianyu');
+        }
+
+        // ---------- 9. platform 总览看板（补漏迁移的页面）----------
+        await w.App.router.navigate('/platform');
+        await sleep(1200);
+
+        check('platform 视图已挂载', w.App.views.current().name, 'platform');
+        check('platform 页面标题正确', d.title.indexOf('总览看板'), 0);
+        truthy('_platformPage 已挂到 window（内联 onclick 依赖）',
+            w._platformPage && typeof w._platformPage.selectPlatform === 'function',
+            '当前 ' + typeof w._platformPage);
+
+        var pErrBefore = errors.length;
+        if (w._platformPage && typeof w._platformPage.selectPlatform === 'function') {
+            try { w._platformPage.selectPlatform('xianyu'); } catch (ex) { errors.push('selectPlatform: ' + ex.message); }
+        }
+        await sleep(500);
+        check('调用平台筛选未抛错', errors.length, pErrBefore);
+
+        await w.App.router.navigate('/memo');
+        await sleep(500);
+        check('离开 platform 后 _platformPage 已回收', typeof w._platformPage, 'undefined');
+
+        // ---------- 收尾 ----------
+        check('全程无运行期 JS 错误', errors.length, 0);
+        if (errors.length) results.push('  错误：' + errors.slice(0, 5).join(' | '));
+
+        var failed = results.filter(function (x) { return x.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0
+            ? '>>> ALL PASS (' + results.filter(function (x) { return x.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

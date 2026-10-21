@@ -1,0 +1,125 @@
+<div class="flex-1 overflow-y-auto p-6 lg:p-8">
+    <div class="max-w-[1200px] mx-auto">
+
+        <!-- 筛选与搜索 -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <select id="filter-category" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-brand-500">
+                    <option value="">全部分类</option>
+                    <option value="docs">技术文档</option>
+                    <option value="tools">开发工具</option>
+                    <option value="learning">学习资源</option>
+                    <option value="design">设计资源</option>
+                    <option value="community">技术社区</option>
+                    <option value="other">其他</option>
+                </select>
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="search-input" placeholder="搜索网站名称、标签..." class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 outline-none focus:border-brand-500">
+                </div>
+            </div>
+            <button data-act="new" class="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors flex items-center gap-2">
+                <i class="ph ph-plus"></i> 添加收藏
+            </button>
+        </div>
+
+        <!-- 收藏网格 -->
+        <div id="bookmarks-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+
+        <!-- 空状态 -->
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20">
+            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <i class="ph ph-bookmark-simple text-3xl text-gray-400"></i>
+            </div>
+            <p class="text-gray-500 mb-2">暂无收藏网址</p>
+            <p class="text-gray-400 text-xs">点击右上角添加第一个收藏</p>
+        </div>
+
+    </div>
+</div>
+
+<!-- 收藏表单抽屉：位于视图容器内，切页时随内容销毁 -->
+<div id="bookmark-drawer" class="fixed inset-0 z-[1000] hidden">
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-act="close"></div>
+    <div class="absolute right-0 top-0 h-full w-[480px] bg-white shadow-2xl transform translate-x-full transition-transform duration-300" id="bookmark-drawer-panel">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800" id="drawer-title">添加收藏</h3>
+                <button data-act="close" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-x text-gray-500"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="bookmark-form" class="space-y-5">
+                    <input type="hidden" id="bookmark-id">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">网站名称 <span class="text-red-500">*</span></label>
+                        <input type="text" id="bookmark-title" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="例如：Vue.js 官方文档" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">网址 <span class="text-red-500">*</span></label>
+                        <input type="url" id="bookmark-url" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="https://..." required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">分类 <span class="text-red-500">*</span></label>
+                        <select id="bookmark-category" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500 bg-white" required>
+                            <option value="">选择分类</option>
+                            <option value="docs">技术文档</option>
+                            <option value="tools">开发工具</option>
+                            <option value="learning">学习资源</option>
+                            <option value="design">设计资源</option>
+                            <option value="community">技术社区</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">标签</label>
+                        <input type="text" id="bookmark-tags" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500" placeholder="用逗号分隔，例如：前端, Vue, 教程">
+                        <p class="text-xs text-gray-400 mt-1">多个标签用逗号分隔</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                        <textarea id="bookmark-desc" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500 resize-none" placeholder="添加网站描述..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">网站图标</label>
+                        <div class="flex items-center gap-4">
+                            <div id="bookmark-icon-preview" class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                                <i class="ph ph-image text-xl text-gray-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <input type="file" id="bookmark-icon-upload" accept="image/*" class="hidden">
+                                <button type="button" data-act="pick-icon" class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    上传图标
+                                </button>
+                                <p class="text-xs text-gray-400 mt-1">支持 JPG、PNG、SVG 格式，建议 64x64 像素</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="use-bookmark-text-icon" class="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500">
+                        <label for="use-bookmark-text-icon" class="text-sm text-gray-700">使用网站名称首字作为图标</label>
+                    </div>
+                    <div id="bookmark-text-icon-preview" class="hidden">
+                        <div class="w-12 h-12 rounded-lg bg-brand-500 text-white flex items-center justify-center text-xl font-bold" id="bookmark-text-icon-display">
+                            网
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="p-6 border-t border-gray-100 flex gap-3">
+                <button type="button" data-act="close" class="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">取消</button>
+                <button type="button" data-act="save" class="flex-1 px-4 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors">保存</button>
+            </div>
+        </div>
+    </div>
+</div>

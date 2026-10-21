@@ -1,0 +1,32 @@
+<div class="p-6">
+    <h2 class="text-lg font-medium text-gray-800">订单列表（样例视图 A）</h2>
+    <p class="mt-2 text-sm text-gray-500">
+        这一页是独立的 HTML 片段，由 router fetch 后注入 <code class="px-1 bg-gray-100 rounded">#page-view</code>。
+        下面这个计时器在离开页面时会被自动清理 —— 旧架构里它会被漏掉，一直跑下去。
+    </p>
+
+    <div class="mt-5 p-4 rounded-lg bg-blue-50 border border-blue-100">
+        <p class="text-sm text-blue-700">
+            已在本页停留 <span data-count class="font-medium">0</span> 秒
+        </p>
+    </div>
+
+    <div class="mt-5 flex gap-2">
+        <button data-action="toast" class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm">测试统一 toast</button>
+        <button data-action="confirm" class="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600">测试 Promise confirm</button>
+    </div>
+
+    <div class="mt-6">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">演示：未转义 vs 已转义</h3>
+        <div class="rounded-lg border border-gray-100 divide-y divide-gray-50 text-sm">
+            <div class="p-3 flex gap-3">
+                <span class="w-24 text-gray-400 shrink-0">原始输入</span>
+                <code class="text-gray-700 break-all">&lt;img src=x onerror=alert(1)&gt;</code>
+            </div>
+            <div class="p-3 flex gap-3">
+                <span class="w-24 text-gray-400 shrink-0">escapeHtml</span>
+                <code class="text-green-600 break-all" data-escaped></code>
+            </div>
+        </div>
+    </div>
+</div>

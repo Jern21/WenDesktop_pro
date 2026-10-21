@@ -1,0 +1,178 @@
+<!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1600px] mx-auto space-y-6">
+
+                <!-- Top Metrics Row -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="stats-metrics">
+                    <!-- Metric 1: 订单总数 -->
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-soft relative">
+                        <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center mb-3">
+                            <i class="ph-fill ph-bag text-lg"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-1">订单总数</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-1" id="stat-order-count">-</h3>
+                        <p class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i> <span id="stat-order-growth">--</span></p>
+                    </div>
+                    <!-- Metric 2: 成交总额 -->
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-soft relative">
+                        <div class="w-9 h-9 rounded-lg bg-green-50 text-green-500 flex items-center justify-center mb-3">
+                            <i class="ph-fill ph-currency-cny text-lg"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-1">成交总额</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-1" id="stat-revenue">-</h3>
+                        <p class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i> <span id="stat-revenue-growth">--</span></p>
+                    </div>
+                    <!-- Metric 3: 平均客单价 -->
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-soft relative">
+                        <div class="w-9 h-9 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center mb-3">
+                            <i class="ph-fill ph-chart-line-up text-lg"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-1">平均客单价</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-1" id="stat-avg-order">-</h3>
+                        <p class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i> <span id="stat-avg-growth">--</span></p>
+                    </div>
+                    <!-- Metric 4: 成交客户数 -->
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-soft relative">
+                        <div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center mb-3">
+                            <i class="ph-fill ph-users text-lg"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-1">成交客户数</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-1" id="stat-customers">-</h3>
+                        <p class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i> <span id="stat-customer-growth">--</span></p>
+                    </div>
+                    <!-- Metric 5: 复购率 -->
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-soft relative">
+                        <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center mb-3">
+                            <i class="ph-fill ph-percent text-lg"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-1">复购率</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-1" id="stat-repeat-rate">-</h3>
+                        <p class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i> <span id="stat-repeat-growth">--</span></p>
+                    </div>
+                    <!-- Metric 6: 好评率 -->
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-soft relative">
+                        <div class="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-500 flex items-center justify-center mb-3">
+                            <i class="ph-fill ph-smiley text-lg"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-1">好评率</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-1" id="stat-good-rate">-</h3>
+                        <p class="text-[10px] text-gray-400 flex items-center"><i class="ph ph-minus mr-0.5"></i> <span id="stat-good-growth">--</span></p>
+                    </div>
+                </div>
+
+                <!-- Row 1: Revenue Trend + Platform Distribution -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Revenue Trend (Line Chart) -->
+                    <div class="card lg:col-span-2 h-[360px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-base">收入趋势</h3>
+                                <p class="text-xs text-gray-400 mt-0.5" id="revenueTrendSubtitle">全量收入趋势</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="px-3 py-1 text-xs border border-brand-200 text-brand-600 bg-brand-50 rounded-lg font-medium">月度</button>
+                                <button class="px-3 py-1 text-xs border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors">周度</button>
+                            </div>
+                        </div>
+                        <div id="revenueChart" class="flex-1 w-full"></div>
+                    </div>
+
+                    <!-- Platform Distribution (Pie Chart) -->
+                    <div class="card lg:col-span-1 h-[360px] flex flex-col">
+                        <h3 class="font-semibold text-gray-800 text-base mb-1">客源平台分布</h3>
+                        <p class="text-xs text-gray-400 mb-2">各平台客户来源占比</p>
+                        <div id="platformChart" class="flex-1 w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Project Type + Monthly Orders -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Project Type Distribution (Bar Chart) -->
+                    <div class="card h-[340px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-base">项目类型分布</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">按项目类型统计订单数量</p>
+                            </div>
+                        </div>
+                        <div id="projectTypeChart" class="flex-1 w-full"></div>
+                    </div>
+
+                    <!-- Orders Trend (Bar Chart with Type Switch) -->
+                    <div class="card h-[340px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-base" id="ordersTrendTitle">订单量统计</h3>
+                                <p class="text-xs text-gray-400 mt-0.5" id="ordersTrendSubtitle">按项目类型统计</p>
+                            </div>
+                            <div class="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                                <button class="orders-type-btn px-3 py-1 text-xs rounded-md font-medium transition-all bg-white text-brand-600 shadow-sm" data-type="total">总览</button>
+                                <button class="orders-type-btn px-3 py-1 text-xs rounded-md font-medium transition-all text-gray-500 hover:text-gray-700" data-type="annual">年度</button>
+                                <button class="orders-type-btn px-3 py-1 text-xs rounded-md font-medium transition-all text-gray-500 hover:text-gray-700" data-type="monthly">月度</button>
+                            </div>
+                        </div>
+                        <div id="ordersTrendChart" class="flex-1 w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Customer Level + Conversion Funnel -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Customer Level Distribution -->
+                    <div class="card h-[340px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-base">客户等级分布</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">高价值/普通/潜在/流失客户占比</p>
+                            </div>
+                        </div>
+                        <div id="customerLevelChart" class="flex-1 w-full"></div>
+                    </div>
+
+                    <!-- Conversion Funnel -->
+                    <div class="card h-[340px] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-base">转化漏斗分析</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">从咨询到成交的转化率</p>
+                            </div>
+                        </div>
+                        <div id="funnelChart" class="flex-1 w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Row 4: Detailed Data Table -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-gray-800 text-base">明细数据</h3>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1.5 text-xs border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1">
+                                <i class="ph ph-funnel"></i> 筛选
+                            </button>
+                            <button class="px-3 py-1.5 text-xs border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1">
+                                <i class="ph ph-download-simple"></i> 导出
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="bg-gray-50/50 text-gray-500 text-xs border-b border-gray-100">
+                                    <th class="py-3 px-4 font-medium">周期</th>
+                                    <th class="py-3 px-2 font-medium text-center">订单数</th>
+                                    <th class="py-3 px-2 font-medium text-center">成交金额</th>
+                                    <th class="py-3 px-2 font-medium text-center">新增客户</th>
+                                    <th class="py-3 px-2 font-medium text-center">平均客单价</th>
+                                    <th class="py-3 px-2 font-medium text-center">复购率</th>
+                                    <th class="py-3 px-2 font-medium text-center">好评率</th>
+                                    <th class="py-3 px-4 font-medium text-center">环比增长</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthly-detail-tbody" class="text-gray-800 text-sm">
+                                <tr><td colspan="8" class="py-8 text-center text-gray-400">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>

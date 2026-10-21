@@ -1,0 +1,311 @@
+<!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1400px] mx-auto space-y-6">
+
+                <!-- 顶部统计卡片 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="card flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-fill ph-bell-ringing text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">今日待办</p>
+                            <h3 class="text-xl font-bold text-gray-800" id="stat-today">0</h3>
+                        </div>
+                    </div>
+                    <div class="card flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-fill ph-calendar-x text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">即将到期</p>
+                            <h3 class="text-xl font-bold text-gray-800" id="stat-soon">0</h3>
+                        </div>
+                    </div>
+                    <div class="card flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-green-50 text-green-500 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-fill ph-check-circle text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">已完成</p>
+                            <h3 class="text-xl font-bold text-gray-800" id="stat-done">0</h3>
+                        </div>
+                    </div>
+                    <div class="card flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-fill ph-list-checks text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">全部提醒</p>
+                            <h3 class="text-xl font-bold text-gray-800" id="stat-total">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 主体：左侧日历 + 右侧提醒列表 -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                    <!-- 左侧：日历 -->
+                    <div class="card xl:col-span-1">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-gray-800 text-base flex items-center gap-2">
+                                <i class="ph-fill ph-calendar-blank text-brand-500"></i>日历
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <button id="cal-prev" class="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
+                                    <i class="ph ph-caret-left"></i>
+                                </button>
+                                <span id="cal-title" class="text-sm font-medium text-gray-700 min-w-[80px] text-center"></span>
+                                <button id="cal-next" class="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
+                                    <i class="ph ph-caret-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 text-center text-xs text-gray-400 mb-2">
+                            <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                        </div>
+                        <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
+
+                        <!-- 日历图例 -->
+                        <div class="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-gray-50">
+                            <span class="flex items-center gap-1 text-[10px] text-gray-400">
+                                <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span>有提醒
+                            </span>
+                            <span class="flex items-center gap-1 text-[10px] text-gray-400">
+                                <span class="w-2 h-2 rounded bg-brand-500"></span>今天
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：提醒列表 -->
+                    <div class="xl:col-span-2 flex flex-col">
+                        <!-- 筛选 + 添加 -->
+                        <div class="card flex items-center justify-between gap-3 flex-wrap mb-4">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button class="filter-btn active px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" data-filter="all">全部</button>
+                                <button class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" data-filter="today">今日</button>
+                                <button class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" data-filter="soon">7天内</button>
+                                <button class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" data-filter="overdue">已逾期</button>
+                                <button class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" data-filter="done">已完成</button>
+                            </div>
+                            <button id="add-reminder-btn" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors flex-shrink-0">
+                                <i class="ph ph-plus"></i> 新建提醒
+                            </button>
+                        </div>
+
+                        <!-- 提醒列表 - 双列布局，最大高度与日历齐平，支持滚动 -->
+                        <div class="card flex-1 overflow-hidden">
+                            <div id="reminder-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto max-h-[420px] p-1"></div>
+
+                            <!-- 空状态 -->
+                            <div id="empty-state" class="hidden text-center py-12">
+                                <i class="ph ph-bell-slash text-5xl text-gray-200 mb-3 block"></i>
+                                <p class="text-gray-400 text-sm">暂无提醒事项</p>
+                                <p class="text-gray-300 text-xs mt-1">点击「新建提醒」添加你的第一个待办</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部：提醒配置 -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-gray-800 text-base flex items-center gap-2">
+                            <i class="ph-fill ph-gear-six text-brand-500"></i>提醒配置
+                        </h3>
+                        <button id="add-category-btn" class="text-xs text-brand-500 hover:text-brand-600 flex items-center gap-1 transition-colors">
+                            <i class="ph ph-plus"></i> 新增分类
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 通知设置 -->
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">通知方式</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-bell text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-700 font-medium">浏览器通知</p>
+                                            <p class="text-[10px] text-gray-400">到期前在浏览器弹窗提醒</p>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-switch on" data-config="browser_notify"><div class="toggle-dot"></div></div>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-clock-countdown text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-700 font-medium">提前提醒</p>
+                                            <p class="text-[10px] text-gray-400">在到期前指定时间推送通知</p>
+                                        </div>
+                                    </div>
+                                    <select id="advance-time" class="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none bg-white text-gray-600">
+                                        <option value="0">准时</option>
+                                        <option value="1" selected>提前1小时</option>
+                                        <option value="3">提前3小时</option>
+                                        <option value="24">提前1天</option>
+                                        <option value="72">提前3天</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-red-100 text-red-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-warning text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-700 font-medium">逾期高亮</p>
+                                            <p class="text-[10px] text-gray-400">超过截止时间的提醒标红显示</p>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-switch on" data-config="overdue_highlight"><div class="toggle-dot"></div></div>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-green-100 text-green-500 flex items-center justify-center">
+                                            <i class="ph-fill ph-arrows-clockwise text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-700 font-medium">自动归档</p>
+                                            <p class="text-[10px] text-gray-400">完成后7天自动归档隐藏</p>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-switch off" data-config="auto_archive"><div class="toggle-dot"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分类管理 -->
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">提醒分类</h4>
+                            <div id="category-list" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    <!-- ========== 新建/编辑提醒 模态框 (在 #page-view 内部) ========== -->
+    <div id="reminder-modal" class="modal-overlay hidden">
+        <div class="modal-panel">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-800 text-base" id="modal-title">新建提醒</h3>
+                <button id="modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- 标题 -->
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1.5">提醒标题 <span class="text-red-500">*</span></label>
+                    <input type="text" id="form-title" placeholder="如：客户需求确认截止" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 transition-colors">
+                </div>
+                <!-- 描述 -->
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1.5">详细描述</label>
+                    <textarea id="form-desc" rows="2" placeholder="补充说明..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 transition-colors resize-none"></textarea>
+                </div>
+                <!-- 日期 + 时间 -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5">截止日期 <span class="text-red-500">*</span></label>
+                        <input type="date" id="form-date" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5">截止时间</label>
+                        <input type="time" id="form-time" value="09:00" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                </div>
+                <!-- 分类 + 优先级 -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5">分类</label>
+                        <select id="form-category" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-white focus:border-brand-500 transition-colors"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5">优先级</label>
+                        <select id="form-priority" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-white focus:border-brand-500 transition-colors">
+                            <option value="high">高 — 紧急重要</option>
+                            <option value="medium" selected>中 — 正常处理</option>
+                            <option value="low">低 — 有空再做</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 重复设置 -->
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1.5">重复</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button class="repeat-btn px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors active" data-repeat="none">不重复</button>
+                        <button class="repeat-btn px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors" data-repeat="daily">每天</button>
+                        <button class="repeat-btn px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors" data-repeat="weekly">每周</button>
+                        <button class="repeat-btn px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors" data-repeat="monthly">每月</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 p-5 border-t border-gray-100">
+                <button id="modal-cancel" class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+                <button id="modal-save" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 分类管理 模态框 ========== -->
+    <div id="category-modal" class="modal-overlay hidden">
+        <div class="modal-panel max-w-md">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-800 text-base">新增分类</h3>
+                <button id="cat-modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1.5">分类名称 <span class="text-red-500">*</span></label>
+                    <input type="text" id="cat-form-name" placeholder="如：账单缴费" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1.5">颜色标识</label>
+                    <div class="flex gap-2 flex-wrap" id="cat-color-picker">
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-blue-400 ring-2 ring-offset-2 ring-blue-400" data-color="blue" data-cls="cat-work"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-purple-400" data-color="purple" data-cls="cat-order"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-cyan-400" data-color="cyan" data-cls="cat-meeting"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-amber-400" data-color="amber" data-cls="cat-personal"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-red-400" data-color="red" data-cls="cat-deadline"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-green-400" data-color="green" data-cls="cat-green"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-pink-400" data-color="pink" data-cls="cat-pink"></button>
+                        <button class="cat-color-btn w-8 h-8 rounded-lg bg-indigo-400" data-color="indigo" data-cls="cat-indigo"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 p-5 border-t border-gray-100">
+                <button id="cat-modal-cancel" class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+                <button id="cat-modal-save" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 删除确认 ========== -->
+    <div id="delete-modal" class="modal-overlay hidden">
+        <div class="modal-panel max-w-sm">
+            <div class="p-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
+                    <i class="ph-fill ph-warning text-2xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 text-base mb-2">确认删除？</h3>
+                <p class="text-sm text-gray-500 mb-5" id="delete-text">删除后将无法恢复，确定要删除这条提醒吗？</p>
+                <div class="flex gap-3">
+                    <button id="delete-cancel" class="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+                    <button id="delete-confirm" class="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg opacity-0 pointer-events-none transition-all duration-300"></div>

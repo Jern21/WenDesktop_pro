@@ -1,0 +1,165 @@
+        <!-- Content Area -->
+        <div class="flex-1 overflow-hidden">
+            <div class="flex h-full">
+
+                <!-- Left: Job List -->
+                <div class="w-[360px] flex-shrink-0 border-r border-gray-100 bg-white flex flex-col">
+                    <!-- Search -->
+                    <div class="p-4 border-b border-gray-100">
+                        <div class="relative">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="job-search" placeholder="搜索岗位或公司..." 
+                                class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Job List -->
+                    <div id="job-list" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+                        <!-- Job cards will be rendered here -->
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="p-4 border-t border-gray-100 bg-gray-50">
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span>共 <strong id="job-count" class="text-gray-800">0</strong> 份简历</span>
+                            <span class="text-green-600 flex items-center gap-1">
+                                <i class="ph-fill ph-check-circle"></i> 已投递 12 份
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: PDF Viewer -->
+                <div class="flex-1 bg-gray-100 flex flex-col">
+                    <!-- Toolbar -->
+                    <div id="pdf-toolbar" class="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0 hidden">
+                        <div class="flex items-center gap-4">
+                            <span id="current-job-name" class="font-medium text-gray-800">岗位名称</span>
+                            <span id="current-job-company" class="text-xs text-gray-500">公司名称</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Page Navigation -->
+                            <div class="flex items-center gap-1 mr-4">
+                                <button data-act="prevPage" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600">
+                                    <i class="ph ph-caret-left"></i>
+                                </button>
+                                <span class="text-sm text-gray-600">
+                                    <input type="number" id="page-input" min="1" value="1" 
+                                        class="w-10 text-center border border-gray-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:border-brand-500">
+                                    / <span id="total-pages">1</span>
+                                </span>
+                                <button data-act="nextPage" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600">
+                                    <i class="ph ph-caret-right"></i>
+                                </button>
+                            </div>
+                            <!-- Zoom -->
+                            <div class="flex items-center gap-1 border-l border-gray-200 pl-4">
+                                <button data-act="zoomOut" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="缩小">
+                                    <i class="ph ph-minus"></i>
+                                </button>
+                                <span id="zoom-level" class="text-sm text-gray-600 w-14 text-center">100%</span>
+                                <button data-act="zoomIn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="放大">
+                                    <i class="ph ph-plus"></i>
+                                </button>
+                                <button data-act="fitToWidth" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600" title="适应宽度">
+                                    <i class="ph ph-frame-corners"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button data-act="openEditModal" class="px-3 py-1.5 border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 rounded-lg text-xs font-medium flex items-center gap-1.5" title="编辑岗位信息">
+                                <i class="ph ph-pencil-simple"></i> 编辑
+                            </button>
+                            <button data-act="uploadPdfForCurrentJob" class="px-3 py-1.5 border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                                <i class="ph ph-upload-simple"></i> 重新上传
+                            </button>
+                            <button data-act="downloadCurrentPdf" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5">
+                                <i class="ph ph-download-simple"></i> 下载
+                            </button>
+                            <button data-act="deleteCurrentJob" class="px-3 py-1.5 border border-red-200 text-red-600 bg-white hover:bg-red-50 rounded-lg text-xs font-medium flex items-center gap-1.5" title="删除简历">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="empty-state" class="flex-1 flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-200 flex items-center justify-center">
+                                <i class="ph ph-file-text text-4xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-base font-medium text-gray-700 mb-1">选择一个岗位查看简历</h3>
+                            <p class="text-sm text-gray-400 mb-4">或创建新的岗位简历</p>
+                            <button data-act="createNewJob" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium">
+                                新增简历
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PDF Container -->
+                    <div id="pdf-container-wrapper" class="flex-1 overflow-auto custom-scrollbar hidden">
+                        <div id="pdf-container" class="p-8 min-h-full flex flex-col items-center">
+                            <!-- PDF pages will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- New Job Modal (在 #page-view 内部，SPA 导航时随内容一起注入) -->
+<div id="new-job-modal" class="fixed inset-0 z-[9999] hidden">
+    <div class="absolute inset-0 bg-black/50" data-act="closeNewJobModal"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">新增简历</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1.5">岗位名称 <span class="text-red-500">*</span></label>
+                <input type="text" id="new-job-title" placeholder="如：高级前端工程师" 
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1.5">公司名称</label>
+                <input type="text" id="new-job-company" placeholder="如：字节跳动" 
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1.5">上传简历 PDF</label>
+                <div id="pdf-upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-brand-400 hover:bg-brand-50/30 transition-all cursor-pointer">
+                    <i class="ph ph-upload-simple text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-sm text-gray-500">点击或拖拽上传 PDF</p>
+                    <p class="text-xs text-gray-400 mt-1">支持 PDF 格式，最大 10MB</p>
+                </div>
+                <input type="file" id="new-job-pdf" accept="application/pdf" class="hidden">
+                <p id="selected-filename" class="text-xs text-brand-600 mt-2 hidden"></p>
+            </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button data-act="closeNewJobModal" class="flex-1 px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">取消</button>
+            <button data-act="saveNewJob" class="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Job Modal -->
+<div id="edit-job-modal" class="fixed inset-0 z-[9999] hidden">
+    <div class="absolute inset-0 bg-black/50" data-act="closeEditModal"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">编辑岗位信息</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1.5">岗位名称 <span class="text-red-500">*</span></label>
+                <input type="text" id="edit-job-title" placeholder="如：高级前端工程师"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1.5">公司名称</label>
+                <input type="text" id="edit-job-company" placeholder="如：字节跳动"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500">
+            </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button data-act="closeEditModal" class="flex-1 px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">取消</button>
+            <button data-act="saveEditJob" class="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">保存</button>
+        </div>
+    </div>
+</div>

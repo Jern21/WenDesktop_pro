@@ -1,0 +1,19 @@
+<div class="p-6">
+    <h2 class="text-lg font-medium text-gray-800">客户列表（样例视图 B）</h2>
+    <p class="mt-2 text-sm text-gray-500">
+        这一页验证「同一视图连续进入两次」不再报错 —— 这正是旧架构需要把
+        <code class="px-1 bg-gray-100 rounded">let/const</code> 强行改写成 <code class="px-1 bg-gray-100 rounded">var</code> 才能绕过的坑。
+    </p>
+
+    <div class="mt-5 p-4 rounded-lg bg-amber-50 border border-amber-100">
+        <p class="text-sm text-amber-700">
+            本视图累计挂载次数：<span data-mounts class="font-medium">0</span>
+        </p>
+    </div>
+
+    <div class="mt-6 space-y-2">
+        <div class="p-3 rounded-lg border border-gray-100 text-sm text-gray-600">客户 A · 进行中</div>
+        <div class="p-3 rounded-lg border border-gray-100 text-sm text-gray-600">客户 B · 已交付</div>
+        <div class="p-3 rounded-lg border border-gray-100 text-sm text-gray-600">客户 C · 待报价</div>
+    </div>
+</div>

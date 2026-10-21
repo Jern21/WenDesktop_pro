@@ -1,6 +1,17 @@
 # 文的项目工作台
 
+[![Version](https://img.shields.io/badge/version-2.0.0-2563eb?style=flat-square)](frontend/js/changelog.js)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Express](https://img.shields.io/badge/Express-4.x-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com)
+[![Frontend](https://img.shields.io/badge/frontend-native%20SPA-f59e0b?style=flat-square)](docs/架构重构方案.md)
+[![Storage](https://img.shields.io/badge/storage-JSON%20files-6b7280?style=flat-square)](#技术栈)
+[![Auth](https://img.shields.io/badge/auth-HMAC%20cookie-8b5cf6?style=flat-square)](#快速开始)
+[![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#许可)
+[![Tests](https://img.shields.io/badge/tests-node%20--test-0ea5e9?style=flat-square)](#运行测试)
+
 个人接单工作台，一套用于管理接单业务全流程的本地 Web 应用：从客户、订单、报价到多平台内容发布、素材库与数据统计，一站式完成记录与复盘。
+
+> 版本说明与更新记录：应用内顶栏 **更新日志** 按钮，或查看 [`frontend/js/changelog.js`](frontend/js/changelog.js)。
 
 ## 功能特性
 
@@ -11,7 +22,7 @@
 - **多平台发布台账**：小红书/闲鱼/抖音发帖记录、数据表现统计、爆款标记、咨询客户追踪
 - **待办与智能提醒**：待办事项、截止日期、优先级标记、到期自动提醒
 - **数据统计**：收入趋势、平台客源占比、项目类型分布、利润率核算
-- **系统管理**：账号登录、数据备份与恢复、一键导出 Excel
+- **系统管理**：访问密码、数据备份与恢复、一键导出 Excel
 
 ## 技术栈
 
@@ -20,7 +31,8 @@
 | 后端 | Node.js + Express |
 | 前端 | 原生 JavaScript + Tailwind CSS + ECharts + Phosphor Icons |
 | 存储 | JSON 文件存储（自动备份） |
-| 架构 | 前端 SPA 局部刷新 + RESTful API |
+| 架构 | 真 SPA（`app.html` + History 路由）+ RESTful API |
+| 安全 | HMAC 无状态 Cookie 鉴权（本机可免登录） |
 
 ## 快速开始
 
@@ -32,9 +44,17 @@
 
 双击 `start.bat`，脚本会自动检查依赖、启动后端服务并打开浏览器：
 
-- 前端地址：<http://localhost:3456>
+- 前端地址：<http://localhost:3456>（默认进入新 SPA 入口 `app.html`）
 - API 地址：<http://localhost:3456/api>
 - 健康检查：<http://localhost:3456/api/health>
+
+首次开启鉴权时，控制台会打印自动生成的访问密码（也可设置环境变量 `APP_PASSWORD`）。本机开发可保持默认「本机免登录」；公网部署请设置强密码。
+
+| 环境变量 | 说明 |
+|----------|------|
+| `AUTH_ENABLED=0` | 关闭鉴权（仅建议完全可信的本机环境） |
+| `AUTH_TRUST_LOCALHOST=0` | 本机也需输入密码 |
+| `SPA_AS_HOME=0` | 首页回退旧版 `index.html` |
 
 停止服务请双击 `stop.bat`。
 
@@ -54,32 +74,40 @@ cd backend
 npm test           # 或双击 test.bat（node --test）
 ```
 
+前端另有路由冒烟、迁移校验等页面测试，见 `frontend/test/` 与 `tools/verify-consistency.js`。
+
 ## 项目结构
 
 ```
-├── backend/            # Node.js 后端服务
-│   ├── server.js       # 服务入口（API + 静态托管 + SPA 路由回退）
-│   ├── src/
-│   │   ├── routes/     # RESTful API 路由（16 个模块）
-│   │   ├── utils/      # 存储、响应、备份等工具
-│   │   └── data/       # 种子数据
-│   ├── test/           # 单元测试
-│   └── data/           # 运行时数据（JSON + 上传文件）
-├── frontend/           # 前端页面
-│   ├── index.html      # 首页仪表盘
-│   ├── js/             # 全局脚本（路由、API、UI 组件等）
-│   ├── pages/          # 业务页面（business/content/personal/platform）
-│   ├── css/            # 样式
-│   └── assets/         # 静态资源
-├── docs/               # 项目文档
-├── start.bat / stop.bat / test.bat   # 一键启停与测试脚本
-└── 工作内容.md          # 需求清单
+├── backend/                 # Node.js 后端
+│   ├── server.js            # API + 静态托管 + SPA 回退 + 鉴权守卫
+│   ├── src/routes/          # REST API（含 /api/auth）
+│   ├── src/utils/           # 存储、鉴权等
+│   └── test/                # 单元测试（含 auth）
+├── frontend/
+│   ├── app.html             # ★ SPA 唯一入口（默认首页）
+│   ├── login.html           # 登录页
+│   ├── js/
+│   │   ├── core/            # dom / ui / view / router
+│   │   ├── views/           # 各页面视图模块
+│   │   ├── app.js           # 启动与导航桥接
+│   │   └── changelog.js     # 版本更新日志数据
+│   ├── views/               # 页面 HTML 模板片段
+│   ├── css/views/           # 按页样式
+│   ├── pages/               # 旧版多页（迁移期可回退）
+│   └── test/                # 前端冒烟与交互测试
+├── docs/                    # 架构与方案文档
+├── tools/                   # 视图迁移与一致性校验脚本
+└── start.bat / stop.bat / test.bat
 ```
+
+架构细节见 [`docs/架构重构方案.md`](docs/架构重构方案.md)。
 
 ## 主要 API
 
 | 模块 | 前缀 | 说明 |
 |------|------|------|
+| 认证 | `/api/auth` | 登录 / 登出 / 状态 |
 | 订单 | `/api/orders` | 订单 CRUD |
 | 客户 | `/api/customers` | 客户管理 |
 | 报价 | `/api/quotes` | 报价单管理 |
@@ -91,7 +119,7 @@ npm test           # 或双击 test.bat（node --test）
 | 统计 | `/api/stats` | 数据统计 |
 | 上传 | `/api/upload` | 文件上传 |
 
-> 接口统一返回 `{ success: boolean, data: ... }` 结构。
+> 除 `/api/auth` 与健康检查外，接口默认需已登录。统一返回 `{ success: boolean, data: ... }`。
 
 ## 许可
 

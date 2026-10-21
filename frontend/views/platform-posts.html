@@ -1,0 +1,20 @@
+<!-- 平台内容页共用模板：抖音 / 闲鱼 / 小红书 三个页面结构完全相同，仅配置不同 -->
+<div class="flex-1 overflow-y-auto p-6 lg:p-8">
+    <div class="max-w-[1400px] mx-auto">
+
+        <!-- 统计卡片 -->
+        <div id="pm-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+
+        <!-- 筛选与标签页 -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <div id="pm-tabs" class="flex bg-gray-100/80 p-1 rounded-lg"></div>
+            <div id="pm-categories" class="flex items-center gap-2">
+                <span class="text-sm text-gray-500 mr-1">内容分类:</span>
+            </div>
+        </div>
+
+        <!-- 内容网格 -->
+        <div id="pm-posts" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+
+    </div>
+</div>

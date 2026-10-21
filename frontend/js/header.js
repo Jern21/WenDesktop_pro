@@ -331,6 +331,29 @@
         emerald: { bg: 'bg-emerald-50', text: 'text-emerald-500' }
     };
 
+    function renderChangelogButton() {
+        return [
+            '<button type="button" aria-label="更新日志" id="changelog-button" title="更新日志" class="relative w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors">',
+            '    <i class="ph ph-scroll text-lg"></i>',
+            '    <span id="changelog-badge" class="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full border border-white" style="display:none" aria-hidden="true"></span>',
+            '</button>'
+        ].join('');
+    }
+
+    function bindChangelogButton() {
+        var btn = document.getElementById('changelog-button');
+        if (!btn || btn.dataset.bound === 'true') return;
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', function () {
+            if (window.AppChangelog && typeof window.AppChangelog.open === 'function') {
+                window.AppChangelog.open();
+            }
+        });
+        if (window.AppChangelog && typeof window.AppChangelog.syncBadge === 'function') {
+            window.AppChangelog.syncBadge();
+        }
+    }
+
     function renderBell() {
         return [
             '<div class="relative" id="bell-container">',
@@ -564,7 +587,7 @@
     //
     // 统一布局：
     //   ┌──────────────────────────────────────────────────────────────────┐
-    //   │ [图标] 标题          [搜索] [控件] [次按钮] [主按钮] │ [铃铛] [头像] │
+    //   │ [图标] 标题          [搜索] [控件] [次按钮] [主按钮] │ [日志] [铃铛] [头像] │
     //   │        副标题                                                    │
     //   └──────────────────────────────────────────────────────────────────┘
     //
@@ -592,6 +615,7 @@
             : '';
 
         var systemArea = '<div class="flex items-center gap-2">' +
+            renderChangelogButton() +
             renderBell() +
             renderAvatar() +
             '</div>';
@@ -638,6 +662,7 @@
             header.innerHTML = headerHtml;
             bindStatsRangeButtons(header);
             syncStatsRangeButtons(header);
+            bindChangelogButton();
             loadBellNotifications();
             applyUserProfileToHeader(window.__userProfile || getDefaultUserProfile());
             loadHeaderProfile();
@@ -657,6 +682,7 @@
         header = document.getElementById('app-header');
         bindStatsRangeButtons(header);
         syncStatsRangeButtons(header);
+        bindChangelogButton();
         loadBellNotifications();
         applyUserProfileToHeader(window.__userProfile || getDefaultUserProfile());
         loadHeaderProfile();

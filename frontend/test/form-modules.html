@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>表单模块接线验证</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">表单模块接线验证（订单编辑 / 海报编辑 这类抽屉能不能打开）</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/orders" style="width:1280px;height:760px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+/**
+ * 这一页守的两类故障：
+ *
+ * 1) 接线断（用户报的「编辑订单打不开」）
+ *    orders.js 里写的是 `if (typeof window.openOrderForm === 'function') window.openOrderForm(order);`
+ *    而 order-form.js 没在 app.html 里加载 → 函数不存在 → 条件为假 → 静默什么都不做。
+ *    表现：点了完全没反应，控制台连报错都没有（最坑的一种）。
+ *    同理 posters.js 依赖 window.openPosterForm，customer.js 也依赖 openOrderForm。
+ *
+ * 2) 销毁竞争
+ *    closeOrderForm() 的 300ms 关闭动画定时器，和 spa:cleanup-forms（切页清理），
+ *    以前各自写一遍「把 overlay/drawer 置 null」。先跑的那条置空、后跑的那条
+ *    拿 null 去点 classList → TypeError: Cannot read properties of null (reading 'classList')。
+ */
+(function () {
+    'use strict';
+
+    var results = [];
+    var frame = document.getElementById('frame');
+
+    // 断言三兄弟：名字必须名副其实。
+    // 之前只有一个 check(name, ok, extra)，却被当成 eq 用（把实际值当 ok 传），
+    // 于是 '' 和 0 这种合法期望值因为是假值而被判成失败 —— 测试自己撒谎。
+    function ok(name, truthy, extra) {
+        results.push((truthy ? 'PASS  ' : 'FAIL  ') + name + (extra !== undefined ? '  [' + extra + ']' : ''));
+        return !!truthy;
+    }
+    function eq(name, actual, expected) {
+        return ok(name, actual === expected, actual === expected ? undefined : '实际=' + JSON.stringify(actual) + ' 期望=' + JSON.stringify(expected));
+    }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    // 轮询等待。固定 sleep 在无头浏览器 + 虚拟时间下会抖：
+    // 网络/渲染稍慢一点，断言就随机失败，于是「真 bug」和「测慢了」混在一起没法判断。
+    //
+    // ⚠️ 超时用「轮次」而不是 Date.now()：--virtual-time-budget 下虚拟时钟的推进速度
+    //    和 setTimeout 队列不是一回事，用墙钟算超时会出现「300ms 的定时器还没轮到，
+    //    墙钟已经过了 5s」的假超时（实测踩过）。
+    // 等某个东西「出现」。返回命中的值，等不到返回 null。
+    async function waitFor(fn, tries, interval) {
+        tries = tries || 120;
+        interval = interval || 50;
+        for (var i = 0; i < tries; i++) {
+            var v = fn();
+            if (v) return v;
+            await sleep(interval);
+        }
+        return null;
+    }
+
+    // 等某个东西「消失」。必须单独一个函数：
+    // 拿 waitFor 去等消失会立刻返回（元素本来就在，第一次轮询就"命中"），
+    // 等于完全没等 —— 这个坑把「关闭后抽屉已移除」测成了永远失败。
+    async function waitGone(fn, tries, interval) {
+        tries = tries || 120;
+        interval = interval || 50;
+        for (var i = 0; i < tries; i++) {
+            if (!fn()) return true;
+            await sleep(interval);
+        }
+        return false;
+    }
+
+    // 「更多 → 编辑订单」这一串动作，各个页面里重复出现，抽出来统一等待
+    async function openEditDrawer(d) {
+        var moreBtn = await waitFor(function () { return d.querySelector('.order-more-btn'); });
+        if (!moreBtn) return { ok: false, reason: '没有「更多」按钮' };
+        moreBtn.click();
+        var item = await waitFor(function () { return d.querySelector('.order-action-menu .order-action-item'); });
+        if (!item) return { ok: false, reason: '下拉菜单没出来' };
+        item.click();
+        var opened = await waitFor(function () { return isDrawerOpen(d, 'order-form-drawer') || null; });
+        return { ok: !!opened, item: item, reason: opened ? '' : '点了但抽屉没打开' };
+    }
+
+    function isDrawerOpen(d, id) {
+        var el = d.getElementById(id);
+        if (!el) return false;
+        return el.className.indexOf('translate-x-full') === -1;
+    }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        var errors = [];
+        // 带上 文件:行号 —— 光有 "null (reading 'classList')" 完全不知道该修哪个文件
+        w.addEventListener('error', function (e) {
+            var where = e.filename ? String(e.filename).split('/').pop() + ':' + e.lineno : '(无位置)';
+            errors.push(e.message + '  @ ' + where);
+        });
+
+        await sleep(2500);
+
+        // ---------- 1. 模块确实加载并暴露了全局 ----------
+        ok('window.openOrderForm 存在', typeof w.openOrderForm === 'function', typeof w.openOrderForm);
+        ok('window.closeOrderForm 存在', typeof w.closeOrderForm === 'function', typeof w.closeOrderForm);
+        ok('window.openPosterForm 存在', typeof w.openPosterForm === 'function', typeof w.openPosterForm);
+
+        // ---------- 2. 订单页：更多 → 编辑订单 → 抽屉打开 ----------
+        await w.App.router.render('/orders');
+
+        var open1 = await openEditDrawer(d);
+        ok('订单列表渲染出「更多」按钮', open1.reason !== '没有「更多」按钮', open1.reason || undefined);
+        ok('下拉菜单已弹出', open1.reason !== '下拉菜单没出来', open1.reason || undefined);
+        ok('菜单里有「编辑订单」项', !!open1.item, open1.item ? open1.item.textContent.trim() : open1.reason);
+        ok('点击「编辑订单」后抽屉已打开', open1.ok, open1.ok ? undefined : open1.reason);
+        eq('抽屉标题为编辑模式', (d.getElementById('order-form-title') || {}).textContent, '编辑我的订单');
+        eq('打开时锁定页面滚动', d.body.style.overflow, 'hidden');
+
+        // 关闭（关闭动画 300ms，等它真正消失再断言）
+        var closeBtn = d.getElementById('order-form-close');
+        if (closeBtn) closeBtn.click();
+        var gone = await waitGone(function () { return d.getElementById('order-form-drawer'); });
+        ok('关闭后抽屉已移除', gone);
+        eq('关闭后恢复滚动', d.body.style.overflow, '');
+        if (!gone) {
+            var leftover = d.getElementById('order-form-drawer');
+            results.push('  [diag] closeBtn=' + !!closeBtn
+                + ' 抽屉残留 translate-x-full=' + (leftover ? leftover.className.indexOf('translate-x-full') >= 0 : '-')
+                + ' overflow=' + JSON.stringify(d.body.style.overflow));
+        }
+
+        // ---------- 3. 切页后状态被重置（spa:cleanup-forms）----------
+        // 先把抽屉打开，然后直接切页，再切回来必须还能打开（isOpen 不能卡死）
+        var open2 = await openEditDrawer(d);
+        var openedBeforeLeave = !!d.getElementById('order-form-drawer');
+        ok('切页前抽屉是打开的', openedBeforeLeave, open2.ok ? undefined : open2.reason);
+
+        await w.App.router.navigate('/memo');
+        await sleep(200);
+        ok('切页后抽屉节点已清理', !d.getElementById('order-form-drawer'));
+        eq('切页后 body 滚动已恢复', d.body.style.overflow, '');
+
+        await w.App.router.navigate('/orders');
+        var open3 = await openEditDrawer(d);
+        ok('切走再回来仍能打开编辑抽屉（isOpen 未卡死）', open3.ok,
+            (open3.ok ? '' : open3.reason + ' / ') + '离开前已打开=' + openedBeforeLeave);
+
+        // ---------- 3b. 关闭动画进行中直接切页（原来会抛 null classList）----------
+        // 不等待 300ms 关动画结束就导航，正是原来那条 TypeError 的触发路径
+        w.closeOrderForm();
+        var errBeforeRace = errors.length;
+        await w.App.router.navigate('/memo');
+        await sleep(800);
+        eq('关动画未结束就切页：不抛错', errors.length, errBeforeRace);
+        ok('关动画未结束就切页：节点已清理', !d.getElementById('order-form-drawer'));
+
+        // ---------- 3c. 「打开」的 rAF 还没跑就被清理（null classList 的精确根因）----------
+        // openOrderForm 里有一段 requestAnimationFrame(...overlay.classList.remove...)，
+        // 回调是异步的。旧代码直接引用模块级的 overlay/drawer，如果这一帧之内
+        // 抽屉被切页清理掉了，回调执行时拿到的是 null → TypeError。
+        // 这里在同一个 tick 内 open 完立刻派发清理事件，把 rAF 逼到 null 之后再跑。
+        await w.App.router.render('/orders');
+        await sleep(1200);
+        var errBeforeRafNull = errors.length;
+        w.openOrderForm();
+        w.dispatchEvent(new w.CustomEvent('spa:cleanup-forms'));
+        await sleep(500);
+        eq('打开后同帧被清理：rAF 回调不抛错', errors.length, errBeforeRafNull);
+        ok('打开后同帧被清理：节点也已移除', !d.getElementById('order-form-drawer'));
+        eq('打开后同帧被清理：滚动锁已释放', d.body.style.overflow, '');
+
+        // ---------- 3d. 关闭动画还在播时立刻再打开 ----------
+        // 关闭后 isOpen 要等 300ms 动画结束才复位。如果这段时间里再点「编辑」，
+        // 旧逻辑会因为「已打开」直接跳过 → 用户看到的就是「点了打不开」。
+        await sleep(300);
+        w.openOrderForm();
+        // 等它进入「已打开」（rAF 在无头环境不保证一定出帧，等不到也不判失败，
+        // 因为下面要验的是关闭定时器的行为，跟动画无关）
+        await waitFor(function () { return isDrawerOpen(d, 'order-form-drawer') || null; }, 40);
+        w.closeOrderForm();                 // 关闭动画（300ms）还在播
+        w.openOrderForm();                  // 不等它结束，立刻再打开
+
+        // 判据放在「等过 300ms 之后节点还在不在」上：
+        //   · 若被当成「已打开」跳过 → 没有新节点，旧的会在 300ms 后被销毁
+        //   · 若旧关闭定时器没被取消 → 新节点也会在 300ms 后被一起干掉
+        // 两种情况都会让节点消失，而正常重开则会留下一个。
+        await sleep(900);
+        ok('关闭动画中立刻再打开：抽屉没被旧关闭定时器干掉', !!d.getElementById('order-form-drawer'));
+        eq('关闭动画中立刻再打开：只留一个抽屉', d.querySelectorAll('#order-form-drawer').length, 1);
+        // 遮罩也只能有一个，否则叠两层谁也点不动
+        eq('关闭动画中立刻再打开：只留一个遮罩', d.querySelectorAll('#order-form-overlay').length, 1);
+        eq('关闭动画中立刻再打开：滚动仍锁着', d.body.style.overflow, 'hidden');
+
+        // 这个实例要是活的（事件绑上了），再关一次必须能关掉
+        w.closeOrderForm();
+        ok('重新打开后的实例可以正常关闭', await waitGone(function () { return d.getElementById('order-form-drawer'); }));
+
+        // 清理
+        if (typeof w.closeOrderForm === 'function') w.closeOrderForm();
+        await sleep(400);
+
+        // ---------- 4. 海报页：编辑能打开 ----------
+        await w.App.router.navigate('/posters');
+        await sleep(1500);
+
+        var errBefore = errors.length;
+        if (typeof w.openPosterForm === 'function') {
+            w.openPosterForm();
+            await sleep(600);
+        }
+        ok('海报编辑抽屉已打开', isDrawerOpen(d, 'poster-form-drawer'));
+        eq('打开海报抽屉未抛错', errors.length, errBefore);
+        if (typeof w.closePosterForm === 'function') w.closePosterForm();
+        await sleep(500);
+
+        // ---------- 5. 客户页也依赖 openOrderForm ----------
+        await w.App.router.navigate('/customer');
+        await sleep(1500);
+        ok('客户页可正常渲染（不因缺 openOrderForm 报错）',
+            d.getElementById('page-view').innerHTML.trim().length > 100);
+
+        eq('全程无运行期 JS 错误', errors.length, 0);
+        if (errors.length) {
+            errors.slice(0, 8).forEach(function (msg, i) {
+                results.push('  错误' + (i + 1) + ': ' + String(msg));
+            });
+        }
+
+        var failed = results.filter(function (x) { return x.indexOf('FAIL') === 0; }).length;
+        results.push('');
+        results.push(failed === 0
+            ? '>>> ALL PASS (' + results.filter(function (x) { return x.indexOf('PASS') === 0; }).length + ' 项)'
+            : '>>> ' + failed + ' 项失败');
+        document.getElementById('result').textContent = results.join('\n');
+        document.title = failed === 0 ? 'ALL-PASS' : 'HAS-FAIL';
+    };
+})();
+</script>
+</body>
+</html>

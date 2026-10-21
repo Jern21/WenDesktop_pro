@@ -1,0 +1,111 @@
+<div class="flex-1 overflow-y-auto p-6 lg:p-8">
+    <div class="max-w-[1400px] mx-auto">
+
+        <!-- Quick Add Bar -->
+        <div class="bg-white rounded-xl border border-gray-100 shadow-soft p-4 mb-6 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-pencil-simple text-lg"></i>
+            </div>
+            <input type="text" id="quick-add-input" placeholder="快速记录一条备忘... (按 Enter 保存)" class="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400">
+            <div class="flex items-center gap-2">
+                <select id="quick-add-category" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-gray-50 focus:border-brand-500 text-gray-600">
+                    <option value="其他">选择分类</option>
+                    <option value="客户信息">客户信息</option>
+                    <option value="项目笔记">项目笔记</option>
+                    <option value="技术方案">技术方案</option>
+                    <option value="报价参考">报价参考</option>
+                    <option value="灵感记录">灵感记录</option>
+                    <option value="其他">其他</option>
+                </select>
+                <button data-act="new-memo" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors">
+                    <i class="ph ph-plus"></i> 新建备忘
+                </button>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="flex gap-6">
+
+            <!-- Left Sidebar: Categories -->
+            <div class="w-56 flex-shrink-0">
+                <div class="bg-white rounded-xl border border-gray-100 shadow-soft p-4 sticky top-0">
+                    <h3 class="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                        <i class="ph-fill ph-folders text-brand-500"></i> 分类
+                    </h3>
+                    <div id="category-list" class="space-y-1"></div>
+
+                    <div class="border-t border-gray-100 my-3"></div>
+
+                    <h3 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-2">
+                        <i class="ph-fill ph-tag text-gray-400"></i> 标签
+                    </h3>
+                    <div id="tag-list" class="flex flex-wrap gap-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Right: Notes Grid -->
+            <div class="flex-1 min-w-0">
+
+                <!-- Filter & Sort Bar -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span id="current-category-label" class="text-sm text-gray-600">全部笔记</span>
+                        <span id="total-count" class="text-xs text-gray-400">0 条</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="search-input" placeholder="搜索备忘..." class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-gray-50 focus:border-brand-500 text-gray-600 w-40">
+                        <select id="sort-select" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-gray-50 focus:border-brand-500 text-gray-600">
+                            <option value="updated">按更新时间</option>
+                            <option value="created">按创建时间</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Pinned Section -->
+                <div id="pinned-section" class="mb-5" style="display:none;">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i class="ph-fill ph-push-pin text-brand-500"></i> 置顶笔记
+                    </h3>
+                    <div id="pinned-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+                <!-- All Notes -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i class="ph ph-clock text-gray-400"></i> 最近笔记
+                    </h3>
+                    <div id="notes-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 详情抽屉：位于视图容器内，切页时随内容一起销毁 -->
+<div id="detail-drawer-overlay" class="detail-drawer-overlay" data-act="close-drawer"></div>
+<div id="detail-drawer" class="detail-drawer shadow-drawer">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-brand-50 to-white flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <button data-act="close-drawer" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-500 hover:text-brand-600 transition-colors">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-notebook text-brand-500"></i>
+                <span class="font-bold text-gray-800">备忘详情</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="drawer-pin-btn" data-act="pin-from-drawer" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 hover:text-brand-500 transition-colors" title="置顶">
+                <i class="ph ph-push-pin text-lg"></i>
+            </button>
+            <button data-act="edit-current" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm">
+                <i class="ph ph-pencil-simple"></i> 编辑
+            </button>
+        </div>
+    </div>
+    <div class="detail-drawer-content p-5 bg-gradient-to-b from-white to-gray-50/50">
+        <div id="drawer-content"></div>
+    </div>
+</div>

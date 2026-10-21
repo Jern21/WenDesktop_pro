@@ -1,0 +1,38 @@
+/**
+ * accounts 视图样式
+ * 提取自 frontend/pages/personal/accounts.html
+ *
+ * 原样式用 @apply，已展开为等价原生 CSS
+ * （Tailwind CDN 不保证处理 SPA 动态加载的样式表）。
+ * 色值取自 js/tailwind-config.js 的自定义色板。
+ */
+
+.account-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #f1f5f9;          /* gray-100 */
+    padding: 1.25rem;
+    transition: box-shadow 0.15s ease;
+    cursor: pointer;
+}
+
+.account-card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.platform-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+}
+
+.platform-github   { background: #f1f5f9; color: #334155; }  /* gray-100 / gray-700 */
+.platform-gitee    { background: #fef2f2; color: #dc2626; }
+.platform-coding   { background: #eff6ff; color: #2563eb; }  /* brand-50 / brand-600 */
+.platform-leetcode { background: #fefce8; color: #ca8a04; }
+.platform-juejin   { background: #eff6ff; color: #3b82f6; }  /* brand-50 / brand-500 */
+.platform-csdn     { background: #fef2f2; color: #ef4444; }
+.platform-zhihu    { background: #eff6ff; color: #2563eb; }
+.platform-other    { background: #f8fafc; color: #475569; }  /* gray-50 / gray-600 */

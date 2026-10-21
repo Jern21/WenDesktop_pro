@@ -1,0 +1,43 @@
+/**
+ * 收藏页视图样式
+ *
+ * 迁移自 pages/personal/bookmarks.html 的 <style type="text/tailwindcss">。
+ * 原样式用的是 @apply 指令，依赖 Tailwind CDN 在运行时展开；
+ * SPA 下动态注入的 style 不保证被处理，因此这里展开为等价原生 CSS。
+ */
+
+.bookmark-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #f3f4f6;
+    padding: 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.bookmark-card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.category-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+}
+
+.category-docs      { background: #eff6ff; color: #2563eb; }
+.category-tools     { background: #f0fdf4; color: #16a34a; }
+.category-learning  { background: #faf5ff; color: #9333ea; }
+.category-design    { background: #fdf2f8; color: #db2777; }
+.category-community { background: #fff7ed; color: #ea580c; }
+.category-other     { background: #f9fafb; color: #4b5563; }
+
+/* 兼容旧页面用到的多行截断 */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

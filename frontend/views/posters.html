@@ -1,0 +1,35 @@
+<!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-[1400px] mx-auto">
+                
+                <!-- Filters & Tabs -->
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <!-- Tabs (Dynamic) -->
+                    <div id="poster-tabs" class="flex bg-gray-100/80 p-1 rounded-lg">
+                        <!-- Tabs rendered by JS -->
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <!-- Platform Filters -->
+                        <div id="platform-filters" class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500 mr-1">平台:</span>
+                            <button data-filter-platform="" class="pf-btn w-8 h-8 rounded-full border border-brand-500 bg-brand-50 flex items-center justify-center text-brand-500 transition-colors tooltip" title="全部"><i class="ph ph-squares-four"></i></button>
+                            <button data-filter-platform="xianyu" class="pf-btn w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-500 transition-colors tooltip overflow-hidden" title="闲鱼"><img data-platform-icon="xianyu" alt="闲鱼" class="block w-full h-full" style="object-fit:cover" loading="lazy"></button>
+                            <button data-filter-platform="xiaohongshu" class="pf-btn w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:border-red-400 hover:text-red-500 transition-colors tooltip overflow-hidden" title="小红书"><img data-platform-icon="xiaohongshu" alt="小红书" class="block w-full h-full" style="object-fit:cover;transform:scale(1.2)" loading="lazy"></button>
+                            <button data-filter-platform="douyin" class="pf-btn w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:border-gray-800 hover:bg-gray-100 transition-colors tooltip overflow-hidden" title="抖音"><img data-platform-icon="douyin" alt="抖音" class="block w-full h-full" style="object-fit:cover" loading="lazy"></button>
+                            <button data-filter-platform="wechat" class="pf-btn w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:border-green-400 hover:text-green-500 transition-colors tooltip overflow-hidden" title="微信"><img data-platform-icon="wechat" alt="微信" class="block w-full h-full" style="object-fit:cover;transform:scale(1.2)" loading="lazy"></button>
+                        </div>
+                        <!-- 上传按钮 -->
+                        <button id="btn-upload-poster" class="flex items-center gap-1.5 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition text-sm font-medium shadow-sm shadow-brand-500/30">
+                            <i class="ph ph-plus"></i>上传海报
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Posters Grid (Dynamic) -->
+                <div id="posters-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <!-- Cards rendered by JS -->
+                </div>
+
+            </div>
+        </div>

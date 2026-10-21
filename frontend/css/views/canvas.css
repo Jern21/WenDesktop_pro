@@ -1,0 +1,35 @@
+/**
+ * canvas 视图样式
+ * 提取自 frontend/pages/content/canvas.html
+ */
+
+#infinite-canvas-page .minimal-dot-pattern {
+                    background-color: #fafafa;
+                    background-image: radial-gradient(#e4e4e7 1.15px, transparent 1.15px);
+                    background-size: 24px 24px;
+                }
+                #infinite-canvas-page .canvas-transition {
+                    transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+                }
+                #infinite-canvas-page .node-dragging {
+                    cursor: grabbing;
+                }
+                #infinite-canvas-page .ic-terminal-shell:focus-within {
+                    border-color: rgba(99,102,241,0.38);
+                    box-shadow: 0 22px 60px -28px rgba(99,102,241,0.65), 0 0 26px rgba(56,189,248,0.16), 0 0 0 1px rgba(99,102,241,0.18);
+                }
+                @keyframes ic-dash {
+                    to { stroke-dashoffset: -20; }
+                }
+                #infinite-canvas-page .animate-dash {
+                    stroke-dasharray: 6;
+                    animation: ic-dash 1.2s linear infinite;
+                }
+                [data-theme="aurora"] #infinite-canvas-page .minimal-dot-pattern {
+                    background-color: #0f0e17;
+                    background-image: radial-gradient(rgba(167,139,250,0.28) 1.15px, transparent 1.15px);
+                }
+                [data-theme="glow-digital-dark"] #infinite-canvas-page .minimal-dot-pattern {
+                    background-color: #0b0f19;
+                    background-image: radial-gradient(rgba(129,140,248,0.3) 1.15px, transparent 1.15px);
+                }

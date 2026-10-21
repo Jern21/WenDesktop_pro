@@ -22,6 +22,7 @@
     // ========== 状态 ==========
     var drawer = null;
     var overlay = null;
+    var closeTimer = null; // 关闭动画的销毁定时器，切页清理时要能取消它
     var selectedTags = [];
     var isOpen = false;
     var editMode = false;
@@ -320,7 +321,14 @@
 
     // ========== 打开 / 关闭 ==========
     function openMemoForm(data) {
-        if (isOpen) return;
+        if (isOpen) {
+            // 关闭动画进行中就直接把旧抽屉销毁、继续打开新的，
+            // 否则「关掉后立刻再点」会什么都不发生
+            if (!closeTimer) return;
+            destroyDrawer();
+        }
+        // 上一次关闭的销毁定时器如果还挂着，会把这次新建的节点一起干掉
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
 
         // 构建 DOM
         document.body.insertAdjacentHTML('beforeend', buildDrawerHTML());
@@ -338,10 +346,14 @@
         // 编辑模式填充数据
         if (editMode) fillData(data);
 
-        // 动画打开
+        // 动画打开。rAF 回调是异步的，执行时抽屉可能已被切页清理或关闭动画销毁，
+        // 所以用局部引用 + isConnected 判断，不直接吃模块级的 overlay / drawer。
+        var openingOverlay = overlay;
+        var openingDrawer = drawer;
         requestAnimationFrame(function () {
-            overlay.classList.remove('opacity-0');
-            drawer.classList.remove('translate-x-full');
+            if (!isOpen) return;
+            if (openingOverlay && openingOverlay.isConnected) openingOverlay.classList.remove('opacity-0');
+            if (openingDrawer && openingDrawer.isConnected) openingDrawer.classList.remove('translate-x-full');
         });
 
         // 锁定 body 滚动
@@ -349,29 +361,29 @@
         isOpen = true;
     }
 
+    // 统一的销毁入口：关闭动画结束、SPA 切页清理，两条路径都只走这里，
+    // 避免一边把引用置 null、另一边还拿 null 去点 classList。
+    function destroyDrawer() {
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+        var wasOpen = isOpen || overlay || drawer;
+        if (overlay) { overlay.remove(); overlay = null; }
+        if (drawer) { drawer.remove(); drawer = null; }
+        if (wasOpen) document.body.style.overflow = '';
+        isOpen = false;
+    }
+
     function closeMemoForm() {
         if (!isOpen) return;
 
-        overlay.classList.add('opacity-0');
-        drawer.classList.add('translate-x-full');
+        if (overlay) overlay.classList.add('opacity-0');
+        if (drawer) drawer.classList.add('translate-x-full');
 
-        setTimeout(function () {
-            if (overlay) { overlay.remove(); overlay = null; }
-            if (drawer) { drawer.remove(); drawer = null; }
-            document.body.style.overflow = '';
-            isOpen = false;
-        }, 300);
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(destroyDrawer, 300);
     }
 
     // SPA 切换页面时清理
-    window.addEventListener('spa:cleanup-forms', function () {
-        if (isOpen) {
-            if (overlay) { overlay.remove(); overlay = null; }
-            if (drawer) { drawer.remove(); drawer = null; }
-            document.body.style.overflow = '';
-            isOpen = false;
-        }
-    });
+    window.addEventListener('spa:cleanup-forms', destroyDrawer);
 
     // 暴露全局 API
     window.openMemoForm = openMemoForm;

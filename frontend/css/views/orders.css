@@ -1,0 +1,80 @@
+/**
+ * orders 视图样式
+ * 提取自 frontend/pages/business/orders.html
+ *
+ * 原样式用 @apply，已展开为等价原生 CSS
+ * （Tailwind CDN 不保证处理 SPA 动态加载的样式表）。
+ */
+
+/* 页面专属：表格行样式 */
+.table-row-item {
+    border-bottom: 1px solid #f8fafc;   /* gray-50 */
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: background-color 0.15s ease;
+}
+
+.table-row-item:hover {
+    background-color: rgb(248 250 252 / 0.8);
+}
+
+/* 页面专属：状态标签 */
+.status-badge {
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    border-width: 1px;
+    border-style: solid;
+}
+
+.status-processing {
+    background: #f0fdf4;
+    color: #22c55e;
+    border-color: #dcfce7;
+}
+
+.status-acceptance {
+    background: #fff7ed;
+    color: #f97316;
+    border-color: #ffedd5;
+}
+
+.status-completed {
+    background: #faf5ff;
+    color: #a855f7;
+    border-color: #f3e8ff;
+}
+
+.status-overdue {
+    background: #fef2f2;
+    color: #ef4444;
+    border-color: #fee2e2;
+}
+
+.status-closed {
+    background: #f8fafc;               /* gray-50 */
+    color: #64748b;                    /* gray-500 */
+    border-color: #e2e8f0;             /* gray-200 */
+}
+
+/* 页面专属：报价单预览 */
+.paper-preview {
+    background: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);   /* shadow-paper */
+    border: 1px solid #e2e8f0;                          /* gray-200 */
+    padding: 2rem;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    min-height: 700px;
+}
+
+.paper-dash-line {
+    border-bottom: 1px dashed #cbd5e1;  /* gray-300 */
+    margin: 1rem 0;
+}
