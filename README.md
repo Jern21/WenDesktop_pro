@@ -7,14 +7,14 @@
 [![Storage](https://img.shields.io/badge/storage-JSON%20files-6b7280?style=flat-square)](#功能)
 [![Auth](https://img.shields.io/badge/auth-HMAC%20cookie-8b5cf6?style=flat-square)](#启动)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#许可)
-[![Tests](https://img.shields.io/badge/tests-node%20--test-0ea5e9?style=flat-square)](#启动)
 
 本机接单工作台。桌面端管客户、订单、报价、项目、发帖和素材；手机端查进度、改状态。两边共用同一套后端，数据按账号分开存放。
 
 <p>
-  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="260">
-  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="260">
+  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="310">
+  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="310">
 </p>
+
 
 ## 功能
 
