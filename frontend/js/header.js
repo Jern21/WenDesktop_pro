@@ -35,6 +35,20 @@
         return Object.assign(getDefaultUserProfile(), profile || {});
     }
 
+    // 顶栏显示的用户名称：昵称优先 → 登录名 → 兜底「用户」。
+    // 头像旁文字、首页问候语都走这里，别在别处再写一套 fallback。
+    function getProfileDisplayName(profile) {
+        var normalized = normalizeUserProfile(profile);
+        return normalized.nickname || normalized.username || '用户';
+    }
+
+    // 首页标题「欢迎回来，xxx 👋」。
+    // 登录态是异步拿到的（/api/auth/status），首帧可能只有「用户」，
+    // applyUserProfileToHeader 拿到真实账号后会再刷一次这段文案。
+    function buildGreetingTitle() {
+        return '欢迎回来，' + getProfileDisplayName(window.__userProfile) + ' 👋';
+    }
+
     function makeProfileAvatar(name) {
         var label = String(name || '用').trim().charAt(0) || '用';
         var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">' +
@@ -48,12 +62,15 @@
     function applyUserProfileToHeader(profile) {
         var normalized = normalizeUserProfile(profile);
         window.__userProfile = normalized;
-        var name = normalized.nickname || normalized.username || '用户';
+        var name = getProfileDisplayName(normalized);
         var avatar = normalized.avatar || makeProfileAvatar(name);
         var avatarEl = document.getElementById('header-user-avatar');
         var nameEl = document.getElementById('header-user-name');
         if (avatarEl) avatarEl.src = avatar;
         if (nameEl) nameEl.textContent = name;
+        // 首页问候语跟着登录用户走：这段文案在渲染时还是占位「用户」，这里补上真实账号
+        var greetingEl = document.querySelector('[data-header-greeting]');
+        if (greetingEl) greetingEl.textContent = buildGreetingTitle();
     }
 
     function loadHeaderProfile() {
@@ -89,7 +106,10 @@
     //   action:   主功能按钮（如"新建订单"），固定在铃铛左侧
     var HEADER_CONFIG = {
         'index.html': {
-            title: '欢迎回来，JERN 👋',
+            // 标题跟随登录用户，所以用函数；greeting 标记让 applyUserProfileToHeader
+            // 登录态回来后能定位到这个 h2 刷新文案
+            greeting: true,
+            title: buildGreetingTitle,
             subtitle: function() {
                 var now = new Date();
                 var weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -242,13 +262,15 @@
     function renderLeft(config) {
         var iconHtml = renderIcon(config);
         var titleClass = config.titleClass || 'text-xl';
-        // 支持函数类型的 subtitle
+        // title / subtitle 都支持函数（例如首页问候语要带登录用户名）
+        var titleText = typeof config.title === 'function' ? config.title() : config.title;
         var subtitleText = typeof config.subtitle === 'function' ? config.subtitle() : config.subtitle;
+        var greetingAttr = config.greeting ? ' data-header-greeting="1"' : '';
         return [
             '<div class="flex items-center gap-3">',
             iconHtml,
             '    <div>',
-            '        <h2 class="' + titleClass + ' font-bold text-gray-800">' + escapeHtml(config.title) + '</h2>',
+            '        <h2 class="' + titleClass + ' font-bold text-gray-800"' + greetingAttr + '>' + escapeHtml(titleText) + '</h2>',
             subtitleText ? '        <p class="text-sm text-gray-500 mt-0.5">' + escapeHtml(subtitleText) + '</p>' : '',
             '    </div>',
             '</div>'
@@ -374,6 +396,202 @@
             '    </button>',
             '</div>'
         ].join('');
+    }
+
+    // ========== Grok Bot 连接入口（当前只做样式，功能待接） ==========
+    //
+    // 现状：按钮 + hover 浮层，状态固定 offline（灰色的"未连接"）。
+    // 后续接真实连接性时**只调 updateGrokStatus(state, detail)** 即可，
+    // 不需要动这里任何 DOM 结构。
+    //
+    // ⚠️ 浮层挂在 body 上（和铃铛浮层同一个理由）：header 有 z-index / 层叠上下文，
+    //    放到 header 内部会被裁切或被侧边栏盖住。挂 body 就得自己算 fixed 坐标，
+    //    所以下面有 positionGrokPopover()，且 resize 时要重算。
+    var GROK_STATUS = {
+        offline:  { label: '未连接',   dot: 'bg-gray-300',    chip: 'bg-gray-100 text-gray-500' },
+        checking: { label: '检测中',   dot: 'bg-amber-400',   chip: 'bg-amber-50 text-amber-600' },
+        online:   { label: '已连接',   dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-600' },
+        error:    { label: '连接异常', dot: 'bg-red-500',     chip: 'bg-red-50 text-red-600' }
+    };
+
+    var grokHideTimer = null;
+    var grokRealignTimer = null;
+    var grokPositionBound = false;
+
+    /**
+     * Grok 标记（官方 24×24 路径，fill=currentColor）。
+     * 来源：LobeHub 图标库的 grok.svg（单 path、evenodd）。
+     * 换 logo 时只改这一处 GROK_PATH。
+     */
+    var GROK_PATH = 'M9.27 15.29l7.978-5.897c.391-.29.95-.177 1.137.272.98 2.369.542 5.215-1.41 7.169-1.951 1.954-4.667 2.382-7.149 1.406l-2.711 1.257c3.889 2.661 8.611 2.003 11.562-.953 2.341-2.344 3.066-5.539 2.388-8.42l.006.007c-.983-4.232.242-5.924 2.75-9.383.06-.082.12-.164.179-.248l-3.301 3.305v-.01L9.267 15.292M7.623 16.723c-2.792-2.67-2.31-6.801.071-9.184 1.761-1.763 4.647-2.483 7.166-1.425l2.705-1.25a7.808 7.808 0 00-1.829-1A8.975 8.975 0 005.984 5.83c-2.533 2.536-3.33 6.436-1.962 9.764 1.022 2.487-.653 4.246-2.34 6.022-.599.63-1.199 1.259-1.682 1.925l7.62-6.815';
+
+    function renderGrokMark(className) {
+        return '<svg class="' + className + '" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true" focusable="false">' +
+            '<path d="' + GROK_PATH + '"/>' +
+            '</svg>';
+    }
+
+    function renderGrokButton() {
+        var st = GROK_STATUS.offline;
+        return [
+            '<div class="relative" id="grok-container">',
+            '    <button type="button" id="grok-button" data-state="offline" aria-label="Grok Bot 连接状态" aria-haspopup="true" aria-expanded="false" class="relative w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">',
+            renderGrokMark('w-[18px] h-[18px]'),
+            '        <span id="grok-status-dot" class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ' + st.dot + '"></span>',
+            '    </button>',
+            '</div>'
+        ].join('');
+    }
+
+    function grokFieldRow(label, value, id) {
+        return '<div class="flex items-center justify-between gap-3">' +
+            '<span class="text-[11px] text-gray-400 shrink-0">' + label + '</span>' +
+            '<span id="' + id + '" class="text-xs font-medium text-gray-700 truncate">' + escapeHtml(value) + '</span>' +
+            '</div>';
+    }
+
+    function getGrokPopoverHTML() {
+        var st = GROK_STATUS.offline;
+        return [
+            '<div class="w-64 bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/70 overflow-hidden">',
+            '    <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-2.5">',
+            '        <span class="w-7 h-7 rounded-lg bg-gray-900 text-white flex items-center justify-center shrink-0">',
+            renderGrokMark('w-4 h-4'),
+            '        </span>',
+            '        <div class="min-w-0 flex-1">',
+            '            <p class="text-sm font-bold text-gray-800 leading-tight">Grok Bot 连接</p>',
+            '            <p id="grok-pop-sub" class="text-[11px] text-gray-400 mt-0.5">助理通道 · 待配置</p>',
+            '        </div>',
+            '        <span id="grok-pop-chip" class="px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ' + st.chip + '">' + st.label + '</span>',
+            '    </div>',
+            '    <div class="px-4 py-3 space-y-2.5">',
+            grokFieldRow('服务地址', '尚未配置', 'grok-pop-endpoint'),
+            grokFieldRow('响应延迟', '—', 'grok-pop-latency'),
+            grokFieldRow('最近同步', '—', 'grok-pop-synced'),
+            '    </div>',
+            '    <div class="px-4 py-2.5 border-t border-gray-100 bg-gray-50/70">',
+            '        <p id="grok-pop-hint" class="text-[11px] text-gray-400 leading-relaxed">尚未接入。当前仅展示样式，功能开发中。</p>',
+            '    </div>',
+            '</div>'
+        ].join('');
+    }
+
+    function ensureGrokPopoverOnBody() {
+        var pop = document.getElementById('grok-popover');
+        if (!pop) {
+            pop = document.createElement('div');
+            pop.id = 'grok-popover';
+            pop.setAttribute('role', 'tooltip');
+            pop.className = 'fixed w-64 opacity-0 invisible -translate-y-1 transition-all duration-150 ease-out pointer-events-none z-[9999]';
+            pop.innerHTML = getGrokPopoverHTML();
+            document.body.appendChild(pop);
+        }
+        return pop;
+    }
+
+    /** 浮层在 body 上，位置要自己算：右边缘对齐按钮右边缘，垂直贴按钮下沿 */
+    function positionGrokPopover() {
+        var btn = document.getElementById('grok-button');
+        var pop = document.getElementById('grok-popover');
+        if (!btn || !pop) return;
+        var rect = btn.getBoundingClientRect();
+        pop.style.top = (rect.bottom + 10) + 'px';
+        pop.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+        pop.style.left = 'auto';
+    }
+
+    function showGrokPopover() {
+        var pop = ensureGrokPopoverOnBody();
+        var btn = document.getElementById('grok-button');
+        positionGrokPopover();
+        pop.classList.remove('opacity-0', 'invisible', '-translate-y-1', 'pointer-events-none');
+        pop.classList.add('opacity-100', 'visible', 'translate-y-0', 'pointer-events-auto');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+
+        // 再对齐一次：header 里的头像/昵称是异步拉回来的（loadHeaderProfile），
+        // 名字一变长，右侧整组往左挪，按钮位置就变了 → 浮层会歪几像素。
+        // 这个延迟重算专门兜这一段。
+        clearTimeout(grokRealignTimer);
+        grokRealignTimer = setTimeout(positionGrokPopover, 180);
+    }
+
+    function hideGrokPopover() {
+        var pop = document.getElementById('grok-popover');
+        var btn = document.getElementById('grok-button');
+        clearTimeout(grokRealignTimer);
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        if (!pop) return;
+        pop.classList.add('opacity-0', 'invisible', '-translate-y-1', 'pointer-events-none');
+        pop.classList.remove('opacity-100', 'visible', 'translate-y-0', 'pointer-events-auto');
+    }
+
+    function scheduleGrokHide() {
+        clearTimeout(grokHideTimer);
+        grokHideTimer = setTimeout(hideGrokPopover, 160);
+    }
+
+    function cancelGrokHide() {
+        clearTimeout(grokHideTimer);
+    }
+
+    function bindGrokButton() {
+        var container = document.getElementById('grok-container');
+        if (!container) return;
+
+        // 浮层在自己身上只绑一次（它是 body 上的持久节点，不会随 header 重建）
+        var pop = ensureGrokPopoverOnBody();
+        if (pop.dataset.hoverBound !== 'true') {
+            pop.dataset.hoverBound = 'true';
+            pop.addEventListener('mouseenter', cancelGrokHide);
+            pop.addEventListener('mouseleave', scheduleGrokHide);
+        }
+
+        // 按钮每轮重建，dataset 哨兵天然失效，所以这里直接绑新的
+        container.addEventListener('mouseenter', function () {
+            cancelGrokHide();
+            showGrokPopover();
+        });
+        container.addEventListener('mouseleave', scheduleGrokHide);
+
+        if (!grokPositionBound) {
+            grokPositionBound = true;
+            window.addEventListener('resize', positionGrokPopover);
+        }
+    }
+
+    function setGrokField(id, value) {
+        if (value == null) return;
+        var el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    }
+
+    /**
+     * 更新 Grok Bot 连接外观 —— 后续接真实数据时只调这个。
+     * @param {'offline'|'checking'|'online'|'error'} state
+     * @param {{sub?:string, endpoint?:string, latency?:string, syncedAt?:string, hint?:string}} [detail]
+     */
+    function updateGrokStatus(state, detail) {
+        var key = GROK_STATUS[state] ? state : 'offline';
+        var st = GROK_STATUS[key];
+        detail = detail || {};
+
+        var btn = document.getElementById('grok-button');
+        var dot = document.getElementById('grok-status-dot');
+        var chip = document.getElementById('grok-pop-chip');
+        if (btn) {
+            btn.setAttribute('data-state', key);
+            btn.setAttribute('aria-label', 'Grok Bot 连接状态：' + st.label);
+        }
+        if (dot) dot.className = 'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ' + st.dot;
+        if (chip) {
+            chip.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ' + st.chip;
+            chip.textContent = st.label;
+        }
+        setGrokField('grok-pop-sub', detail.sub);
+        setGrokField('grok-pop-endpoint', detail.endpoint);
+        setGrokField('grok-pop-latency', detail.latency);
+        setGrokField('grok-pop-synced', detail.syncedAt);
+        setGrokField('grok-pop-hint', detail.hint);
     }
 
     /** 浮窗 HTML 模板（会被移到 body 末尾，脱离 header 层叠上下文） */
@@ -584,7 +802,7 @@
 
     function renderAvatar() {
         var profile = normalizeUserProfile(window.__userProfile);
-        var name = profile.nickname || profile.username || '用户';
+        var name = getProfileDisplayName(profile);
         var avatar = profile.avatar || makeProfileAvatar(name);
         return [
             '<div class="relative group" id="header-user-menu">',
@@ -648,13 +866,13 @@
     // ========== 组装标题栏 ==========
     //
     // 统一布局：
-    //   ┌──────────────────────────────────────────────────────────────────┐
-    //   │ [图标] 标题          [搜索] [控件] [次按钮] [主按钮] │ [日志] [铃铛] [头像] │
-    //   │        副标题                                                    │
-    //   └──────────────────────────────────────────────────────────────────┘
+    //   ┌────────────────────────────────────────────────────────────────────────┐
+    //   │ [图标] 标题      [搜索] [控件] [次按钮] [主按钮] │ [Grok] [日志] [铃铛] [头像] │
+    //   │        副标题                                                          │
+    //   └────────────────────────────────────────────────────────────────────────┘
     //
     // 左侧：可选图标 + 标题 + 副标题（所有页面结构一致）
-    // 右侧：功能按钮区 ─ 竖线分隔 ─ 系统区（铃铛 + 头像）
+    // 右侧：功能按钮区 ─ 竖线分隔 ─ 系统区（Grok + 更新日志 + 铃铛 + 头像）
     // 没有功能按钮的页面，竖线不显示，系统区仍靠右对齐
     function buildHeaderInnerHTML(pageName) {
         var config = getHeaderConfig(pageName);
@@ -677,6 +895,7 @@
             : '';
 
         var systemArea = '<div class="flex items-center gap-2">' +
+            renderGrokButton() +
             renderChangelogButton() +
             renderBell() +
             renderAvatar() +
@@ -720,10 +939,15 @@
         var header = document.getElementById('app-header');
         var headerHtml = buildHeaderInnerHTML(currentPage);
 
+        // 切换页面时先收起 Grok 浮层：它挂在 body 上，不会随 header 重建而消失，
+        // 不主动收起来会停在上一个页面的位置
+        hideGrokPopover();
+
         if (header) {
             header.innerHTML = headerHtml;
             bindStatsRangeButtons(header);
             syncStatsRangeButtons(header);
+            bindGrokButton();
             bindChangelogButton();
             bindHeaderUserMenu();
             loadBellNotifications();
@@ -745,6 +969,7 @@
         header = document.getElementById('app-header');
         bindStatsRangeButtons(header);
         syncStatsRangeButtons(header);
+        bindGrokButton();
         bindChangelogButton();
         bindHeaderUserMenu();
         loadBellNotifications();
@@ -769,4 +994,6 @@
 
     window.renderHeader = renderHeader;
     window.applyUserProfileToHeader = applyUserProfileToHeader;
+    // 后续接真实连通性时只调这个（header.js 是 app.html 静态引入的，挂 window 不会被回收）
+    window.updateGrokStatus = updateGrokStatus;
 })();

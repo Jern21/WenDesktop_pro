@@ -1,0 +1,241 @@
+/* 待办列表 + 月历 */
+
+.rem-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.rem-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.rem-seg {
+    display: flex;
+    padding: 2px;
+    border-radius: 10px;
+    background: var(--shell-rail-active);
+}
+
+.rem-seg button {
+    height: 30px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--shell-text-secondary);
+    font: inherit;
+    font-size: 0.8125rem;
+}
+
+.rem-seg button.is-active {
+    background: var(--shell-surface);
+    color: var(--shell-text);
+    font-weight: 650;
+}
+
+.rem-refresh {
+    margin-left: auto;
+    height: 30px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--shell-accent);
+    font: inherit;
+    font-size: 0.8125rem;
+}
+
+.rem-group {
+    margin-bottom: 14px;
+}
+
+.rem-group-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    color: var(--shell-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.rem-group.is-overdue .rem-group-title {
+    color: var(--ui-danger);
+}
+
+.rem-count {
+    min-width: 1.1rem;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--shell-rail-active);
+    text-align: center;
+    font-size: 0.6875rem;
+}
+
+.rem-group.is-overdue .rem-count {
+    background: var(--ui-danger-bg);
+}
+
+.rem-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    margin: 0 0 8px;
+    padding: 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 14px;
+    background: var(--shell-surface);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.rem-item.is-done .rem-title {
+    color: var(--shell-text-tertiary);
+    text-decoration: line-through;
+}
+
+.rem-check {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    margin-top: 1px;
+    border: 1.5px solid var(--shell-text-tertiary);
+    border-radius: 50%;
+    background: transparent;
+}
+
+.rem-item.is-done .rem-check {
+    border-color: var(--ui-ok);
+    background: var(--ui-ok);
+    box-shadow: inset 0 0 0 3px var(--shell-surface);
+}
+
+.rem-item.is-busy {
+    opacity: 0.6;
+}
+
+.rem-item > span:last-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.rem-title {
+    display: block;
+    color: var(--shell-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.rem-meta {
+    display: block;
+    margin-top: 3px;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.rem-done-toggle {
+    border: none;
+    background: none;
+    color: var(--shell-text-secondary);
+    font: inherit;
+    font-size: 0.8125rem;
+    padding: 8px 0;
+}
+
+.rem-state {
+    padding: 36px 12px;
+    text-align: center;
+    color: var(--shell-text-secondary);
+}
+
+.rem-retry {
+    height: 36px;
+    margin-top: 8px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 12px;
+    background: var(--shell-accent);
+    color: #fff;
+    font: inherit;
+}
+
+.rem-cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.rem-cal-head button {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: var(--shell-rail-active);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 1.1rem;
+}
+
+.rem-cal-title {
+    font-weight: 650;
+}
+
+.rem-weekdays,
+.rem-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.rem-weekdays span {
+    text-align: center;
+    color: var(--shell-text-tertiary);
+    font-size: 0.6875rem;
+}
+
+.rem-day {
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 0.875rem;
+}
+
+.rem-day.is-out {
+    visibility: hidden;
+}
+
+.rem-day.is-today {
+    box-shadow: inset 0 0 0 1px var(--shell-accent);
+}
+
+.rem-day.is-selected {
+    background: var(--shell-accent);
+    color: #fff;
+}
+
+.rem-day.has-item {
+    font-weight: 700;
+}
+
+.rem-day.has-open {
+    color: var(--ui-danger);
+}
+
+.rem-day.is-selected.has-open {
+    color: #fff;
+}
+
+.rem-day-list {
+    margin-top: 12px;
+}

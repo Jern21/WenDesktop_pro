@@ -20,8 +20,11 @@ var Storage = require('../utils/storage');
 var resp = require('../utils/response');
 var orderRules = require('../utils/order-rules');
 var orderPayload = require('../utils/order-payload');
+var customerOrders = require('../utils/customer-orders');
+var nextOrderNo = require('../utils/order-no').nextOrderNo;
 
 var orders = new Storage('orders');
+var customers = new Storage('customers');
 
 /** 白名单外的字段被丢弃时留个痕，方便发现前端多传/传错字段名 */
 function warnIgnoredFields(action, ignored) {
@@ -31,25 +34,10 @@ function warnIgnoredFields(action, ignored) {
 
 // ========== 辅助函数 ==========
 
-/**
- * 生成订单编号: DD + YYYYMMDD + 3位序号
- * 序号基于当天已有订单数量递增
- */
 function generateOrderNo() {
-    var now = new Date();
-    var y = now.getFullYear();
-    var m = String(now.getMonth() + 1).padStart(2, '0');
-    var d = String(now.getDate()).padStart(2, '0');
-    var dateStr = y + m + d;
-
-    var all = orders.findAll();
-    var prefix = 'DD' + dateStr;
-    var count = 0;
-    all.forEach(function (o) {
-        if (o.orderNo && o.orderNo.indexOf(prefix) === 0) count++;
-    });
-    var seq = String(count + 1).padStart(3, '0');
-    return prefix + seq;
+    return nextOrderNo(orders.findAll().map(function (order) {
+        return order.orderNo;
+    }));
 }
 
 // 付款字段推导、附件归一化、字段白名单与校验统一放在 utils/order-payload.js，
@@ -229,7 +217,10 @@ router.get('/', resp.asyncHandler(function (req, res) {
 router.get('/:id', resp.asyncHandler(function (req, res) {
     var record = orders.findById(req.params.id);
     if (!record) return resp.notFound(res, '订单不存在');
-    return resp.success(res, record);
+    var linked = customerOrders.matchCustomer(record, customers.findAll());
+    return resp.success(res, Object.assign({}, record, {
+        linkedCustomerId: linked ? linked.id : ''
+    }));
 }));
 
 // ========== 新建 ==========
@@ -238,8 +229,7 @@ router.post('/', resp.asyncHandler(function (req, res) {
     var built = orderPayload.buildCreatePayload(req.body || {});
     warnIgnoredFields('创建', built.ignored);
 
-    // 订单编号一律由服务端生成：客户端能指定编号就能造出重复单号，
-    // 而 generateOrderNo() 是按"当天已有数量"推算序号的，一旦重复就再也对不上。
+    // 订单编号一律由服务端生成：取当天已有编号的最大值加一，删除中间记录也不会重复。
     var record = orders.create(Object.assign({}, built.payload, {
         orderNo: generateOrderNo()
     }));

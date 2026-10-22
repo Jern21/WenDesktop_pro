@@ -1,0 +1,392 @@
+/* ============================================================
+ * 通用组件样式：列表容器 / 轻提示 / 确认弹层 / 图片兜底
+ *
+ * 配色一律走 shell.css 定义的 --shell-* 变量，天然支持亮/暗主题。
+ * 语义色不变量化（绿=成功、红=危险），因为它们在暗色下也要有足够对比度，
+ * 所以每个都给了亮/暗两套值。
+ * ========================================================== */
+
+:root,
+html[data-theme="light"] {
+    --ui-ok: #12874f;
+    --ui-ok-bg: rgba(18, 135, 79, 0.1);
+    --ui-danger: #d92020;
+    --ui-danger-bg: rgba(217, 32, 32, 0.1);
+    --ui-warn: #b25000;
+    --ui-warn-bg: rgba(178, 80, 0, 0.1);
+    --ui-info: #0071e3;
+    --ui-info-bg: rgba(0, 113, 227, 0.1);
+    --ui-skeleton: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="dark"] {
+    --ui-ok: #30d158;
+    --ui-ok-bg: rgba(48, 209, 88, 0.16);
+    --ui-danger: #ff453a;
+    --ui-danger-bg: rgba(255, 69, 58, 0.16);
+    --ui-warn: #ff9f0a;
+    --ui-warn-bg: rgba(255, 159, 10, 0.16);
+    --ui-info: #0a84ff;
+    --ui-info-bg: rgba(10, 132, 255, 0.16);
+    --ui-skeleton: rgba(255, 255, 255, 0.09);
+}
+
+/* ============================================================
+ * 列表容器
+ * ========================================================== */
+
+.lv-root {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* 下拉刷新指示器：高度由 JS 控制（0 → 56px），所以这里只给过渡和排版 */
+.lv-pull {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 0;
+    overflow: hidden;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+    transition: height 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.lv-pull.is-dragging {
+    transition: none;
+}
+
+.lv-pull.is-ready .lv-pull-text {
+    color: var(--ui-info);
+    font-weight: 600;
+}
+
+.lv-pull.is-loading .lv-pull-text::after {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 6px;
+    vertical-align: -1px;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: lv-spin 0.7s linear infinite;
+}
+
+@keyframes lv-spin {
+    to { transform: rotate(360deg); }
+}
+
+.lv-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 单个条目只是外壳，具体卡片样式由各页面自己给 */
+.lv-item {
+    display: block;
+}
+
+.lv-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 0 16px;
+}
+
+.lv-footer-text {
+    font-size: 0.75rem;
+    color: var(--shell-text-tertiary);
+}
+
+.lv-footer-text--end {
+    opacity: 0.6;
+}
+
+.lv-footer-text--err {
+    color: var(--ui-danger);
+}
+
+/* ============================================================
+ * 空态 / 错误态 / 骨架
+ * ========================================================== */
+
+.lv-empty,
+.lv-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 56px 24px;
+    text-align: center;
+}
+
+.lv-empty-icon {
+    font-size: 2rem;
+    line-height: 1;
+    opacity: 0.85;
+}
+
+.lv-empty-title {
+    margin: 6px 0 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--shell-text);
+}
+
+.lv-empty-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--shell-text-tertiary);
+    line-height: 1.5;
+}
+
+.lv-error .lv-empty-title {
+    color: var(--ui-danger);
+    max-width: 22em;
+    word-break: break-word;
+}
+
+.lv-retry {
+    margin-top: 10px;
+    padding: 8px 20px;
+    border: 1px solid var(--shell-border);
+    border-radius: 999px;
+    background: var(--shell-surface);
+    color: var(--ui-info);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.lv-retry--inline {
+    margin: 0;
+}
+
+.lv-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--shell-surface);
+    border: 1px solid var(--shell-border);
+}
+
+.lv-skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--ui-skeleton);
+    animation: lv-shimmer 1.3s ease-in-out infinite;
+}
+
+.lv-skeleton-line--title {
+    width: 55%;
+    height: 15px;
+}
+
+.lv-skeleton-line--short {
+    width: 32%;
+}
+
+@keyframes lv-shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+/* ============================================================
+ * 图片兜底
+ * ========================================================== */
+
+.img-fallback {
+    object-fit: contain !important;
+    background: var(--ui-skeleton);
+}
+
+/* ============================================================
+ * Toast
+ * ========================================================== */
+
+.toast-host {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    padding: 0 24px;
+}
+
+.toast {
+    max-width: min(420px, 100%);
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: rgba(29, 29, 31, 0.92);
+    color: #fff;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    text-align: center;
+    word-break: break-word;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+    backdrop-filter: blur(12px);
+}
+
+.toast.is-in {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.toast--action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: auto;
+    text-align: left;
+}
+
+.toast-undo {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    padding: 0;
+}
+
+.toast--success { background: rgba(18, 135, 79, 0.95); }
+.toast--error   { background: rgba(198, 28, 28, 0.95); }
+.toast--warn    { background: rgba(160, 72, 0, 0.95); }
+
+html[data-theme="dark"] .toast {
+    background: rgba(58, 58, 60, 0.96);
+}
+html[data-theme="dark"] .toast--success { background: rgba(22, 122, 68, 0.96); }
+html[data-theme="dark"] .toast--error   { background: rgba(180, 30, 30, 0.96); }
+html[data-theme="dark"] .toast--warn    { background: rgba(150, 70, 0, 0.96); }
+
+/* ============================================================
+ * 底部确认弹层
+ * ========================================================== */
+
+.sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0);
+    transition: background 0.2s ease;
+}
+
+.sheet-backdrop.is-in {
+    background: rgba(0, 0, 0, 0.42);
+}
+
+.sheet-panel {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 20px 18px 14px;
+    border-radius: 18px;
+    background: var(--shell-surface);
+    color: var(--shell-text);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.16);
+    transform: translateY(14px);
+    opacity: 0;
+    transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.2s ease;
+}
+
+.sheet-backdrop.is-in .sheet-panel {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.sheet-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.sheet-message {
+    margin: 8px 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--shell-text-secondary);
+    text-align: center;
+    word-break: break-word;
+}
+
+.sheet-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.sheet-btn {
+    flex: 1;
+    min-height: 44px;
+    border: 1px solid var(--shell-border);
+    border-radius: 12px;
+    background: var(--shell-bg);
+    color: var(--shell-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.sheet-btn--primary {
+    border-color: transparent;
+    background: var(--shell-accent);
+    color: #fff;
+}
+
+.sheet-btn--danger {
+    border-color: transparent;
+    background: var(--ui-danger);
+    color: #fff;
+}
+
+.sheet-btn:active {
+    opacity: 0.82;
+}
+
+/* ============================================================
+ * 通用小件：状态徽标 / 分段控件（各页面共用，避免重复写）
+ * ========================================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.badge.is-ok      { color: var(--ui-ok);      background: var(--ui-ok-bg); }
+.badge.is-danger  { color: var(--ui-danger);  background: var(--ui-danger-bg); }
+.badge.is-warn    { color: var(--ui-warn);    background: var(--ui-warn-bg); }
+.badge.is-info    { color: var(--ui-info);    background: var(--ui-info-bg); }
+.badge.is-accent  { color: var(--shell-accent); background: var(--ui-info-bg); }
+.badge.is-muted   { color: var(--shell-text-tertiary); background: var(--ui-skeleton); }
+
+/* 底部弹层用的安全区（记一笔等 sheet 复用） */
+.is-sheet-open {
+    overflow: hidden;
+}

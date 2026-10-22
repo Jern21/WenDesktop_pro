@@ -62,10 +62,9 @@ function initAiImageConfig() {
 
     // 加载已有配置
     function loadConfig() {
-        fetch(API_BASE + '/config')
-            .then(function(r) { return r.json(); })
+        global.SettingsPage.call(API_BASE + '/config', { signal: ctx && ctx.signal })
             .then(function(result) {
-                if (result.success && result.data) {
+                if (result && result.data) {
                     var cfg = result.data;
                     apiUrlInput.value = cfg.apiUrl || '';
                     modelInput.value = cfg.model || 'dall-e-3';
@@ -100,21 +99,16 @@ function initAiImageConfig() {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> 保存中...';
 
-        fetch(API_BASE + '/config', {
+        global.SettingsPage.call(API_BASE + '/config', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: payload,
+            signal: ctx && ctx.signal
         })
-            .then(function(r) { return r.json(); })
-            .then(function(result) {
+            .then(function() {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="ph ph-floppy-disk"></i> 保存配置';
-                if (result.success) {
-                    showStatusBar('success', '配置已保存成功');
-                    loadConfig(); // 刷新状态
-                } else {
-                    showStatusBar('error', result.error || '保存失败');
-                }
+                showStatusBar('success', '配置已保存成功');
+                loadConfig();
             })
             .catch(function() {
                 saveBtn.disabled = false;
@@ -141,21 +135,21 @@ function initAiImageConfig() {
         showTestResult('testing', '正在连接...');
 
         // 先保存
-        fetch(API_BASE + '/config', {
+        global.SettingsPage.call(API_BASE + '/config', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: payload,
+            signal: ctx && ctx.signal
         })
-            .then(function() { return fetch(API_BASE + '/test', { method: 'POST' }); })
-            .then(function(r) { return r.json(); })
+            .then(function() {
+                return global.SettingsPage.call(API_BASE + '/test', {
+                    method: 'POST',
+                    signal: ctx && ctx.signal
+                });
+            })
             .then(function(result) {
                 testBtn.disabled = false;
                 testBtn.innerHTML = '<i class="ph ph-plug"></i> 测试连接';
-                if (result.success) {
-                    showTestResult('success', result.data.message || '连接成功');
-                } else {
-                    showTestResult('error', result.error || '连接失败');
-                }
+                showTestResult('success', (result.data && result.data.message) || '连接成功');
             })
             .catch(function() {
                 testBtn.disabled = false;

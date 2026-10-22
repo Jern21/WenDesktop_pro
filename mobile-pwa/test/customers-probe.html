@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>客户页探针</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+        #app { height: 720px; }
+        #result { padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
+        .ok { color: #12874f; }
+        .bad { color: #d92020; }
+    </style>
+</head>
+<body>
+    <!--
+      客户列表 / 详情探针。
+      跑法：http://127.0.0.1:3460/test/customers-probe.html
+      会临时建一位客户和一笔订单，结束时删除。
+    -->
+    <div id="app"></div>
+    <pre id="result">running…</pre>
+    <script type="module" src="/test/customers-probe.js"></script>
+</body>
+</html>

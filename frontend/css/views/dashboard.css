@@ -6,6 +6,63 @@
  * （Tailwind CDN 不保证处理 SPA 动态加载的样式表）。
  */
 
+/* 待办配色独立于全局工具类，避免浅色背景在暗色主题中残留。 */
+#todo-list {
+    --todo-fill: 0.05;
+    --todo-border: 0.12;
+    --todo-hover: 0.1;
+    --todo-icon-fill: 0.15;
+    --todo-label: #374151;
+    --todo-count: #dc2626;
+}
+
+#todo-list .dashboard-todo--blue { --todo-rgb: 59, 130, 246; --todo-ink: #2563eb; }
+#todo-list .dashboard-todo--orange { --todo-rgb: 249, 115, 22; --todo-ink: #c2410c; }
+#todo-list .dashboard-todo--gray { --todo-rgb: 107, 114, 128; --todo-ink: #4b5563; }
+#todo-list .dashboard-todo--red { --todo-rgb: 239, 68, 68; --todo-ink: #dc2626; }
+#todo-list .dashboard-todo--emerald { --todo-rgb: 16, 185, 129; --todo-ink: #047857; }
+#todo-list .dashboard-todo--rose { --todo-rgb: 244, 63, 94; --todo-ink: #e11d48; }
+#todo-list .dashboard-todo--violet { --todo-rgb: 139, 92, 246; --todo-ink: #7c3aed; }
+#todo-list .dashboard-todo--indigo { --todo-rgb: 99, 102, 241; --todo-ink: #4f46e5; }
+
+#todo-list .dashboard-todo {
+    background-color: rgba(var(--todo-rgb), var(--todo-fill));
+    border-color: rgba(var(--todo-rgb), var(--todo-border));
+}
+
+#todo-list .dashboard-todo:hover {
+    background-color: rgba(var(--todo-rgb), var(--todo-hover));
+}
+
+#todo-list .dashboard-todo-icon {
+    background-color: rgba(var(--todo-rgb), var(--todo-icon-fill));
+    color: var(--todo-icon-ink, var(--todo-ink));
+}
+
+#todo-list .dashboard-todo-label { color: var(--todo-label); }
+#todo-list .dashboard-todo-count { color: var(--todo-count); }
+
+[data-theme="aurora"] #todo-list,
+[data-theme="glow-digital-dark"] #todo-list {
+    --todo-fill: 0.1;
+    --todo-border: 0.25;
+    --todo-hover: 0.18;
+    --todo-icon-fill: 0.2;
+    --todo-count: #fda4af;
+}
+
+[data-theme="aurora"] #todo-list { --todo-label: var(--aurora-text, #e2e0f0); }
+[data-theme="glow-digital-dark"] #todo-list { --todo-label: var(--gdd-text, #e2e8f0); }
+
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--blue { --todo-icon-ink: #93c5fd; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--orange { --todo-icon-ink: #fdba74; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--gray { --todo-icon-ink: #cbd5e1; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--red { --todo-icon-ink: #fca5a5; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--emerald { --todo-icon-ink: #6ee7b7; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--rose { --todo-icon-ink: #fda4af; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--violet { --todo-icon-ink: #c4b5fd; }
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #todo-list .dashboard-todo--indigo { --todo-icon-ink: #a5b4fc; }
+
 /* 页面专属：表格行样式 */
         .table-row {
             border-bottom: 1px solid #f8fafc;   /* gray-50 */

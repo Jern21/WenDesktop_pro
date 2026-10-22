@@ -1,0 +1,384 @@
+/* 订单列表 + 详情。颜色走 shell / ui 变量，亮暗主题不用各写一套。 */
+
+.ord-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.ord-tools {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -12px -10px 8px;
+    padding: 12px 10px 8px;
+    background: var(--shell-bg);
+}
+
+.ord-search {
+    width: 100%;
+    box-sizing: border-box;
+    height: 36px;
+    margin: 0 0 8px;
+    padding: 0 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 10px;
+    background: var(--shell-surface);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 0.875rem;
+}
+
+.ord-search:focus {
+    outline: none;
+    border-color: var(--shell-accent);
+}
+
+.ord-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+}
+
+.ord-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.ord-chip {
+    flex: 0 0 auto;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--shell-border);
+    border-radius: 999px;
+    background: var(--shell-surface);
+    color: var(--shell-text-secondary);
+    font: inherit;
+    font-size: 0.75rem;
+}
+
+.ord-chip.is-active {
+    border-color: transparent;
+    background: var(--shell-accent);
+    color: #fff;
+}
+
+.ord-count {
+    margin: 0;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.ord-card {
+    padding: 12px 12px 10px;
+    border: 1px solid var(--shell-border);
+    border-radius: 14px;
+    background: var(--shell-surface);
+}
+
+.ord-card-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ord-card-line + .ord-card-line {
+    margin-top: 8px;
+}
+
+.ord-card-who {
+    flex: 0 1 auto;
+    max-width: 42%;
+    overflow: hidden;
+    color: var(--shell-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ord-card-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--shell-text-secondary);
+    font-size: 0.8125rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ord-card-amount {
+    margin-right: auto;
+    color: var(--shell-text);
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+}
+
+.ord-badge {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--shell-rail-active);
+    color: var(--shell-text-secondary);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+}
+
+.ord-badge.is-ok { color: var(--ui-ok); background: var(--ui-ok-bg); }
+.ord-badge.is-warn { color: var(--ui-warn); background: var(--ui-warn-bg); }
+.ord-badge.is-danger { color: var(--ui-danger); background: var(--ui-danger-bg); }
+.ord-badge.is-info,
+.ord-badge.is-accent { color: var(--ui-info); background: var(--ui-info-bg); }
+.ord-badge.is-muted { color: var(--shell-text-tertiary); background: var(--shell-rail-active); }
+
+.ord-due {
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.ord-due.is-overdue { color: var(--ui-danger); font-weight: 600; }
+.ord-due.is-today,
+.ord-due.is-soon { color: var(--ui-warn); }
+
+.ord-no {
+    margin-left: auto;
+    color: var(--shell-text-tertiary);
+    font-size: 0.6875rem;
+}
+
+.ord-detail {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+
+.ord-block {
+    margin-bottom: 10px;
+    padding: 14px 14px 6px;
+    border: 1px solid var(--shell-border);
+    border-radius: 16px;
+    background: var(--shell-surface);
+}
+
+.ord-block-title {
+    margin: 0 0 8px;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.ord-hero-name {
+    margin: 0 0 6px;
+    color: var(--shell-text);
+    font-size: 1.125rem;
+    line-height: 1.35;
+}
+
+.ord-hero-amount {
+    margin: 0 0 8px;
+    color: var(--shell-text);
+    font-size: 1.5rem;
+    font-weight: 650;
+}
+
+.ord-hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.ord-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 1px solid var(--shell-border);
+    font-size: 0.875rem;
+}
+
+.ord-row span:first-child {
+    flex: 0 0 auto;
+    color: var(--shell-text-secondary);
+}
+
+.ord-row span:last-child,
+.ord-row a {
+    min-width: 0;
+    color: var(--shell-text);
+    text-align: right;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.ord-row a {
+    color: var(--shell-accent);
+}
+
+.ord-row.is-overdue span:last-child {
+    color: var(--ui-danger);
+    font-weight: 600;
+}
+
+.ord-link {
+    display: inline-flex;
+    margin: 4px 0 10px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--shell-accent);
+    font: inherit;
+    font-size: 0.8125rem;
+}
+
+.ord-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 10px;
+}
+
+.ord-file {
+    width: 72px;
+    border: none;
+    padding: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+}
+
+.ord-file img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 10px;
+    background: var(--shell-rail-active);
+}
+
+.ord-file-name {
+    display: block;
+    margin-top: 4px;
+    overflow: hidden;
+    color: var(--shell-text-tertiary);
+    font-size: 0.6875rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ord-file-link {
+    color: var(--shell-accent);
+    font-size: 0.8125rem;
+}
+
+.ord-state {
+    padding: 48px 16px;
+    text-align: center;
+}
+
+.ord-state-title {
+    margin: 0 0 14px;
+    color: var(--shell-text-secondary);
+    font-size: 0.9375rem;
+}
+
+.ord-retry,
+.ord-actions button {
+    border: none;
+    border-radius: 12px;
+    background: var(--shell-accent);
+    color: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+}
+
+.ord-retry {
+    height: 36px;
+    padding: 0 16px;
+}
+
+.ord-actions:not([hidden]) {
+    position: fixed;
+    left: 0;
+    right: 3.25rem;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--shell-border);
+    background: var(--shell-rail-bg);
+    backdrop-filter: saturate(180%) blur(16px);
+}
+
+.ord-actions button {
+    flex: 1;
+    height: 42px;
+}
+
+.ord-actions button:disabled {
+    opacity: 0.55;
+}
+
+.ord-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 4px 0 14px;
+}
+
+.ord-choice {
+    height: 40px;
+    border: 1px solid var(--shell-border);
+    border-radius: 12px;
+    background: var(--shell-bg);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 0.875rem;
+}
+
+.ord-choice.is-active {
+    border-color: var(--shell-accent);
+    color: var(--shell-accent);
+    font-weight: 600;
+}
+
+.ord-ratio:not([hidden]) {
+    display: block;
+    margin: 0 0 12px;
+    color: var(--shell-text-secondary);
+    font-size: 0.8125rem;
+}
+
+.ord-ratio input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    height: 40px;
+    margin-top: 6px;
+    padding: 0 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 12px;
+    background: var(--shell-bg);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 1rem;
+}
+
+.ord-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+}
+
+.ord-lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}

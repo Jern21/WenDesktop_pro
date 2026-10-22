@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>工作台面板探针</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+        /* 模拟 shell 的内容区：高度受限 + 内部滚动，和真实环境一致 */
+        #probe-host { height: 720px; overflow-y: auto; }
+        #result { padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
+        .ok { color: #12874f; }
+        .bad { color: #d92020; }
+    </style>
+</head>
+<body>
+    <!--
+      工作台面板回归探针：确认「迁移到 lib/format.js + api/resources.js」之后渲染没坏。
+      跑法：http://127.0.0.1:3460/test/workbench-probe.html
+    -->
+    <div id="probe-host" class="mobile-content mobile-content--flush"></div>
+    <pre id="result">running…</pre>
+    <script type="module" src="/test/workbench-probe.js"></script>
+</body>
+</html>

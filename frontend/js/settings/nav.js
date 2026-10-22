@@ -46,12 +46,15 @@ function initSettingsNav() {
         });
     }, { rootMargin: '-20% 0px -70% 0px' });
 
-    document.querySelectorAll('#account, #appearance, #security, #notification, #ai-image, #export, #backup, #bug-reports, #cleanup, #recycle, #about').forEach(function(sec) {
+    document.querySelectorAll('#account, #appearance, #menu-options, #security, #notification, #ai-image, #llm, #export, #backup, #bug-reports, #cleanup, #recycle, #about').forEach(function(sec) {
         observer.observe(sec);
     });
+    return observer;
 }
 
-// ========== 账号信息 ==========
-        initSettingsNav();
+        var observer = initSettingsNav();
+        return function () {
+            if (observer && typeof observer.disconnect === 'function') observer.disconnect();
+        };
     });
 })(typeof window !== 'undefined' ? window : this);

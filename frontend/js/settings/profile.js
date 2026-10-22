@@ -132,10 +132,8 @@ function initAccountProfile() {
 
     function loadProfile() {
         showStatus('info', '正在读取账号信息...');
-        return fetch(API_BASE)
-            .then(function (res) { return res.json(); })
+        return global.SettingsPage.call(API_BASE, { signal: ctx && ctx.signal })
             .then(function (result) {
-                if (!result.success) throw new Error(result.error || '读取账号信息失败');
                 currentProfile = normalizeProfile(result.data && result.data.profile);
                 fillForm(currentProfile);
                 publishProfile(currentProfile);
@@ -157,14 +155,12 @@ function initAccountProfile() {
         }
 
         setButtonLoading(saveBtn, true, '保存中...');
-        fetch(API_BASE, {
+        global.SettingsPage.call(API_BASE, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profile: profile })
+            body: { profile: profile },
+            signal: ctx && ctx.signal
         })
-            .then(function (res) { return res.json(); })
             .then(function (result) {
-                if (!result.success) throw new Error(result.error || '保存失败');
                 currentProfile = normalizeProfile(result.data && result.data.profile);
                 fillForm(currentProfile);
                 publishProfile(currentProfile);

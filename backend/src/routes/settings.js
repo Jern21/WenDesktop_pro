@@ -130,23 +130,7 @@ router.post('/backup', resp.asyncHandler(function (req, res) {
 
 // ========== 导入数据恢复 ==========
 router.post('/restore', resp.asyncHandler(function (req, res) {
-    var backup = req.body || {};
-    if (!backup || !backup._meta) {
-        return resp.error(res, '无效的备份数据格式');
-    }
-
-    var restored = [];
-    var scope = dataBackups.captureScope();
-    Object.keys(backup).forEach(function (key) {
-        if (key === '_meta') return;
-        try {
-            dataBackups.writeJsonFile(key, backup[key], { scope: scope });
-            restored.push(key);
-        } catch (e) {
-            console.error('[Restore] 恢复失败:', key, e.message);
-        }
-    });
-
+    var restored = dataBackups.restoreBundle(req.body || {}, dataBackups.captureScope());
     return resp.success(res, { restored: restored, count: restored.length });
 }));
 

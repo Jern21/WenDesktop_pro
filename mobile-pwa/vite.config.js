@@ -72,15 +72,13 @@ export default defineConfig(function ({ mode }) {
                 },
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+                    // 业务接口和登录态不能进 Cache Storage。
+                    // NetworkFirst 会在慢网时把上一账号的响应交出来。
+                    // 静态资源仍由 precache 负责。旧的 api-cache 由应用启动和登出时删除。
                     runtimeCaching: [
                         {
                             urlPattern: /^https?:\/\/.*\/api\/.*/i,
-                            handler: 'NetworkFirst',
-                            options: {
-                                cacheName: 'api-cache',
-                                networkTimeoutSeconds: 8,
-                                expiration: { maxEntries: 32, maxAgeSeconds: 300 }
-                            }
+                            handler: 'NetworkOnly'
                         }
                     ]
                 }

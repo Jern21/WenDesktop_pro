@@ -26,6 +26,9 @@
                                 <a href="#ai-image" class="settings-nav-item" data-section="ai-image">
                                     <i class="ph ph-robot sn-icon"></i> AI生图配置
                                 </a>
+                                <a href="#llm" class="settings-nav-item" data-section="llm">
+                                    <i class="ph ph-chat-circle-dots sn-icon"></i> 大模型配置
+                                </a>
                                 <a href="#export" class="settings-nav-item" data-section="export">
                                     <i class="ph ph-export sn-icon"></i> 数据导出
                                 </a>
@@ -272,7 +275,7 @@
                                 </div>
                             </div>
 
-                            <!-- 列表由 settings.js 的 initMenuOptions() 依据侧栏实际菜单渲染 -->
+                            <!-- 列表由 js/settings/menu.js 依据侧栏实际菜单渲染 -->
                             <div id="menu-options-list" class="space-y-2">
                                 <p class="text-xs text-gray-400 py-6 text-center">正在读取菜单项…</p>
                             </div>
@@ -513,6 +516,87 @@
                                     <p><strong>支持的 API 格式：</strong>OpenAI Images API（dall-e-3 等）、及任何兼容该格式的第三方服务。</p>
                                     <p><strong>请求格式：</strong>POST JSON，Header 携带 <code class="px-1 bg-gray-100 rounded">Authorization: Bearer {密钥}</code></p>
                                     <p><strong>响应解析：</strong>自动适配 <code class="px-1 bg-gray-100 rounded">data[0].url</code> / <code class="px-1 bg-gray-100 rounded">data[0].b64_json</code> / <code class="px-1 bg-gray-100 rounded">output</code> / <code class="px-1 bg-gray-100 rounded">images[0]</code> 等常见结构。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ====== 大模型配置（小柴犬对话用） ====== -->
+                        <div id="llm" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-chat-circle-dots text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">大模型配置</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">配置一个 OpenAI 兼容的大模型接口，侧栏底部的小柴犬对话窗口就会用它来回答。不配置也能用，只是小柴会一直跟你装傻。</p>
+
+                            <!-- 配置状态提示 -->
+                            <div id="llm-status-bar" class="hidden items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-4 border">
+                                <i class="ph ph-info text-sm"></i>
+                                <span id="llm-status-text"></span>
+                            </div>
+
+                            <!-- 常见服务商快捷填充 -->
+                            <div class="mb-5">
+                                <label class="form-label">快速填充</label>
+                                <div class="flex flex-wrap gap-2" id="llm-presets">
+                                    <button type="button" class="llm-preset px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-brand-50 hover:text-brand-600 border border-gray-200 rounded-lg transition-colors" data-llm-preset="deepseek" data-api-url="https://api.deepseek.com/v1" data-model="deepseek-chat">DeepSeek</button>
+                                    <button type="button" class="llm-preset px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-brand-50 hover:text-brand-600 border border-gray-200 rounded-lg transition-colors" data-llm-preset="openai" data-api-url="https://api.openai.com/v1" data-model="gpt-4o-mini">OpenAI</button>
+                                    <button type="button" class="llm-preset px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-brand-50 hover:text-brand-600 border border-gray-200 rounded-lg transition-colors" data-llm-preset="dashscope" data-api-url="https://dashscope.aliyuncs.com/compatible-mode/v1" data-model="qwen-plus">通义千问</button>
+                                    <button type="button" class="llm-preset px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-brand-50 hover:text-brand-600 border border-gray-200 rounded-lg transition-colors" data-llm-preset="zhipu" data-api-url="https://open.bigmodel.cn/api/paas/v4" data-model="glm-4-flash">智谱 GLM</button>
+                                    <button type="button" class="llm-preset px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-brand-50 hover:text-brand-600 border border-gray-200 rounded-lg transition-colors" data-llm-preset="moonshot" data-api-url="https://api.moonshot.cn/v1" data-model="moonshot-v1-8k">Kimi</button>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1">点一下自动填地址和模型名，密钥仍需自己粘</p>
+                            </div>
+
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="form-label">API 请求地址</label>
+                                    <input type="text" id="llm-api-url" placeholder="例如: https://api.deepseek.com/v1" class="form-input font-mono text-xs">
+                                    <p class="text-xs text-gray-400 mt-1">填域名、填到 /v1、或填完整的 /v1/chat/completions 都可以，会自动补齐</p>
+                                </div>
+                                <div>
+                                    <label class="form-label">API 密钥</label>
+                                    <div class="relative">
+                                        <input type="password" id="llm-api-key" placeholder="sk-..." autocomplete="off" class="form-input font-mono text-xs pr-10">
+                                        <button type="button" id="llm-toggle-key" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                                            <i class="ph ph-eye text-sm"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">加密存储在服务端，页面上只看得到前后各 4 位；清空后保存等于删除密钥</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label class="form-label">模型名称</label>
+                                        <input type="text" id="llm-model" placeholder="deepseek-chat" class="form-input font-mono text-xs">
+                                        <p class="text-xs text-gray-400 mt-1">如 deepseek-chat、gpt-4o-mini、qwen-plus</p>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">请求超时（秒）</label>
+                                        <input type="number" id="llm-timeout" placeholder="60" value="60" min="5" max="300" class="form-input text-xs">
+                                        <p class="text-xs text-gray-400 mt-1">小柴思考的最大等待时间</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-gray-50">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div id="llm-test-result" class="hidden items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border"></div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <button type="button" id="llm-save-btn" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center gap-1.5">
+                                        <i class="ph ph-floppy-disk"></i> 保存配置
+                                    </button>
+                                    <button type="button" id="llm-test-btn" class="px-5 py-2 border border-gray-200 text-gray-600 bg-white rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-plug"></i> 测试连接
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 p-4 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2">
+                                <i class="ph ph-info text-blue-500 text-base mt-0.5"></i>
+                                <div class="text-xs text-gray-500 space-y-1">
+                                    <p><strong>接口格式：</strong>OpenAI 兼容的 <code class="px-1 bg-gray-100 rounded">POST /v1/chat/completions</code>，绝大多数国内厂商都支持。</p>
+                                    <p><strong>谁会用到：</strong>侧栏底部的小柴犬对话窗口。没配置时它会先想 1~2 秒，然后回你一句「你还没接大模型喔」。</p>
+                                    <p><strong>密钥安全：</strong>走 AES-256-GCM 加密落盘，接口返回前端时一律脱敏成 <code class="px-1 bg-gray-100 rounded">sk-x****1234</code>。</p>
                                 </div>
                             </div>
                         </div>

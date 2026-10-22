@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>list-view 探针</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #f5f5f7; }
+        #probe-host { height: 200px; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #fff; }
+        .fake-card { height: 100px; box-sizing: border-box; padding: 12px; border-bottom: 1px solid #eee; }
+        #result { padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
+        .ok { color: #12874f; }
+        .bad { color: #d92020; }
+    </style>
+</head>
+<body>
+    <!--
+      列表组件回归探针（开发用，不进生产包）
+      跑法：http://127.0.0.1:3460/test/probe.html
+      无头抓取：chrome --headless=new --dump-dom --virtual-time-budget=25000 http://127.0.0.1:3460/test/probe.html
+      结果写在 <pre id="result"> 和 body[data-probe-result] 上。
+      目录约定：测试文件一律在 mobile-pwa/test/ 下，不混进 src/。
+    -->
+    <div id="probe-host" class="mobile-content"></div>
+    <pre id="result">running…</pre>
+    <script type="module" src="/test/list-view-probe.js"></script>
+</body>
+</html>

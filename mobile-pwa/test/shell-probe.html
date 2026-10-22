@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>外壳路由探针</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+        #app { height: 720px; }
+        #result { padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
+        .ok { color: #12874f; }
+        .bad { color: #d92020; }
+    </style>
+</head>
+<body>
+    <!--
+      外壳路由探针：验证 nav → PANEL_REGISTRY → mount 这条链路。
+      这是「新增页面只改注册表」重构后的核心契约，链路断了所有页面都不显示。
+      跑法：http://127.0.0.1:3460/test/shell-probe.html
+    -->
+    <div id="app"></div>
+    <pre id="result">running…</pre>
+    <script type="module" src="/test/shell-probe.js"></script>
+</body>
+</html>

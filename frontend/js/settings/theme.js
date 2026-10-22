@@ -46,10 +46,11 @@ function initThemeSwitcher() {
         });
     });
 
-    // 监听主题变化（其他页面也可能触发）
-    window.addEventListener('themechange', function(e) {
-        updateUI(e.detail.theme);
-    });
+    if (ctx && typeof ctx.listen === 'function') {
+        ctx.listen(window, 'themechange', function (e) {
+            updateUI(e.detail && e.detail.theme);
+        });
+    }
 
     // 所有逻辑完成后才标记为已绑定（放在末尾确保异常时允许重试）
     themeCards[0].dataset.themeBound = '1';

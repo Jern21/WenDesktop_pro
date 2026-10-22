@@ -37,14 +37,14 @@ var POST_EDITABLE = [
     'publishTime', 'publishType', 'status', 'stats', 'posterId', 'tags'
 ];
 
-function deleteFileByUrl(url) {
-    uploads.deleteByUrl(url);
+function deleteFileByUrl(url, req) {
+    uploads.deleteByUrl(url, req);
 }
 
 // 批量删除图片文件
-function deleteFilesByUrls(urls) {
+function deleteFilesByUrls(urls, req) {
     if (!Array.isArray(urls)) return;
-    urls.forEach(function (url) { deleteFileByUrl(url); });
+    urls.forEach(function (url) { deleteFileByUrl(url, req); });
 }
 
 // ========== 统计概览 ==========
@@ -187,7 +187,7 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
         var newImages = picked.fields.images || [];
         existing.images.forEach(function (oldUrl) {
             if (newImages.indexOf(oldUrl) === -1) {
-                deleteFileByUrl(oldUrl);
+                deleteFileByUrl(oldUrl, req);
             }
         });
     }
@@ -203,7 +203,7 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
 
     // 删除关联的图片文件
     if (Array.isArray(record.images)) {
-        deleteFilesByUrls(record.images);
+        deleteFilesByUrls(record.images, req);
     }
 
     posts.remove(req.params.id);

@@ -89,8 +89,12 @@
         node.className = 'flex items-center gap-2 px-5 py-3 rounded-lg text-white text-sm ' +
             conf.cls + ' transition-all duration-200';
         node.style.cssText = 'opacity:0;transform:translateY(-8px);';
-        node.innerHTML = '<i class="ph ' + conf.icon + ' text-base"></i>' +
-            '<span>' + dom.escapeHtml(message) + '</span>';
+        var iconEl = document.createElement('i');
+        iconEl.className = 'ph ' + conf.icon + ' text-base';
+        var textEl = document.createElement('span');
+        textEl.textContent = message == null ? '' : String(message);
+        node.appendChild(iconEl);
+        node.appendChild(textEl);
 
         wrap.appendChild(node);
         root.appendChild(wrap);

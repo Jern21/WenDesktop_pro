@@ -292,6 +292,9 @@
                                         el = document.getElementById('metric-year-revenue');
                                         if (el) el.textContent = formatMoney(d.yearRevenue);
                                         setGrowth('metric-year-revenue-rate-wrap', 'metric-year-revenue-rate', d.yearRevenueGrowth);
+
+                                        el = document.getElementById('metric-total-revenue');
+                                        if (el) el.textContent = formatMoney(d.totalRevenue);
                                     })
                                     .catch(function(err) {
                                         ui.hideLoading();

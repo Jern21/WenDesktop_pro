@@ -22,6 +22,7 @@ var http = require('http');
 var resp = require('../utils/response');
 var settingsRepository = require('../utils/settings-repository');
 var dataBackups = require('../utils/data-backups');
+var outboundHttp = require('../utils/outbound-http');
 
 var DEFAULT_CONFIG = {
     apiUrl: '',
@@ -29,13 +30,6 @@ var DEFAULT_CONFIG = {
     model: 'dall-e-3',
     timeout: 90000
 };
-
-function normalizeTimeoutMs(value) {
-    var timeout = parseInt(value, 10);
-    if (!timeout || timeout <= 0) return DEFAULT_CONFIG.timeout;
-    // 设置页填写单位是“秒”；兼容历史已保存的毫秒值。
-    return timeout < 1000 ? timeout * 1000 : timeout;
-}
 
 function normalizeImageApiUrl(value) {
     var apiUrl = String(value || '').trim();
@@ -82,52 +76,6 @@ function formatResponsePreview(response) {
 function getConfig(scope) {
     var settings = settingsRepository.read(scope || dataBackups.captureScope());
     return Object.assign({}, DEFAULT_CONFIG, settings.imageGen || {});
-}
-
-// ========== 通用 HTTP 请求（支持 http / https） ==========
-
-function httpRequest(url, options, body) {
-    return new Promise(function (resolve, reject) {
-        var parsedUrl;
-        try {
-            parsedUrl = new URL(url);
-        } catch (e) {
-            return reject(new Error('无效的 API 地址: ' + url));
-        }
-
-        var lib = parsedUrl.protocol === 'https:' ? https : http;
-
-        var reqOptions = {
-            hostname: parsedUrl.hostname,
-            port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-            path: parsedUrl.pathname + parsedUrl.search,
-            method: options.method || 'POST',
-            headers: options.headers || {}
-        };
-
-        var req = lib.request(reqOptions, function (res) {
-            var chunks = [];
-            res.on('data', function (chunk) { chunks.push(chunk); });
-            res.on('end', function () {
-                resolve({
-                    statusCode: res.statusCode,
-                    headers: res.headers,
-                    body: Buffer.concat(chunks).toString('utf-8')
-                });
-            });
-        });
-
-        req.on('error', reject);
-        var timeoutMs = normalizeTimeoutMs(options.timeout);
-        req.setTimeout(timeoutMs, function () {
-            req.destroy(new Error('请求超时（' + Math.round(timeoutMs / 1000) + 's）'));
-        });
-
-        if (body) {
-            req.write(body);
-        }
-        req.end();
-    });
 }
 
 // ========== 从多种响应格式中提取图片地址 ==========
@@ -228,13 +176,13 @@ router.post('/generate', resp.asyncHandler(async function (req, res) {
 
     try {
         var apiUrl = normalizeImageApiUrl(config.apiUrl);
-        var response = await httpRequest(apiUrl, {
+        var response = await outboundHttp.request(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + config.apiKey
             },
-            timeout: normalizeTimeoutMs(config.timeout)
+            timeout: outboundHttp.normalizeTimeoutMs(config.timeout, DEFAULT_CONFIG.timeout)
         }, requestBody);
 
         if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -304,13 +252,13 @@ router.post('/test', resp.asyncHandler(async function (req, res) {
 
     try {
         var apiUrl = normalizeImageApiUrl(config.apiUrl);
-        var response = await httpRequest(apiUrl, {
+        var response = await outboundHttp.request(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + config.apiKey
             },
-            timeout: normalizeTimeoutMs(config.timeout)
+            timeout: outboundHttp.normalizeTimeoutMs(config.timeout, DEFAULT_CONFIG.timeout)
         }, requestBody);
 
         if (response.statusCode >= 200 && response.statusCode < 300) {

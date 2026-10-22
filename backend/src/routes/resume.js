@@ -189,7 +189,7 @@ router.post('/:id/pdf', function (req, res, next) {
         var record = resumes.findById(req.params.id);
         if (!record) return resp.notFound(res, '简历不存在');
 
-        if (record.pdfUrl) uploads.deleteByUrl(record.pdfUrl);
+        if (record.pdfUrl) uploads.deleteByUrl(record.pdfUrl, req);
 
         var updated = resumes.update(req.params.id, {
             pdfUrl: uploads.publicUrl(req.file.filename, req),
@@ -218,7 +218,7 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
     var record = resumes.findById(req.params.id);
     if (!record) return resp.notFound(res, '简历不存在');
 
-    if (record.pdfUrl) uploads.deleteByUrl(record.pdfUrl);
+    if (record.pdfUrl) uploads.deleteByUrl(record.pdfUrl, req);
 
     resumes.remove(req.params.id);
     return resp.success(res, { id: req.params.id });

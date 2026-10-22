@@ -89,8 +89,37 @@ function matchOrders(customer, allOrders) {
     });
 }
 
+/**
+ * 反查这条订单属于哪位客户。
+ * 已绑定 customerId 时只认这个 ID。
+ * 历史订单没绑 ID 时，只有唯一一位客户对得上才返回，避免同名点进别人的资料。
+ */
+function matchCustomer(order, allCustomers) {
+    if (!order) return null;
+    var list = allCustomers || [];
+    var bound = toText(order.customerId);
+    if (bound) {
+        return list.filter(function (customer) {
+            return customer && toText(customer.id) === bound;
+        })[0] || null;
+    }
+    var hits = list.filter(function (customer) {
+        return matchOrders(customer, [order]).length > 0;
+    });
+    if (hits.length === 1) return hits[0];
+    var phone = toText(order.customerPhone);
+    if (phone) {
+        var byPhone = hits.filter(function (customer) {
+            return toText(customer.phone) === phone;
+        });
+        if (byPhone.length === 1) return byPhone[0];
+    }
+    return null;
+}
+
 module.exports = {
     matchOrders: matchOrders,
+    matchCustomer: matchCustomer,
     orderCustomerKey: orderCustomerKey,
     uniqueCustomerCount: uniqueCustomerCount,
     repeatRate: repeatRate

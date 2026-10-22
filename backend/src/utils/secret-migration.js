@@ -1,7 +1,7 @@
 /**
  * 存量数据加密迁移
  *
- * 把 data/accounts.json 的 password、data/settings.json 的 imageGen.apiKey
+ * 把 data/accounts.json 的 password、data/settings.json 的 imageGen.apiKey / llm.apiKey
  * 从明文转成密文（AES-256-GCM，见 secret-box.js）。
  *
  * 设计要求：
@@ -16,6 +16,7 @@
 var fs = require('fs');
 var path = require('path');
 var secretBox = require('./secret-box');
+var settingsRepository = require('./settings-repository');
 var dataPaths = require('./data-paths');
 
 var DATA_DIR = dataPaths.DATA_DIR;
@@ -82,32 +83,45 @@ function migrateAccountsInDir(dataDir) {
 }
 
 /**
- * AI 生图 API Key：settings.json → imageGen.apiKey
+ * settings.json 里的所有密钥字段（imageGen.apiKey、llm.apiKey …）
+ *
+ * 字段清单不在本文件维护，直接复用 settings-repository 的 SECRET_PATHS ——
+ * 两份清单一定会漂移，而漂移的后果是「某个密钥永久明文落盘」且没有任何报错。
+ * 这里只借用常量，读写仍走本文件的原子写，不经过 user-context。
  */
 function migrateSettingsInDir(dataDir) {
     var filePath = path.join(dataDir, 'settings.json');
     var settings = readJson(filePath);
     if (!settings || typeof settings !== 'object') return { file: 'settings.json', skipped: true };
 
-    var imageGen = settings.imageGen;
-    if (!imageGen || typeof imageGen.apiKey !== 'string' || imageGen.apiKey === '') {
-        return { file: 'settings.json', changed: 0, total: 0 };
-    }
-    if (secretBox.isEncrypted(imageGen.apiKey)) {
-        return { file: 'settings.json', changed: 0, total: 1 };
-    }
+    var changed = 0;
+    var total = 0;
 
-    var plain = imageGen.apiKey;
-    var encrypted = secretBox.encrypt(plain);
-    if (secretBox.decrypt(encrypted) !== plain) {
-        throw new Error('加密回环校验失败，已中止（settings.json 未改动）');
-    }
+    settingsRepository.SECRET_PATHS.forEach(function (entry) {
+        var parent = settings;
+        for (var i = 0; i < entry.path.length - 1; i++) {
+            parent = (parent && typeof parent === 'object') ? parent[entry.path[i]] : null;
+        }
+        if (!parent || typeof parent !== 'object') return;
 
-    var next = Object.assign({}, settings, {
-        imageGen: Object.assign({}, imageGen, { apiKey: encrypted })
+        var key = entry.path[entry.path.length - 1];
+        if (typeof parent[key] !== 'string' || parent[key] === '') return;
+
+        total++;
+        // 「前缀对」还不够：用户填的密钥本身可能就以 enc:v1: 开头，得真能解开才算密文
+        if (secretBox.isEncrypted(parent[key]) && secretBox.decrypt(parent[key]) !== null) return;
+
+        var plain = parent[key];
+        var encrypted = secretBox.encrypt(plain);
+        if (secretBox.decrypt(encrypted) !== plain) {
+            throw new Error('加密回环校验失败，已中止（settings.json 未改动）');
+        }
+        parent[key] = encrypted;
+        changed++;
     });
-    atomicWriteJson(filePath, next);
-    return { file: path.relative(DATA_DIR, filePath) || 'settings.json', changed: 1, total: 1 };
+
+    if (changed > 0) atomicWriteJson(filePath, settings);
+    return { file: path.relative(DATA_DIR, filePath) || 'settings.json', changed: changed, total: total };
 }
 
 function migrateAccounts() {

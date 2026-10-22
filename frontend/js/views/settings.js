@@ -1,6 +1,7 @@
 /**
  * 设置中心入口。
  * 各块的加载、保存和状态提示在 js/settings/ 下，这里只负责挂上和卸下。
+ * 监听用 ctx.listen，离开页面时由视图上下文卸掉，这里不再替换全局 addEventListener。
  */
 (function (global) {
     'use strict';
@@ -15,34 +16,8 @@
         styles: 'css/views/settings.css',
 
         async mount(root, ctx) {
-            var _docAdd = document.addEventListener;
-            var _winAdd = window.addEventListener;
-            var _listeners = [];
-            document.addEventListener = function (t, f, o) {
-                _listeners.push(['doc', t, f, o]);
-                return _docAdd.call(document, t, f, o);
-            };
-            window.addEventListener = function (t, f, o) {
-                _listeners.push(['win', t, f, o]);
-                return _winAdd.call(window, t, f, o);
-            };
-            ctx.onCleanup(function () {
-                document.addEventListener = _docAdd;
-                window.addEventListener = _winAdd;
-                _listeners.forEach(function (row) {
-                    try {
-                        (row[0] === 'doc' ? document : window).removeEventListener(row[1], row[2], row[3]);
-                    } catch (e) { /* ignore */ }
-                });
-            });
-
-            try {
-                if (!global.SettingsPage) throw new Error('SettingsPage 未加载');
-                global.SettingsPage.mount(ctx);
-            } finally {
-                document.addEventListener = _docAdd;
-                window.addEventListener = _winAdd;
-            }
+            if (!global.SettingsPage) throw new Error('SettingsPage 未加载');
+            global.SettingsPage.mount(ctx);
         }
     });
 })(typeof window !== 'undefined' ? window : this);

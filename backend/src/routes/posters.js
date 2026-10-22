@@ -30,8 +30,8 @@ var POSTER_EDITABLE = [
     'sourceUrl', 'projectRef', 'image', 'imageHtml'
 ];
 
-function deleteFileByUrl(url) {
-    uploads.deleteByUrl(url);
+function deleteFileByUrl(url, req) {
+    uploads.deleteByUrl(url, req);
 }
 
 // ========== 批量删除 ==========
@@ -43,7 +43,7 @@ router.post('/batch', resp.asyncHandler(function (req, res) {
     ids.forEach(function (id) {
         var record = posters.findById(id);
         if (record && record.image) {
-            deleteFileByUrl(record.image);
+            deleteFileByUrl(record.image, req);
         }
     });
 
@@ -159,7 +159,7 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
     }
 
     if (picked.fields.image !== undefined && existing.image && picked.fields.image !== existing.image) {
-        deleteFileByUrl(existing.image);
+        deleteFileByUrl(existing.image, req);
     }
 
     var updated = posters.update(req.params.id, picked.fields);
@@ -173,7 +173,7 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
 
     // 删除关联的图片文件
     if (record.image) {
-        deleteFileByUrl(record.image);
+        deleteFileByUrl(record.image, req);
     }
 
     posters.remove(req.params.id);

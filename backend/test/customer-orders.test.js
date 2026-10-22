@@ -13,6 +13,7 @@ var assert = require('node:assert/strict');
 
 var customerOrders = require('../src/utils/customer-orders');
 var matchOrders = customerOrders.matchOrders;
+var matchCustomer = customerOrders.matchCustomer;
 var uniqueCustomerCount = customerOrders.uniqueCustomerCount;
 var repeatRate = customerOrders.repeatRate;
 
@@ -34,6 +35,22 @@ test('ID 明确指向别人的订单，即使昵称/电话一样也不能挂过�
     ];
     assert.equal(matchOrders(CUSTOMER_A, orders).length, 0);
     assert.equal(matchOrders(CUSTOMER_B, orders).length, 1);
+});
+
+test('历史订单只有一位客户对得上时，能反查到这位客户', function () {
+    var order = { id: 'o1', customerNick: '张先生', customerPhone: '13800000001' };
+    var found = matchCustomer(order, [CUSTOMER_A, { id: 'cust-c', name: '李女士', phone: '13900000000' }]);
+    assert.equal(found && found.id, 'cust-a');
+});
+
+test('两个同名客户都对得上时，不猜是哪一位', function () {
+    var order = { id: 'o1', customerNick: '张先生' };
+    assert.equal(matchCustomer(order, [CUSTOMER_A, CUSTOMER_B]), null);
+});
+
+test('已绑定的 customerId 反查不到人时不退回昵称', function () {
+    var order = { id: 'o1', customerId: 'missing', customerNick: '张先生' };
+    assert.equal(matchCustomer(order, [CUSTOMER_A]), null);
 });
 
 test('未绑定 ID 的历史订单仍按昵称匹配', function () {

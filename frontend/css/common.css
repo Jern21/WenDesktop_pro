@@ -170,3 +170,28 @@ table tbody > tr:hover > td {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* ========== 顶栏 Grok 连接入口 ========== */
+/*
+ * 只负责状态点的呼吸效果；按钮与浮层的布局/配色全在 js/header.js 的 Tailwind 类里。
+ * 这里刻意不写 display —— 视图样式压掉 Tailwind .hidden 那个坑（reminder 页弹窗常显）别再踩一次。
+ */
+@keyframes grok-dot-online {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+    70%      { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+@keyframes grok-dot-checking {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.5); }
+    70%      { box-shadow: 0 0 0 5px rgba(251, 191, 36, 0); }
+}
+#grok-button[data-state="online"] #grok-status-dot {
+    animation: grok-dot-online 2s ease-out infinite;
+}
+#grok-button[data-state="checking"] #grok-status-dot {
+    animation: grok-dot-checking 1.2s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    #grok-button #grok-status-dot {
+        animation: none !important;
+    }
+}

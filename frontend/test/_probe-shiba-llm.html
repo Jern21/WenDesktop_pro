@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>shiba llm probe</title>
+<style>body{font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:16px}pre{white-space:pre-wrap}h1{font-size:15px}</style>
+</head><body>
+<h1 id="t">RUNNING</h1><pre id="out"></pre>
+<iframe id="f" src="/settings" style="width:1280px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+/**
+ * 验证「设置中心 → 大模型配置」与「小柴犬对话」的接线：
+ *
+ *   A. 设置页有 #llm 卡片 + 左侧导航项，关键 DOM 齐全（防 id 打错导致的静默失效）
+ *   B. 「快速填充」按钮能把地址和模型名填进表单
+ *   C. 保存配置 → PUT 生效、回读是脱敏值、configured 变 true
+ *   D. 未接大模型时，小柴发消息会：先出「正在想…」→ 700ms 时仍未回复 → 1~2 秒内回一句兜底话术
+ *
+ * ⚠️ 必须配 _start-llm-probe-server.js（临时数据目录）跑，否则 C 会写到真实配置：
+ *      node backend/test/_start-llm-probe-server.js 3461
+ *      http://127.0.0.1:3461/test/_probe-shiba-llm.html
+ *
+ * 顺序讲究：D 必须在 C 之前 —— C 一旦保存成功，D 就不再是「未接入」路径了。
+ */
+(function () {
+    var f = document.getElementById('f');
+    var lines = [];
+    function out(s) { document.getElementById('out').textContent = s; }
+    function done() {
+        var fail = lines.filter(function (l) { return l.indexOf('FAIL') === 0; }).length;
+        document.getElementById('t').textContent = fail ? ('DONE ' + fail + ' FAIL') : 'DONE ALL PASS';
+        out(lines.join('\n'));
+    }
+    function check(name, cond) { lines.push((cond ? 'PASS  ' : 'FAIL  ') + name); return cond; }
+    function wait(fn, t, label) {
+        return new Promise(function (res, rej) {
+            var s = Date.now();
+            (function tick() {
+                var v = null;
+                try { v = fn(); } catch (e) { /* 元素还没挂上，继续等 */ }
+                if (v) return res(v);
+                if (Date.now() - s > (t || 15000)) return rej(new Error('timeout ' + (label || '')));
+                setTimeout(tick, 50);
+            })();
+        });
+    }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    /** 轮询一个返回 Promise 的条件（条件为真时 resolve 那个值） */
+    function waitAsync(fn, t, label) {
+        var s = Date.now();
+        return new Promise(function (res, rej) {
+            (function tick() {
+                Promise.resolve().then(fn).then(function (v) {
+                    if (v) return res(v);
+                    if (Date.now() - s > t) return rej(new Error('timeout ' + (label || '')));
+                    setTimeout(tick, 150);
+                }, function () {
+                    if (Date.now() - s > t) return rej(new Error('timeout ' + (label || '')));
+                    setTimeout(tick, 150);
+                });
+            })();
+        });
+    }
+
+    var W = null, D = null;
+
+    function botMessages() {
+        // 欢迎语和正式回复都算；「正在想…」占位单独一个类
+        return Array.prototype.slice.call(D.querySelectorAll('.shiba-chat-msg--bot:not(.shiba-chat-typing)'));
+    }
+
+    f.addEventListener('load', function () {
+        W = f.contentWindow;
+        D = f.contentDocument;
+
+        wait(function () { return D.getElementById('llm') && W.ShibaDialogue; }, 20000, '页面与模块')
+            .then(function () {
+                // ---------- A：设置卡片结构 ----------
+                var card = D.getElementById('llm');
+                check('设置页有 #llm 卡片', !!card);
+                var nav = D.querySelector('.settings-nav-item[data-section="llm"]');
+                check('左侧导航有「大模型配置」项', !!nav && nav.textContent.indexOf('大模型配置') !== -1);
+
+                var ids = ['llm-status-bar', 'llm-status-text', 'llm-presets', 'llm-api-url', 'llm-api-key',
+                    'llm-toggle-key', 'llm-model', 'llm-timeout', 'llm-test-result', 'llm-save-btn', 'llm-test-btn'];
+                var missing = ids.filter(function (id) { return !D.getElementById(id); });
+                check('关键 DOM 齐全（' + ids.length + ' 个）' + (missing.length ? '，缺 ' + missing.join(',') : ''), missing.length === 0);
+
+                // ---------- B：快速填充 ----------
+                var preset = D.querySelector('.llm-preset[data-llm-preset="deepseek"]');
+                check('有 DeepSeek 快捷填充按钮', !!preset);
+                if (preset) {
+                    preset.click();
+                    check('点击后 API 地址被填入（' + D.getElementById('llm-api-url').value + '）',
+                        D.getElementById('llm-api-url').value === 'https://api.deepseek.com/v1');
+                    check('点击后模型名被填入（' + D.getElementById('llm-model').value + '）',
+                        D.getElementById('llm-model').value === 'deepseek-chat');
+                    var tip = D.getElementById('llm-status-text').textContent;
+                    check('状态条提示已填入默认地址', tip.indexOf('DeepSeek') !== -1);
+                }
+
+                // ---------- D：未接大模型时的小柴 ----------
+                return testShibaFallback();
+            })
+            .then(function () {
+                // ---------- C：保存配置 ----------
+                return testSaveConfig();
+            })
+            .then(done)
+            .catch(function (e) {
+                lines.push('FAIL  ' + e.message);
+                done();
+            });
+    });
+
+    // ===== D：兜底话术 + 思考时间 =====
+    function testShibaFallback() {
+        // 先重置成「未配置」：探针要能反复跑，不能被上一轮存进去的配置带偏
+        return W.api.call('/api/llm/config', {
+            method: 'PUT',
+            body: { apiUrl: '', model: '', clearApiKey: true }
+        }).then(function () {
+            return W.api.call('/api/llm/config');
+        }).then(function (res) {
+            check('探针开始时大模型是未配置状态（否则 D 组无意义）', res.data.configured === false);
+
+            // 清掉快捷填充留下的值，避免误判成"已配置"
+            D.getElementById('llm-api-url').value = '';
+            D.getElementById('llm-model').value = '';
+            D.getElementById('llm-api-key').value = '';
+
+            W.ShibaDialogue.openPanel();
+            return wait(function () { return D.getElementById('shiba-chat-panel'); }, 5000, 'shiba panel');
+        }).then(function () {
+            var log = D.getElementById('shiba-chat-log');
+            check('对话面板已打开且有欢迎语', log && log.textContent.indexOf('小柴') !== -1);
+
+            var before = botMessages().length;
+            var input = D.getElementById('shiba-chat-input');
+            input.value = '你好呀';
+
+            var startedAt = Date.now();
+            D.getElementById('shiba-chat-form').dispatchEvent(
+                new W.Event('submit', { bubbles: true, cancelable: true })
+            );
+
+            return sleep(120).then(function () {
+                var typing = D.querySelector('.shiba-chat-typing');
+                check('发送后立刻出现「正在想…」占位', !!typing && typing.textContent.indexOf('正在想') !== -1);
+
+                return sleep(580);   // 累计约 700ms
+            }).then(function () {
+                var elapsed = Date.now() - startedAt;
+                check('700ms 时还没回复（不秒回，elapsed=' + elapsed + 'ms）', botMessages().length === before);
+
+                return wait(function () {
+                    return botMessages().length > before ? botMessages()[before] : null;
+                }, 6000, 'shiba reply');
+            }).then(function (replyEl) {
+                var elapsed = Date.now() - startedAt;
+                check('回复在 1~2 秒的思考时间之后出现（' + elapsed + 'ms）', elapsed >= 950 && elapsed <= 4000);
+
+                var text = (replyEl.textContent || '');
+                var isFallback = text.indexOf('大模型') !== -1 || text.indexOf('还没') !== -1 ||
+                    text.indexOf('装个脑子') !== -1 || text.indexOf('通电') !== -1;
+                check('回复是「还没接大模型」的兜底话术：' + text.replace(/\s+/g, ' ').slice(0, 40) + '…', isFallback);
+                check('回复里没有暴露演示文案「演示回复」', text.indexOf('演示回复') === -1);
+                check('思考占位已被移除', !D.querySelector('.shiba-chat-typing'));
+            });
+        });
+    }
+
+    // ===== C：保存 → 回读脱敏 =====
+    function testSaveConfig() {
+        D.getElementById('llm-api-url').value = 'https://api.example.com/v1';
+        D.getElementById('llm-model').value = 'probe-model';
+        D.getElementById('llm-api-key').value = 'sk-probe-key-1234567890';
+
+        D.getElementById('llm-save-btn').click();
+
+        // ⚠️ 不要等「已保存」这行提示：保存成功后紧接着会 loadConfig()，
+        // 状态条立刻被「已接入大模型：…」覆盖，等一个转瞬即逝的中间态必然偶发失败。
+        // 改等「服务端真的变成已配置」这个稳定结果 —— 它同时也证明了点击→PUT 这条链路是通的。
+        return waitAsync(function () {
+            return W.api.call('/api/llm/config').then(function (r) {
+                return r.data.configured === true ? r.data : null;
+            });
+        }, 8000, 'config saved')
+            .then(function (cfg) {
+                check('保存后 configured 变 true', cfg.configured === true);
+                check('回读密钥是脱敏值（' + cfg.apiKeyMasked + '）', cfg.apiKeyMasked === 'sk-p****7890');
+                check('回读模型名正确（' + cfg.model + '）', cfg.model === 'probe-model');
+                check('API 响应里不含完整密钥', JSON.stringify(cfg).indexOf('sk-probe-key-1234567890') === -1);
+
+                // 等 loadConfig() 把回读结果填回表单
+                return wait(function () {
+                    var keyInput = D.getElementById('llm-api-key');
+                    return keyInput.value.indexOf('****') !== -1 ? keyInput : null;
+                }, 5000, 'form refill');
+            })
+            .then(function () {
+                var keyInput = D.getElementById('llm-api-key');
+                check('表单里回填的是脱敏值，不是明文',
+                    keyInput.value.indexOf('****') !== -1 && keyInput.value.indexOf('sk-probe-key') === -1);
+                var bar = D.getElementById('llm-status-text').textContent;
+                check('状态条变成已接入（' + bar + '）', bar.indexOf('已接入') !== -1);
+            });
+    }
+
+    setTimeout(function () {
+        if (document.getElementById('t').textContent === 'RUNNING') {
+            lines.push('FAIL  总超时（40s）');
+            done();
+        }
+    }, 40000);
+})();
+</script>
+</body></html>

@@ -1,0 +1,272 @@
+/* 客户列表 + 详情。颜色走 shell / ui 变量。 */
+
+.cust-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.cust-tools {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -12px -10px 8px;
+    padding: 12px 10px 8px;
+    background: var(--shell-bg);
+}
+
+.cust-search {
+    width: 100%;
+    box-sizing: border-box;
+    height: 36px;
+    margin: 0 0 8px;
+    padding: 0 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 10px;
+    background: var(--shell-surface);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 0.875rem;
+}
+
+.cust-search:focus {
+    outline: none;
+    border-color: var(--shell-accent);
+}
+
+.cust-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+}
+
+.cust-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.cust-chip {
+    flex: 0 0 auto;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--shell-border);
+    border-radius: 999px;
+    background: var(--shell-surface);
+    color: var(--shell-text-secondary);
+    font: inherit;
+    font-size: 0.75rem;
+}
+
+.cust-chip.is-active {
+    border-color: transparent;
+    background: var(--shell-accent);
+    color: #fff;
+}
+
+.cust-count {
+    margin: 0;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.cust-card-name {
+    color: var(--shell-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.cust-card-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 6px;
+}
+
+.cust-card-phone {
+    color: var(--shell-text);
+    font-size: 0.875rem;
+}
+
+.cust-card-meta {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cust-badge {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--shell-bg);
+    color: var(--shell-text-secondary);
+    font-size: 0.6875rem;
+}
+
+.lv-item .cust-card {
+    padding: 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 14px;
+    background: var(--shell-surface);
+}
+
+.cust-detail {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+
+.cust-block {
+    margin-bottom: 10px;
+    padding: 14px;
+    border: 1px solid var(--shell-border);
+    border-radius: 16px;
+    background: var(--shell-surface);
+}
+
+.cust-block h2 {
+    margin: 0 0 8px;
+    color: var(--shell-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.cust-name {
+    margin: 0;
+    color: var(--shell-text);
+    font-size: 1.25rem;
+}
+
+.cust-phone {
+    display: inline-block;
+    margin-top: 6px;
+    color: var(--shell-accent);
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+.cust-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    color: var(--shell-text-secondary);
+    font-size: 0.8125rem;
+}
+
+.cust-row span {
+    flex: 0 0 3.5rem;
+    color: var(--shell-text-tertiary);
+}
+
+.cust-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.cust-stat b {
+    display: block;
+    color: var(--shell-text);
+    font-size: 1rem;
+}
+
+.cust-stat span {
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.cust-order,
+.cust-follow {
+    display: block;
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 12px;
+    background: var(--shell-bg);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.cust-order strong,
+.cust-follow strong {
+    display: block;
+    color: var(--shell-text);
+    font-size: 0.875rem;
+}
+
+.cust-order span,
+.cust-follow span {
+    display: block;
+    margin-top: 2px;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.cust-empty {
+    margin: 0;
+    color: var(--shell-text-tertiary);
+    font-size: 0.8125rem;
+}
+
+.cust-state {
+    padding: 48px 16px;
+    color: var(--shell-text-secondary);
+    text-align: center;
+}
+
+.cust-state button {
+    height: 36px;
+    margin-top: 12px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: var(--shell-accent);
+    color: #fff;
+    font: inherit;
+}
+
+.cust-actions:not([hidden]) {
+    position: fixed;
+    left: 0;
+    right: 3.25rem;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--shell-border);
+    background: var(--shell-rail-bg);
+}
+
+.cust-actions button {
+    flex: 1;
+    height: 42px;
+    border: none;
+    border-radius: 12px;
+    background: var(--shell-accent);
+    color: #fff;
+    font: inherit;
+}
+
+.cust-actions button:disabled {
+    opacity: 0.55;
+}
+
+.cust-follow-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 88px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: 12px;
+    background: var(--shell-bg);
+    color: var(--shell-text);
+    font: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+}

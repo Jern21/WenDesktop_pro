@@ -3,7 +3,7 @@
             <div class="max-w-[1400px] mx-auto space-y-6">
 
                 <!-- Top Metrics Row -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <!-- Card 1: 今日新增订单 -->
                     <div class="card flex items-center gap-3 p-4">
                         <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-blue-200">
@@ -70,6 +70,20 @@
                             <div class="flex items-baseline gap-1.5 flex-wrap">
                                 <h3 id="metric-year-revenue" class="text-lg font-bold text-brand-600">--</h3>
                                 <span id="metric-year-revenue-rate-wrap" class="text-[10px] text-gray-400 flex items-center whitespace-nowrap"><i class="ph ph-minus mr-0.5"></i>较去年 <span id="metric-year-revenue-rate">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 6: 累计总收入 -->
+                    <div class="card flex items-center gap-3 p-4">
+                        <div class="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-teal-200 relative overflow-hidden">
+                             <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                             <i class="ph-fill ph-coins text-xl relative z-10"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-500 mb-0.5 truncate">累计总收入</p>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h3 id="metric-total-revenue" class="text-lg font-bold text-teal-600">--</h3>
+                                <span class="text-[10px] text-gray-400 whitespace-nowrap">全部回款</span>
                             </div>
                         </div>
                     </div>
@@ -149,84 +163,84 @@
                     <div class="card xl:col-span-1 h-[280px] flex flex-col">
                         <h3 class="font-semibold text-gray-800 text-base mb-3">待办事项</h3>
                         <div class="grid grid-cols-2 gap-2 flex-1 content-start" id="todo-list">
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-blue-50/50 rounded-lg border border-blue-100/50 cursor-pointer hover:bg-blue-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--blue rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-chat-circle-dots text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">待回复消息</span>
+                                    <span class="dashboard-todo-label text-xs truncate">待回复消息</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-pending-reply">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-pending-reply">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-orange-50/50 rounded-lg border border-orange-100/50 cursor-pointer hover:bg-orange-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--orange rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-currency-cny text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">待报价订单</span>
+                                    <span class="dashboard-todo-label text-xs truncate">待报价订单</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-pending-quote">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-pending-quote">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--gray rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-clipboard-text text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">平台审核中</span>
+                                    <span class="dashboard-todo-label text-xs truncate">平台审核中</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-platform-reviewing">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-platform-reviewing">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-red-50/50 rounded-lg border border-red-100/50 cursor-pointer hover:bg-red-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--red rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-calendar-x text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">即将到期</span>
+                                    <span class="dashboard-todo-label text-xs truncate">即将到期</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-expiring-soon">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-expiring-soon">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/50 cursor-pointer hover:bg-emerald-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--emerald rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-seal-check text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">待验收订单</span>
+                                    <span class="dashboard-todo-label text-xs truncate">待验收订单</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-pending-acceptance">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-pending-acceptance">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-rose-50/50 rounded-lg border border-rose-100/50 cursor-pointer hover:bg-rose-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--rose rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center text-rose-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-warning-circle text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">逾期订单</span>
+                                    <span class="dashboard-todo-label text-xs truncate">逾期订单</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-overdue-orders">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-overdue-orders">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-violet-50/50 rounded-lg border border-violet-100/50 cursor-pointer hover:bg-violet-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--violet rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center text-violet-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-bell text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">今日提醒</span>
+                                    <span class="dashboard-todo-label text-xs truncate">今日提醒</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-today-reminders">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-today-reminders">--</span>
                             </div>
 
-                            <div class="flex items-center justify-between gap-1.5 p-2 bg-indigo-50/50 rounded-lg border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-colors min-w-0">
+                            <div class="flex items-center justify-between gap-1.5 p-2 dashboard-todo dashboard-todo--indigo rounded-lg border cursor-pointer transition-colors min-w-0">
                                 <div class="flex items-center gap-1.5 min-w-0">
-                                    <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 flex-shrink-0">
+                                    <div class="w-5 h-5 rounded-full dashboard-todo-icon flex items-center justify-center flex-shrink-0">
                                         <i class="ph-fill ph-kanban text-xs"></i>
                                     </div>
-                                    <span class="text-gray-700 text-xs truncate">进行中项目</span>
+                                    <span class="dashboard-todo-label text-xs truncate">进行中项目</span>
                                 </div>
-                                <span class="text-red-500 font-medium text-sm flex-shrink-0" id="todo-active-projects">--</span>
+                                <span class="dashboard-todo-count font-medium text-sm flex-shrink-0" id="todo-active-projects">--</span>
                             </div>
                         </div>
                     </div>

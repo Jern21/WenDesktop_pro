@@ -75,18 +75,13 @@ function initBackupManager() {
 
     function requestJson(path, options) {
         options = options || {};
-        var fetchOptions = Object.assign({ method: 'GET' }, options);
-        fetchOptions.headers = Object.assign({ 'Accept': 'application/json' }, fetchOptions.headers || {});
-        if (fetchOptions.body && typeof fetchOptions.body !== 'string') {
-            fetchOptions.body = JSON.stringify(fetchOptions.body);
-            fetchOptions.headers['Content-Type'] = 'application/json';
-        }
-        return fetch(API_BASE + path, fetchOptions)
-            .then(function (res) { return res.json(); })
-            .then(function (result) {
-                if (!result.success) throw new Error(result.error || '请求失败');
-                return result.data;
-            });
+        return global.SettingsPage.call(API_BASE + path, {
+            method: options.method,
+            body: options.body,
+            signal: ctx && ctx.signal
+        }).then(function (result) {
+            return result && result.data;
+        });
     }
 
     function setButtonLoading(btn, loading, text) {

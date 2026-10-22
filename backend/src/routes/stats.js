@@ -175,6 +175,7 @@ router.get('/home-metrics', resp.asyncHandler(function (req, res) {
     var lastYearRevenue = sumPaymentAmountByDate(allOrders, function (date) {
         return date && date.startsWith(lastYear);
     });
+    var totalRevenue = sumPaymentAmountByDate(allOrders, function () { return true; });
 
     return resp.success(res, {
         todayOrders: todayOrders,
@@ -185,7 +186,8 @@ router.get('/home-metrics', resp.asyncHandler(function (req, res) {
         monthRevenue: monthRevenue,
         monthRevenueGrowth: calcGrowth(monthRevenue, lastMonthRevenue),
         yearRevenue: yearRevenue,
-        yearRevenueGrowth: calcGrowth(yearRevenue, lastYearRevenue)
+        yearRevenueGrowth: calcGrowth(yearRevenue, lastYearRevenue),
+        totalRevenue: totalRevenue
     });
 }));
 

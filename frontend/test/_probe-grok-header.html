@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>grok header probe</title>
+<style>body{font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:16px}pre{white-space:pre-wrap}h1{font-size:15px}</style>
+</head><body>
+<h1 id="t">RUNNING</h1><pre id="out"></pre>
+<iframe id="f" src="/settings" style="width:1280px;height:620px;border:1px solid #ccc"></iframe>
+<script>
+/**
+ * 验证顶栏 Grok 入口（当前只做样式）：
+ *   A. 按钮存在，且位于「更新日志」按钮左侧
+ *   B. 浮层初始不可见
+ *   C. hover 后浮层可见，内容是「Grok 连接 / 未连接 / 服务地址…」
+ *   D. updateGrokStatus('online') 能改状态点与徽标文案
+ *   E. mouseleave 后浮层收起
+ *
+ * 为什么要用 iframe：header.js 在真实 app.html 里由 SPA 挂载，
+ * 单独开一个空页面拿不到 #app-header。
+ */
+(function () {
+    var f = document.getElementById('f');
+    var lines = [];
+    function out(s) { document.getElementById('out').textContent = s; }
+    function done() {
+        var fail = lines.filter(function (l) { return l.indexOf('FAIL') === 0; }).length;
+        document.getElementById('t').textContent = fail ? ('DONE ' + fail + ' FAIL') : 'DONE ALL PASS';
+        out(lines.join('\n'));
+    }
+    function check(name, cond) { lines.push((cond ? 'PASS  ' : 'FAIL  ') + name); return cond; }
+    function wait(fn, t, label) {
+        return new Promise(function (res, rej) {
+            var s = Date.now();
+            (function tick() {
+                var v = null;
+                try { v = fn(); } catch (e) {}
+                if (v) return res(v);
+                if (Date.now() - s > (t || 15000)) return rej(new Error('timeout ' + (label || '')));
+                setTimeout(tick, 80);
+            })();
+        });
+    }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+    function visible(el, w) {
+        var cs = w.getComputedStyle(el);
+        return cs.visibility !== 'hidden' && cs.opacity !== '0';
+    }
+
+    f.addEventListener('load', function () {
+        var w = f.contentWindow, d = f.contentDocument;
+
+        wait(function () { return d.getElementById('grok-button'); }, 15000, 'grok-button')
+            .then(function (btn) {
+                var log = d.getElementById('changelog-button');
+                check('顶栏有 #grok-button', !!btn);
+                check('顶栏有 #changelog-button', !!log);
+                if (log) {
+                    var a = btn.getBoundingClientRect(), b = log.getBoundingClientRect();
+                    check('Grok 图标在「更新日志」左侧（' + Math.round(b.left - a.right) + 'px 间距）', a.right <= b.left);
+                }
+                check('初始状态 dot 是灰色（offline）', btn.getAttribute('data-state') === 'offline');
+
+                var pop = d.getElementById('grok-popover');
+                check('浮层已挂到 iframe 的 body 上（不在 header 内）', !!pop && pop.parentElement === d.body);
+
+                // ⚠️ 关掉过渡再断言。
+                // 浮层带 transition-all 150ms，而 visibility 是"离散"属性：
+                // 显示时立刻变 visible、隐藏时要等过渡走完才变 hidden。
+                // 无头 --dump-dom 不推进过渡帧 → 隐藏后 computed 仍是 visible，会假失败。
+                // 这里只验"类名切换是否正确"，动画本身交给真实浏览器。
+                pop.style.transition = 'none';
+                check('浮层初始不可见', !!pop && !visible(pop, w));
+
+                var container = d.getElementById('grok-container');
+                container.dispatchEvent(new w.MouseEvent('mouseenter', { bubbles: false }));
+                return sleep(260).then(function () { return pop; });
+            })
+            .then(function (pop) {
+                check('hover 后浮层可见', visible(pop, w));
+                var text = pop.innerText || '';
+                check('浮层标题是「Grok Bot 连接」', text.indexOf('Grok Bot 连接') !== -1);
+                check('浮层状态是「未连接」', text.indexOf('未连接') !== -1);
+                check('浮层有三行信息（地址/延迟/同步）',
+                    text.indexOf('服务地址') !== -1 && text.indexOf('响应延迟') !== -1 && text.indexOf('最近同步') !== -1);
+                check('浮层提示「功能开发中」', text.indexOf('功能开发中') !== -1);
+
+                // 浮层贴在按钮下方，右边缘与按钮右边缘对齐（允许 2px 误差）
+                var btn = d.getElementById('grok-button');
+                var br = btn.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+                check('浮层垂直贴在按钮下方（' + Math.round(pr.top - br.bottom) + 'px）', pr.top >= br.bottom);
+                check('浮层水平右对齐（偏差 ' + Math.round(Math.abs(pr.right - br.right)) + 'px）',
+                    Math.abs(pr.right - br.right) <= 2);
+
+                // D：状态切换接口（后续接真实连通性时用它）
+                w.updateGrokStatus('online', {
+                    sub: '助理通道 · 已认证',
+                    endpoint: 'https://example.test',
+                    latency: '128 ms',
+                    syncedAt: '刚刚'
+                });
+                var chip = d.getElementById('grok-pop-chip');
+                var dot = d.getElementById('grok-status-dot');
+                check('updateGrokStatus(online) 徽标变「已连接」', chip.textContent === '已连接');
+                check('updateGrokStatus(online) dot 换成 emerald', dot.className.indexOf('bg-emerald-500') !== -1);
+                check('updateGrokStatus 能写入服务地址字段',
+                    d.getElementById('grok-pop-endpoint').textContent === 'https://example.test');
+                check('online 时按钮 data-state 同步', btn.getAttribute('data-state') === 'online');
+
+                // E：移开收起
+                d.getElementById('grok-container').dispatchEvent(new w.MouseEvent('mouseleave', { bubbles: false }));
+                return sleep(400);
+            })
+            .then(function () {
+                var pop = d.getElementById('grok-popover');
+                var cs = w.getComputedStyle(pop);
+                check('mouseleave 后浮层收起（cls=' + pop.className.indexOf('invisible') + ' vis=' + cs.visibility + ' op=' + cs.opacity + '）', !visible(pop, w));
+                // 复位成初始态，截图时看到的是「未连接」这一版
+                var w2 = f.contentWindow, d2 = f.contentDocument;
+                w2.updateGrokStatus('offline', {
+                    sub: '助理通道 · 待配置',
+                    endpoint: '尚未配置',
+                    latency: '—',
+                    syncedAt: '—',
+                    hint: '尚未接入。当前仅展示样式，功能开发中。'
+                });
+                d2.getElementById('grok-container').dispatchEvent(new w2.MouseEvent('mouseenter', { bubbles: false }));
+                return sleep(300);
+            })
+            .then(done)
+            .catch(function (e) {
+                lines.push('FAIL  ' + e.message);
+                done();
+            });
+    });
+    setTimeout(function () {
+        if (document.getElementById('t').textContent === 'RUNNING') {
+            lines.push('FAIL  总超时（20s）');
+            done();
+        }
+    }, 20000);
+})();
+</script>
+</body></html>

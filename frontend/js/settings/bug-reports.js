@@ -124,24 +124,20 @@ function initBugReports() {
         selectedFiles.forEach(function (file) {
             formData.append('files', file);
         });
-        return fetch(API_ROOT + 'api/upload/multiple', {
+        return global.SettingsPage.call(API_ROOT + 'api/upload/multiple', {
             method: 'POST',
-            body: formData
-        })
-            .then(function (res) { return res.json(); })
-            .then(function (result) {
-                if (!result.success) throw new Error(result.error || '附件上传失败');
-                return result.data || [];
-            });
+            body: formData,
+            signal: ctx && ctx.signal
+        }).then(function (result) {
+            return (result && result.data) || [];
+        });
     }
 
     function loadBugReports() {
         if (refreshBtn) refreshBtn.querySelector('i').classList.add('animate-spin');
-        return fetch(API_ROOT + 'api/bug-reports')
-            .then(function (res) { return res.json(); })
+        return global.SettingsPage.call(API_ROOT + 'api/bug-reports', { signal: ctx && ctx.signal })
             .then(function (result) {
-                if (!result.success) throw new Error(result.error || '加载失败');
-                bugReportsCache = result.data || [];
+                bugReportsCache = (result && result.data) || [];
                 renderBugReports(bugReportsCache);
             })
             .catch(function (err) {
@@ -275,21 +271,19 @@ function initBugReports() {
         setButtonLoading(submitBtn, true, '保存中...');
         uploadSelectedFiles()
             .then(function (attachments) {
-                return fetch(API_ROOT + 'api/bug-reports', {
+                return global.SettingsPage.call(API_ROOT + 'api/bug-reports', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                    body: {
                         title: title,
                         page: pageInput.value.trim(),
                         severity: severityInput.value,
                         description: descInput.value.trim(),
                         attachments: attachments
-                    })
+                    },
+                    signal: ctx && ctx.signal
                 });
             })
-            .then(function (res) { return res.json(); })
-            .then(function (result) {
-                if (!result.success) throw new Error(result.error || '保存失败');
+            .then(function () {
                 resetForm();
                 showBugStatus('success', 'Bug记录已保存');
                 return loadBugReports();
@@ -305,10 +299,11 @@ function initBugReports() {
     function deleteBugReport(id) {
         if (!id) return;
         if (!window.confirm('确定删除这条Bug记录吗？关联附件也会一并删除。')) return;
-        fetch(API_ROOT + 'api/bug-reports/' + encodeURIComponent(id), { method: 'DELETE' })
-            .then(function (res) { return res.json(); })
-            .then(function (result) {
-                if (!result.success) throw new Error(result.error || '删除失败');
+        global.SettingsPage.call(API_ROOT + 'api/bug-reports/' + encodeURIComponent(id), {
+            method: 'DELETE',
+            signal: ctx && ctx.signal
+        })
+            .then(function () {
                 showBugStatus('success', 'Bug记录已删除');
                 return loadBugReports();
             })

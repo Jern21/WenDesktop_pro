@@ -24,6 +24,24 @@ const appHtml = fs.readFileSync(path.join(FE, 'app.html'), 'utf8');
 const loadedScripts = [...appHtml.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1]);
 const loadedSet = new Set(loadedScripts.map(s => s.replace(/^\.?\//, '')));
 
+function normalizeScript(src) {
+    return String(src || '').replace(/^\.\//, '');
+}
+
+/** 视图里按需加载的脚本清单，例如 project.js 的 SCRIPT_SRCS。 */
+function dynamicScriptsIn(src) {
+    const found = [];
+    const re = /(?:var|let|const)\s+SCRIPT_SRCS\s*=\s*\[([\s\S]*?)\]/g;
+    let block;
+    while ((block = re.exec(src))) {
+        const paths = block[1].match(/['"]([^'"]+\.js)['"]/g) || [];
+        paths.forEach(raw => {
+            found.push(normalizeScript(raw.slice(1, -1)));
+        });
+    }
+    return found;
+}
+
 // ---------- 2. 各 js 文件暴露的全局 ----------
 function globalsOf(relPath) {
     const full = path.join(FE, relPath);
@@ -84,8 +102,18 @@ const viewDir = path.join(FE, 'js', 'views');
 const viewFiles = fs.readdirSync(viewDir).filter(f => f.endsWith('.js'));
 
 const used = new Map(); // name -> [引用它的视图]
+const dynamicByView = new Map();
+const missingDynamic = [];
+
 viewFiles.forEach(f => {
     const src = fs.readFileSync(path.join(viewDir, f), 'utf8');
+    const dynamic = dynamicScriptsIn(src);
+    dynamicByView.set(f, dynamic);
+    dynamic.forEach(rel => {
+        if (!fs.existsSync(path.join(FE, rel))) {
+            missingDynamic.push({ view: f, script: rel });
+        }
+    });
     let m;
     const re = /window\.([A-Za-z_$][\w$]*)/g;
     while ((m = re.exec(src))) {
@@ -109,8 +137,6 @@ const IGNORE = new Set([
     'QRCode', 'Image', 'Blob', 'File', 'FileReader', 'URL', 'App', 'PAGE_BASE',
     'ROOT_URL', 'PAGE_ROUTES', 'api', 'ui', 'spaNavigate', 'CountUp',
 
-    // 由视图在运行时**动态加载**的脚本所提供（不是入口静态加载的），属正常设计。
-    // project.js 里 ensureScript() 会按需注入 js/project-page.js。
     '__projectPageSpaReadyBound',
 
     // 仅出现在注释里，扫描误报。
@@ -126,8 +152,11 @@ used.forEach((views, name) => {
     if (providedByLoaded.has(name)) return;             // 已加载，正常
 
     if (providedByUnloaded.has(name)) {
-        // 有模块提供，但没加载 → 真问题
-        broken.push({ name, views, module: providedByUnloaded.get(name) });
+        const modulePath = providedByUnloaded.get(name);
+        const covered = views.every(view => (dynamicByView.get(view) || []).includes(modulePath));
+        if (!covered) {
+            broken.push({ name, views, module: modulePath });
+        }
     } else {
         // 没人提供：可能是视图自己定义的（检查一下）
         const selfDefined = views.every(v => {
@@ -140,6 +169,15 @@ used.forEach((views, name) => {
 
 console.log('入口已加载脚本：' + loadedScripts.length + ' 个');
 console.log('');
+
+if (missingDynamic.length) {
+    problems += missingDynamic.length;
+    console.log('❌ 视图的动态脚本清单指向了不存在的文件：');
+    missingDynamic.forEach(item => {
+        console.log('   ' + item.view + ' → ' + item.script);
+    });
+    console.log('');
+}
 
 if (broken.length) {
     problems += broken.length;

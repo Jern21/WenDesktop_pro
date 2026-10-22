@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>changelog probe</title>
+<style>body{font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:16px}pre{white-space:pre-wrap}</style>
+</head><body>
+<h1 id="t">RUNNING</h1><pre id="out"></pre>
+<iframe id="f" src="/" style="width:1200px;height:600px;border:1px solid #ccc"></iframe>
+<script>
+/**
+ * 验证应用内「更新日志」面板：
+ *   A. 本地 CHANGELOG.json 被读到（当前运行 v2.0.2）
+ *   B. 线上未 push 时面板给出准确提示
+ *   C. 线上取不到时走「本地数据」分支，2.0.2 的条目能正确渲染
+ *
+ * C 是重点：buildContentHtml 取值优先级是 remote > local，
+ * 只要 GitHub 上还是旧版，新条目就不会出现在列表里 —— 这不是 bug，是设计。
+ * 所以探针先 monkey-patch fetch 掐掉 github，再 refresh()，把 local 分支单独验一遍。
+ */
+(function () {
+    var f = document.getElementById('f');
+    function out(s) { document.getElementById('out').textContent = s; }
+    function wait(fn, t, label) {
+        return new Promise(function (res, rej) {
+            var s = Date.now();
+            (function tick() {
+                var v = null;
+                try { v = fn(); } catch (e) {}
+                if (v) return res(v);
+                if (Date.now() - s > (t || 15000)) return rej(new Error('timeout ' + (label || '')));
+                setTimeout(tick, 80);
+            })();
+        });
+    }
+    function panelText(d) {
+        var root = d.getElementById('app-overlay-root');
+        return root ? root.innerText || '' : '';
+    }
+
+    f.addEventListener('load', function () {
+        var w = f.contentWindow, d = f.contentDocument;
+        var lines = [];
+        var api = null;   // 存 AppChangelog 本身：refresh() 之后 then 拿到的是 state，会被覆盖
+        function check(name, cond) { lines.push((cond ? 'PASS  ' : 'FAIL  ') + name); return cond; }
+
+        wait(function () { return w.AppChangelog; }, 15000, 'AppChangelog')
+            .then(function (cl) {
+                api = cl;
+                check('本地 CHANGELOG.json 已读取：当前运行 v2.0.2', cl.version === '2.0.2');
+
+                // ---- A/B：正常打开，确认面板结构与「未 push」提示 ----
+                cl.open();
+                return wait(function () {
+                    return panelText(d).indexOf('更新日志') !== -1;
+                }, 12000, '面板打开');
+            })
+            .then(function () {
+                return new Promise(function (r) { setTimeout(r, 500); }).then(function () {
+                    var text = panelText(d);
+                    check('面板显示「当前运行 v2.0.2」', text.indexOf('当前运行 v2.0.2') !== -1);
+                    // 线上还是 2.0.1 时，该提示必须出现（否则用户不知道为啥看不到新条目）
+                    check('线上落后时给出「本地 changelog 未 push」提示',
+                        text.indexOf('未 push') !== -1 || text.indexOf('GitHub 线上 v2.0.1') !== -1);
+                    // 关掉面板，避免遮罩挡住后续操作
+                    var root = d.getElementById('app-overlay-root');
+                    var btn = root && root.querySelector('button');
+                    if (btn) btn.click();
+                });
+            })
+            // ---- C：掐掉 github，强制走本地分支 ----
+            .then(function () {
+                return new Promise(function (r) { setTimeout(r, 400); }).then(function () {
+                    var origFetch = w.fetch;
+                    w.fetch = function (url) {
+                        if (String(url).indexOf('githubusercontent') !== -1) {
+                            return Promise.reject(new Error('probe: github blocked'));
+                        }
+                        return origFetch.apply(w, arguments);
+                    };
+                    return api.refresh();
+                });
+            })
+            .then(function () {
+                api.open();
+                return wait(function () {
+                    var t = panelText(d);
+                    return t.indexOf('数据隔离与菜单开关') !== -1;
+                }, 12000, '本地分支渲染 2.0.2');
+            })
+            .then(function () {
+                var text = panelText(d);
+                check('本地分支渲染出 v2.0.2 条目', text.indexOf('2.0.2') !== -1);
+                check('条目标题「数据隔离与菜单开关」', text.indexOf('数据隔离与菜单开关') !== -1);
+                check('亮点含「菜单选项」', text.indexOf('菜单选项') !== -1);
+                check('亮点含数据隔离', text.indexOf('按账号隔离') !== -1);
+                check('新版本排在 2.0.1 之前',
+                    text.indexOf('2.0.2') !== -1 &&
+                    text.indexOf('2.0.2') < text.indexOf('2.0.1'));
+
+                lines.push('---- 面板文本 ----');
+                lines.push(text.replace(/\n{2,}/g, '\n').slice(0, 800));
+
+                var bad = lines.filter(function (l) { return l.indexOf('FAIL') === 0; }).length;
+                document.getElementById('t').textContent = bad ? ('CHANGELOG FAIL(' + bad + ')') : 'CHANGELOG PASS';
+                document.title = bad ? 'CHANGELOG FAIL' : 'CHANGELOG PASS';
+                out(lines.join('\n'));
+            })
+            .catch(function (e) {
+                document.title = 'CHANGELOG ERR';
+                out('ERR ' + e.message + '\n' + lines.join('\n'));
+            });
+    });
+})();
+</script>
+</body></html>

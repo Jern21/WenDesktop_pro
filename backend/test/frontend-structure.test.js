@@ -66,10 +66,12 @@ test('旧 MPA 整页已清理：pages/content 下不应再有整页 HTML', funct
     });
 });
 
-test('project-page.js 暴露 __projectPage 契约（init + exposeGlobals）', function () {
-    var script = read('js/project-page.js');
+test('project/page.js 暴露 __projectPage 契约（init + exposeGlobals）', function () {
+    var script = read('js/project/page.js');
+    var api = read('js/project/api.js');
 
-    assert.match(script, /function\s+loadProjects\s*\(/, '业务逻辑仍在本脚本里');
+    assert.match(api, /list:\s*function/, '列表请求在 projectsApi');
+    assert.match(api, /api\.call\(url, options\)/, '项目请求走公共 api.call');
     assert.match(script, /function\s+exposeGlobals\s*\(/, '必须有可重复执行的 exposeGlobals()');
     assert.match(script, /window\.__projectPage\s*=\s*\{/, '必须暴露 __projectPage 供视图取用');
     assert.match(script, /exposeGlobals\s*:\s*exposeGlobals/, '__projectPage 上要挂 exposeGlobals');
@@ -77,7 +79,7 @@ test('project-page.js 暴露 __projectPage 契约（init + exposeGlobals）', fu
 });
 
 test('window.openEditForm 的赋值必须在 exposeGlobals() 内部，不能在顶层', function () {
-    var script = read('js/project-page.js');
+    var script = read('js/project/page.js');
 
     var exposeIdx = script.indexOf('function exposeGlobals');
     // 只认「赋值」，不要被按钮字符串里的 onclick="window.openEditForm(null)" 干扰
@@ -185,5 +187,5 @@ test('前端付款记录金额与后端一样夹负数为 0', function () {
 test('project-form.html 仍作为片段模板被脚本 fetch（不是整页）', function () {
     // 这个是**保留**的：项目表单抽屉是动态 fetch 的 HTML 片段
     assert.ok(exists('pages/content/project-form.html'), 'project-form.html 仍被 project-page.js fetch');
-    assert.match(read('js/project-page.js'), /pages\/content\/project-form\.html/);
+    assert.match(read('js/project/form.js'), /pages\/content\/project-form\.html/);
 });

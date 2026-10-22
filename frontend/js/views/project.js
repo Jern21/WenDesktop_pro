@@ -1,20 +1,22 @@
 /**
  * 项目管理 视图
  *
- * 这一页比较特殊：旧页面里**没有内联脚本**，全部逻辑都在 js/project-page.js
- * （一个 100KB 的全局 IIFE），它自身已经做了两件事：
- *   1. 用 isProjectPageMounted() 判断 DOM 是否就位；
- *   2. 监听 spa:ready 重新初始化（并在 window.__projectPageSpaReadyBound 上防重复绑定）。
- *
- * 所以这个视图只负责「元信息 + 按需加载脚本 + 通知它页面已就绪 + 离开时收浮层」，
- * 不搬任何业务代码 —— 等后续要拆 project-page.js 时再逐块迁进来。
+ * 业务在 js/project/ 下按看板、列表、详情、表单拆开。
+ * 这里只按顺序加载这些脚本，把取消信号交进去，离开时收掉浮层。
  */
 (function (global) {
     'use strict';
 
     var App = global.App = global.App || {};
 
-    var SCRIPT_SRC = 'js/project-page.js';
+    var SCRIPT_SRCS = [
+        'js/project/api.js',
+        'js/project/board.js',
+        'js/project/list.js',
+        'js/project/detail.js',
+        'js/project/form.js',
+        'js/project/page.js'
+    ];
     var SCRIPT_FLAG = 'data-project-page';
     var loadPromise = null;
     // 抓到 project-page.js 暴露的入口，存在闭包里跨挂载存活。
@@ -22,35 +24,41 @@
     // 会被 core/view.js 的 restoreGlobals 在离开时删掉。
     var pageApi = null;
 
-    /**
-     * 按需加载 project-page.js（只加载一次）
-     */
-    function ensureScript() {
-        if (loadPromise) return loadPromise;
-
-        loadPromise = new Promise(function (resolve, reject) {
-            // 已经加载过（例如旧页面跳过来）就直接复用
-            if (document.querySelector('script[' + SCRIPT_FLAG + ']')) {
+    function loadOne(src) {
+        return new Promise(function (resolve, reject) {
+            if (document.querySelector('script[src="' + src + '"]')) {
                 resolve();
                 return;
             }
             var s = document.createElement('script');
-            s.src = SCRIPT_SRC;
+            s.src = src;
             s.async = false;
-            s.setAttribute(SCRIPT_FLAG, '1');
+            if (src === 'js/project/page.js') s.setAttribute(SCRIPT_FLAG, '1');
             s.onload = function () { resolve(); };
             s.onerror = function () {
-                loadPromise = null;     // 允许下次重试
-                reject(new Error('project-page.js 加载失败'));
+                reject(new Error(src + ' 加载失败'));
             };
             document.head.appendChild(s);
-        }).then(function () {
-            // 脚本执行完毕，把入口抓进闭包
+        });
+    }
+
+    /**
+     * 按顺序加载项目模块（只加载一次）
+     */
+    function ensureScript() {
+        if (loadPromise) return loadPromise;
+
+        loadPromise = SCRIPT_SRCS.reduce(function (chain, src) {
+            return chain.then(function () { return loadOne(src); });
+        }, Promise.resolve()).then(function () {
             pageApi = global.__projectPage || null;
             if (!pageApi) {
-                console.warn('[project] project-page.js 未暴露 __projectPage，' +
+                console.warn('[project] 未暴露 __projectPage，' +
                     '全局入口（openEditForm）在二次进入时可能失效');
             }
+        }).catch(function (err) {
+            loadPromise = null;
+            throw err;
         });
 
         return loadPromise;
@@ -93,6 +101,9 @@
             // 每次挂载都重新暴露全局入口：
             // 上一次离开时 view.js 的 restoreGlobals 已经把 openEditForm 删掉了，
             // 而脚本不会重新执行，只能靠这里主动补回来。
+            if (pageApi && typeof pageApi.setSignal === 'function') {
+                pageApi.setSignal(ctx.signal);
+            }
             if (pageApi && typeof pageApi.exposeGlobals === 'function') {
                 pageApi.exposeGlobals();
             }
@@ -104,7 +115,10 @@
                 detail: { page: 'project.html', view: 'project', path: '/project' }
             }));
 
-            ctx.onCleanup(cleanupOverlays);
+            ctx.onCleanup(function () {
+                if (pageApi && typeof pageApi.setSignal === 'function') pageApi.setSignal(null);
+                cleanupOverlays();
+            });
         }
     });
 

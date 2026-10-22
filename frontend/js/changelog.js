@@ -64,6 +64,14 @@
         return '';
     }
 
+    // 仓库地址唯一来源：CHANGELOG.json 的 repository 字段。
+    // 「立即更新」按钮点击后跳到这个地址，不要在别处再写死一份 URL。
+    function getRepoUrl() {
+        if (state.local && state.local.repository) return state.local.repository;
+        if (state.remote && state.remote.repository) return state.remote.repository;
+        return '';
+    }
+
     function readSeen() {
         try {
             var raw = localStorage.getItem(STORAGE_KEY);
@@ -163,7 +171,7 @@
     function buildSyncStatusHtml() {
         var localV = getLocalVersion();
         var remoteV = getRemoteVersion();
-        var repo = (state.local && state.local.repository) || (state.remote && state.remote.repository) || '';
+        var repo = getRepoUrl();
         var rawUrl = getRemoteUrl();
         var parts = [
             '<div class="mb-4 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600 space-y-2">',
@@ -190,6 +198,18 @@
         } else if (state.remoteError) {
             parts.push(
                 '<span class="text-xs text-gray-400">未能拉取 GitHub（' + escapeHtml(state.remoteError) + '），仅显示本地日志</span>'
+            );
+        }
+
+        // 「立即更新」：新标签打开项目仓库，不打断当前页面状态。
+        // 地址取 CHANGELOG.json 的 repository；取不到就不渲染按钮（不在代码里写死 URL）。
+        if (repo) {
+            parts.push(
+                '<a href="' + escapeHtml(repo) + '" target="_blank" rel="noopener noreferrer" ' +
+                'aria-label="立即更新：前往项目 Git 仓库" title="前往项目 Git 仓库，拉取最新代码" ' +
+                'class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 ' +
+                'text-white text-xs font-medium transition-colors shadow-sm shadow-brand-500/30">' +
+                '<i class="ph ph-arrow-clockwise text-sm"></i>立即更新</a>'
             );
         }
 

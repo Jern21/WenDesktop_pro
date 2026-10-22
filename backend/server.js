@@ -116,6 +116,7 @@ app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/stats', require('./src/routes/stats'));
 app.use('/api/ledger', require('./src/routes/ledger'));
 app.use('/api/image-gen', require('./src/routes/image-gen'));
+app.use('/api/llm', require('./src/routes/llm'));
 app.use('/api/accounts', require('./src/routes/accounts'));
 app.use('/api/bookmarks', require('./src/routes/bookmarks'));
 app.use('/api/bug-reports', require('./src/routes/bug-reports'));

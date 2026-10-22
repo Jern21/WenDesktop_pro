@@ -1,0 +1,99 @@
+/* 数据看板、账号只读。数字来自 stats.*，这里只排版。 */
+
+.st-page {
+    min-height: 100%;
+}
+
+.st-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.st-metric {
+    margin: 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--shell-surface);
+}
+
+.st-metric span,
+.st-row-meta {
+    display: block;
+    color: var(--shell-text-tertiary);
+    font-size: 0.75rem;
+}
+
+.st-metric b {
+    display: block;
+    margin-top: 4px;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.st-metric em {
+    display: block;
+    margin-top: 2px;
+    color: var(--shell-text-secondary);
+    font-style: normal;
+    font-size: 0.75rem;
+}
+
+.st-block {
+    margin: 0 0 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--shell-surface);
+}
+
+.st-block h2 {
+    margin: 0 0 10px;
+    font-size: 0.875rem;
+}
+
+.st-row {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.st-row-name {
+    overflow: hidden;
+    color: var(--shell-text);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.st-track {
+    height: 8px;
+    border-radius: 99px;
+    background: var(--shell-bg);
+}
+
+.st-track > i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--shell-accent);
+}
+
+.st-row-value {
+    color: var(--shell-text-secondary);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.st-state {
+    padding: 28px 8px;
+    color: var(--shell-text-secondary);
+    text-align: center;
+}
+
+.st-state button {
+    margin-top: 8px;
+}

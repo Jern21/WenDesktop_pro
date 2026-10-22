@@ -70,6 +70,49 @@ html[data-theme="dark"] {
 .mobile-topbar-page {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mobile-topbar-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+/**
+ * 返回按钮（只出现在子页面）
+ *
+ * ⚠️ 这里**不能**写 `.mobile-topbar-back { display: flex }`。
+ * `[hidden]` 的 display:none 来自浏览器默认样式表，优先级极低，
+ * 作者样式里任何 display 都会把它压掉 → 返回按钮在首页也常显。
+ * （项目里 reminder 页三个模态框常显是同一个坑，见 ARCHITECTURE.md）
+ * 正确写法是把优先级抬到 0,2,0，不依赖加载顺序。
+ */
+.mobile-topbar-back:not([hidden]) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    margin-left: -0.4rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--shell-accent);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.mobile-topbar-back svg {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+.mobile-topbar-back:active {
+    background: var(--shell-rail-active);
 }
 
 .mobile-topbar-title {
@@ -214,21 +257,55 @@ html[data-theme="dark"] .mobile-topbar-menu button.danger {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     padding:
-        10px 0
-        calc(10px + env(safe-area-inset-bottom, 0px));
+        8px 0
+        calc(8px + env(safe-area-inset-bottom, 0px));
     padding-right: env(safe-area-inset-right, 0px);
     border-left: 1px solid var(--shell-border);
     background: var(--shell-rail-bg);
     backdrop-filter: saturate(180%) blur(20px);
+    /**
+     * 12 个入口在 667px 视口下共需约 546px（40px 按钮 + 4px 间距 + 2 条分隔线），放得下。
+     * 但 568px 的老机型（iPhone SE1 / 5s）只有约 490px 可用 —— 实测最后一个按钮
+     * 会落到 rail 底边之外（y=576 vs 底边 568）。
+     *
+     * 这里**不靠滚动兜底**：rail 是「所有功能的入口」，滚出屏幕等于入口消失，
+     * 用户根本不知道下面还有东西。改成让按钮自己收缩（见 .mobile-rail-btn 的 flex），
+     * 任何高度都能完整露出 12 项。overflow 只是小到连 min-height 都放不下时的最后一道保险。
+     */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.mobile-rail::-webkit-scrollbar {
+    display: none;
+}
+
+/** 分组分隔线：12 个纯图标并排，没有它分不清业务区和工具区的边界 */
+.mobile-rail-sep {
+    flex-shrink: 0;
+    width: 1.15rem;
+    height: 1px;
+    margin: 3px 0;
+    background: var(--shell-border);
 }
 
 .mobile-rail-btn {
-    width: 2.75rem;
-    height: 2.75rem;
+    /**
+     * 高度自适应：理想 40px，空间不够时收缩到 30px 为止。
+     * flex-basis 40px + flex-shrink 1 + min-height 30px —— 12 项永远能完整露出，
+     * 不需要用户滚 rail 才发现「设置」在下面。
+     * 568px 视口实测落在 36px 左右，44px 的 HIG 触摸标准在小屏上做不到了，
+     * 但 36px 仍然好按，比「看不见入口」强得多。
+     */
+    flex: 0 1 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    min-height: 1.875rem;
     border: none;
-    border-radius: 0.75rem;
+    border-radius: 0.7rem;
     background: transparent;
     color: var(--shell-text-tertiary);
     display: flex;

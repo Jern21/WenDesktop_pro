@@ -1,30 +1,12 @@
 import '../../styles/workbench.css';
-import { api } from '../../api/client.js';
+import { escapeHtml, formatMoney, formatDate, formatGrowthPoints } from '../../lib/format.js';
+import { toast } from '../../lib/toast.js';
+import { ledger, stats } from '../../api/resources.js';
+import { navigate } from '../../router.js';
+import { orderListSession } from '../order-session.js';
+import { openReminderBucket } from '../reminder-session.js';
 
 var HIDE_KEY = 'wb_hide_amounts';
-
-function escapeHtml(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-function formatMoney(n, hidden) {
-    if (hidden) return '****';
-    var v = Math.round((parseFloat(n) || 0) * 100) / 100;
-    var parts = v.toFixed(2).split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-}
-
-function formatDateLabel(dateStr) {
-    if (!dateStr) return '';
-    var m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!m) return dateStr;
-    return parseInt(m[2], 10) + '月' + parseInt(m[3], 10) + '日';
-}
 
 function isAmountHidden() {
     try {
@@ -60,7 +42,7 @@ function renderBars(months, hidden) {
         return '<p class="wb-empty">暂无趋势数据</p>';
     }
     return months.map(function (m) {
-        var h = Math.max(4, Math.round((m.income / max) * 88));
+        var h = Math.max(4, Math.round((m.income / max) * 64));
         var isMax = m.income >= max;
         return (
             '<div class="wb-bar-col">' +
@@ -84,7 +66,7 @@ function renderTransactions(list, hidden) {
             '<div class="wb-tx-icon">' + escapeHtml(txIcon(tx)) + '</div>' +
             '<div class="wb-tx-body">' +
             '<div class="wb-tx-title">' + escapeHtml(tx.title) + '</div>' +
-            '<div class="wb-tx-meta">' + escapeHtml(formatDateLabel(tx.date) + ' · ' + (tx.category || '')) + '</div>' +
+            '<div class="wb-tx-meta">' + escapeHtml(formatDate(tx.date, 'month-day') + ' · ' + (tx.category || '')) + '</div>' +
             '</div>' +
             '<div class="wb-tx-amount ' + cls + '">' + sign + formatMoney(tx.amount, hidden) + '</div>' +
             '</div>'
@@ -98,14 +80,56 @@ function renderMilestones(items) {
         return (
             '<div class="wb-milestone' + (m.achieved ? ' is-done' : '') + '">' +
             '<div class="wb-milestone-icon">' + icon + '</div>' +
+            '<div class="wb-milestone-copy">' +
             '<p class="wb-milestone-title">' + escapeHtml(m.title) + '</p>' +
             '<p class="wb-milestone-sub">' + escapeHtml(m.subtitle) + '</p>' +
-            '</div>'
+            '</div></div>'
         );
     }).join('');
 }
 
-function renderWorkbench(data, range, hidden) {
+function growthLabel(n) {
+    var text = formatGrowthPoints(n);
+    if (!text) return '';
+    return text === '持平' ? '环比持平' : ('环比 ' + text);
+}
+
+function countText(n) {
+    return typeof n === 'number' ? String(n) : '—';
+}
+
+function overdueReminderCount(notes) {
+    if (!notes || !Array.isArray(notes.items)) return null;
+    for (var i = 0; i < notes.items.length; i++) {
+        if (notes.items[i].type === 'overdue') return notes.items[i].count || 0;
+    }
+    return 0;
+}
+
+function renderOverview(overview, hidden) {
+    var home = overview && overview.home;
+    var todos = overview && overview.todos;
+    var notes = overview && overview.notes;
+    var monthGrowth = home ? growthLabel(home.monthRevenueGrowth) : '';
+    return (
+        '<section class="wb-card wb-today">' +
+        '<div class="wb-today-money">' +
+        '<span>今日 <b>' + (home ? ('¥' + formatMoney(home.todayRevenue, hidden)) : '—') + '</b></span>' +
+        '<span>本月 <b>' + (home ? ('¥' + formatMoney(home.monthRevenue, hidden)) : '—') + '</b>' +
+        (monthGrowth ? '<em>' + escapeHtml(monthGrowth) + '</em>' : '') + '</span>' +
+        '</div>' +
+        '<div class="wb-jumps">' +
+        '<button type="button" class="wb-jump" data-jump="today"><strong>' +
+        countText(todos && todos.todayReminders) + '</strong><span>今日提醒</span></button>' +
+        '<button type="button" class="wb-jump is-alert" data-jump="overdue"><strong>' +
+        countText(overdueReminderCount(notes)) + '</strong><span>逾期提醒</span></button>' +
+        '<button type="button" class="wb-jump" data-jump="acceptance"><strong>' +
+        countText(todos && todos.pendingAcceptance) + '</strong><span>待验收</span></button>' +
+        '</div></section>'
+    );
+}
+
+function renderWorkbench(data, range, hidden, state) {
     var s = data.summary || {};
     var g = data.goal || {};
     var t = data.trend || {};
@@ -133,6 +157,7 @@ function renderWorkbench(data, range, hidden) {
         '<div class="wb-hero-stat"><div class="wb-hero-stat-label">累计净收入</div><div class="wb-hero-stat-value" data-wb="net">' + formatMoney(s.netIncome, hidden) + '</div></div>' +
         '</div></div></header>' +
         '<div class="wb-stack">' +
+        renderOverview(state.overview, hidden) +
         '<section class="wb-card">' +
         '<div class="wb-card-head"><h2 class="wb-card-title">下一个小目标</h2><span class="wb-goal-target">¥' + formatMoney(g.amount, hidden) + '</span></div>' +
         '<div class="wb-progress-track"><div class="wb-progress-bar" style="width:' + (g.progress || 0) + '%"></div></div>' +
@@ -150,7 +175,7 @@ function renderWorkbench(data, range, hidden) {
         '</section>' +
         '<section class="wb-card">' +
         '<h2 class="wb-card-title">成长里程碑</h2>' +
-        '<div class="wb-milestones" style="margin-top:12px">' + renderMilestones(data.milestones) + '</div>' +
+        '<div class="wb-milestones">' + renderMilestones(data.milestones) + '</div>' +
         '</section>' +
         '<section class="wb-card">' +
         '<div class="wb-list-head"><h2 class="wb-card-title">最近记录</h2><button type="button" class="wb-list-link" id="wb-more">全部 ›</button></div>' +
@@ -207,13 +232,14 @@ function openAddSheet(container, onSaved) {
             date: backdrop.querySelector('#wb-f-date').value,
             category: catEl.value
         };
-        api.post('/api/ledger', body)
+        ledger.create(body)
             .then(function () {
                 close();
+                toast.success('已记一笔');
                 if (onSaved) onSaved();
             })
             .catch(function (e) {
-                window.alert(e.message || '保存失败');
+                toast.error(e.message || '保存失败');
             });
     });
 
@@ -252,6 +278,25 @@ function bindWorkbench(container, state) {
         });
     }
 
+    container.querySelectorAll('[data-jump]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var jump = btn.getAttribute('data-jump');
+            if (jump === 'acceptance') {
+                orderListSession.filters.keyword = '';
+                orderListSession.filters.status = 'acceptance';
+                orderListSession.filters.paymentStatus = '';
+                orderListSession.filters.overdue = false;
+                orderListSession.snapshot = null;
+                orderListSession.scrollTop = 0;
+                orderListSession.patch = null;
+                navigate('/orders');
+                return;
+            }
+            openReminderBucket(jump === 'overdue' ? 'overdue' : 'today');
+            navigate('/reminder');
+        });
+    });
+
     var more = container.querySelector('#wb-more');
     if (more) {
         more.addEventListener('click', function () {
@@ -266,11 +311,20 @@ function bindWorkbench(container, state) {
             var s = state.lastData && state.lastData.summary;
             if (!s) return;
             var text = '开发小账：累计收入 ¥' + formatMoney(s.totalIncome, false);
+
+            // 依次降级：系统分享 → 剪贴板 → toast 展示。
+            // 不用 window.alert：它会阻塞 JS、打断手势，且 iOS 上会被当成页面切换。
             if (navigator.share) {
-                navigator.share({ title: '开发小账', text: text }).catch(function () { /* ignore */ });
-            } else {
-                window.alert(text);
+                navigator.share({ title: '开发小账', text: text }).catch(function () { /* 用户取消，忽略 */ });
+                return;
             }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(function () { toast.success('已复制到剪贴板'); })
+                    .catch(function () { toast.info(text); });
+                return;
+            }
+            toast.info(text);
         });
     }
 }
@@ -281,10 +335,15 @@ function loadWorkbench(container, state) {
     var generation = state.generation;
     container.innerHTML = '<p class="wb-empty" style="padding:24px">加载中…</p>';
 
-    var limit = state.showAll ? 50 : 8;
-    api.get('/api/ledger/workbench?range=' + encodeURIComponent(state.range) +
-        '&recentLimit=' + limit)
-        .then(function (res) {
+    var limit = state.showAll ? 50 : 3;
+    Promise.all([
+        ledger.workbench({ range: state.range, recentLimit: limit }),
+        stats.todos().catch(function () { return null; }),
+        stats.homeMetrics().catch(function () { return null; }),
+        stats.notifications().catch(function () { return null; })
+    ])
+        .then(function (parts) {
+            var res = parts[0];
             if (state.disposed || state.generation !== generation) return;
             if (!res.success || !res.data) {
                 container.innerHTML = '<p class="wb-error">加载失败</p>';
@@ -292,7 +351,12 @@ function loadWorkbench(container, state) {
             }
             var data = res.data;
             state.lastData = data;
-            container.innerHTML = renderWorkbench(data, state.range, state.hidden);
+            state.overview = {
+                todos: parts[1] && parts[1].data,
+                home: parts[2] && parts[2].data,
+                notes: parts[3] && parts[3].data
+            };
+            container.innerHTML = renderWorkbench(data, state.range, state.hidden, state);
             bindWorkbench(container, state);
         })
         .catch(function (e) {

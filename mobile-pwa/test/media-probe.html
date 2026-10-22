@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>素材发帖收藏探针</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+        #app { height: 720px; }
+        #result { padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
+        .ok { color: #12874f; }
+        .bad { color: #d92020; }
+    </style>
+</head>
+<body>
+    <!--
+      素材图、发帖筛选、收藏点击探针。
+      跑法：http://127.0.0.1:3460/test/media-probe.html
+    -->
+    <div id="app"></div>
+    <pre id="result">running…</pre>
+    <script type="module" src="/test/media-probe.js"></script>
+</body>
+</html>

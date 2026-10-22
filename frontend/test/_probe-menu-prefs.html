@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>PROBE RUNNING</title>
+<style>
+  body { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 16px; }
+  h1 { font-size: 18px; }
+  .ok { color: #15803d; }
+  .fail { color: #b91c1c; font-weight: 700; }
+  iframe { width: 1280px; height: 860px; border: 1px solid #ccc; margin-top: 12px; }
+  pre { white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1 id="title">PROBE RUNNING</h1>
+<pre id="out"></pre>
+<iframe id="app" src="/settings"></iframe>
+<script>
+/**
+ * 探针：设置中心 →「菜单选项」控制侧边栏显示/隐藏
+ *
+ * 覆盖：
+ *   1. 设置页列出的菜单项与侧栏 data-menu-key 一一对应
+ *   2. 设置中心锁定（不能隐藏，防自锁）
+ *   3. 关掉单项 → 侧栏实际 display:none + localStorage 落盘
+ *   4. 平台管理整组隐藏（含子菜单），子项开关联动禁用
+ *   5. 「全部显示」能清空
+ *   6. 重新加载页面后偏好仍然生效（持久化）
+ */
+(function () {
+    'use strict';
+
+    var results = [];
+    var iframe = document.getElementById('app');
+
+    function log(name, ok, extra) {
+        results.push({ name: name, ok: !!ok, extra: extra == null ? '' : String(extra) });
+    }
+
+    function waitFor(fn, timeout, label) {
+        return new Promise(function (resolve, reject) {
+            var start = Date.now();
+            (function tick() {
+                var v = null;
+                try { v = fn(); } catch (e) { v = null; }
+                if (v) return resolve(v);
+                if (Date.now() - start > timeout) return reject(new Error('等待超时：' + label));
+                setTimeout(tick, 80);
+            })();
+        });
+    }
+
+    function finish() {
+        var passed = results.filter(function (r) { return r.ok; }).length;
+        var failed = results.length - passed;
+        var lines = results.map(function (r) {
+            return (r.ok ? 'PASS  ' : 'FAIL  ') + r.name + (r.extra ? '   [' + r.extra + ']' : '');
+        });
+        document.getElementById('out').textContent = lines.join('\n') +
+            '\n\n合计 ' + results.length + ' 项：通过 ' + passed + '，失败 ' + failed;
+        document.getElementById('title').textContent =
+            (failed === 0 ? 'PROBE PASS' : 'PROBE FAIL(' + failed + ')') +
+            ' ' + passed + '/' + results.length;
+        document.title = failed === 0 ? 'PROBE PASS ' + passed + '/' + results.length
+                                      : 'PROBE FAIL ' + failed + 'of' + results.length;
+    }
+
+    function fireChange(win, input) {
+        input.dispatchEvent(new win.Event('change', { bubbles: true }));
+    }
+
+    function rowInput(doc, key) {
+        return doc.querySelector('#menu-options-list input[data-menu-toggle="' + key + '"]');
+    }
+
+    function navEl(doc, key) {
+        return doc.querySelector('#sidebar-nav [data-menu-key="' + key + '"]');
+    }
+
+    function displayOf(win, el) {
+        return el ? win.getComputedStyle(el).display : 'missing';
+    }
+
+    async function run() {
+        var STORE = 'app-sidebar-menu-hidden';
+
+        // ---------- 0. 等设置页渲染出菜单列表 ----------
+        await waitFor(function () {
+            var d = iframe.contentDocument;
+            return d && d.querySelector('#menu-options-list [data-menu-row]');
+        }, 25000, '设置页菜单列表渲染');
+
+        var doc = iframe.contentDocument;
+        var win = iframe.contentWindow;
+
+        // 干净起点
+        win.localStorage.removeItem(STORE);
+        if (win.SidebarMenuPrefs) win.SidebarMenuPrefs.apply();
+
+        // ---------- 1. 清单一致性 ----------
+        var rows = doc.querySelectorAll('#menu-options-list [data-menu-row]');
+        var navKeys = Array.prototype.map.call(
+            doc.querySelectorAll('#sidebar-nav [data-menu-key]'),
+            function (el) { return el.getAttribute('data-menu-key'); }
+        );
+        log('设置页菜单项数 = 侧栏菜单项数', rows.length === navKeys.length,
+            rows.length + ' vs ' + navKeys.length);
+        log('侧栏菜单项数 = 19（18 个导航 + 平台整组）', navKeys.length === 19, navKeys.join(','));
+
+        var missingInList = navKeys.filter(function (k) {
+            return !doc.querySelector('#menu-options-list [data-menu-row="' + k + '"]');
+        });
+        log('侧栏每一项在设置页都有对应开关', missingInList.length === 0,
+            missingInList.join(',') || '无遗漏');
+
+        // ---------- 2. 设置中心锁定 ----------
+        var settingsInput = rowInput(doc, 'settings');
+        log('「设置中心」开关存在且禁用（防自锁）', !!settingsInput && settingsInput.disabled === true);
+        log('「设置中心」默认为勾选（可见）', !!settingsInput && settingsInput.checked === true);
+
+        // ---------- 3. 隐藏单项：日期提醒 ----------
+        var reminderNav = navEl(doc, 'reminder');
+        log('隐藏前「日期提醒」可见', displayOf(win, reminderNav) !== 'none', displayOf(win, reminderNav));
+
+        var reminderInput = rowInput(doc, 'reminder');
+        reminderInput.checked = false;
+        fireChange(win, reminderInput);
+
+        log('隐藏后侧栏项打上 data-menu-hidden 标记',
+            reminderNav.getAttribute('data-menu-hidden') === '1');
+        log('隐藏后侧栏项实际不显示（computed display）',
+            displayOf(win, reminderNav) === 'none', displayOf(win, reminderNav));
+        log('隐藏后侧栏项不占布局（offsetParent）', reminderNav.offsetParent === null);
+
+        var stored = [];
+        try { stored = JSON.parse(win.localStorage.getItem(STORE) || '[]'); } catch (e) {}
+        log('localStorage 已落盘 reminder', stored.indexOf('reminder') !== -1, JSON.stringify(stored));
+
+        var countEl = doc.getElementById('menu-options-hidden-count');
+        log('「已隐藏 N 项」计数刷新', countEl && countEl.textContent.trim() === '1',
+            countEl && countEl.textContent.trim());
+
+        // ---------- 4. 平台管理整组隐藏 ----------
+        // 注意：子菜单默认是收起的（#platform-submenu 带 hidden），
+        // 先展开再测，否则「子项不可见」在没隐藏父项时也成立，验证不了任何东西。
+        var platformToggle = doc.getElementById('platform-toggle');
+        if (platformToggle) platformToggle.click();
+        await new Promise(function (r) { setTimeout(r, 120); });
+
+        var platformGroup = navEl(doc, 'platform');
+        var platformInput = rowInput(doc, 'platform');
+        var douyinInput = rowInput(doc, 'douyin');
+        var douyinNav = navEl(doc, 'douyin');
+
+        log('展开子菜单后「抖音」可见（测前状态）',
+            !!douyinNav && douyinNav.getBoundingClientRect().width > 0,
+            douyinNav ? Math.round(douyinNav.getBoundingClientRect().width) + 'px' : 'missing');
+        log('隐藏父项前，子项「抖音」开关可用', !!douyinInput && douyinInput.disabled === false);
+
+        platformInput.checked = false;
+        fireChange(win, platformInput);
+
+        log('隐藏「平台管理」后整组不显示', displayOf(win, platformGroup) === 'none',
+            displayOf(win, platformGroup));
+        // 子元素自身的 computed display 不受祖先 display:none 影响，只能看实际盒尺寸
+        log('整组隐藏后子菜单实际不占位置（宽度归零）',
+            !!douyinNav && douyinNav.getBoundingClientRect().width === 0,
+            douyinNav ? Math.round(douyinNav.getBoundingClientRect().width) + 'px' : 'missing');
+        log('整组隐藏后子菜单元素被浏览器判定为不可见（offsetParent）',
+            !!douyinNav && douyinNav.offsetParent === null);
+        log('父项隐藏后子项开关联动禁用', !!douyinInput && douyinInput.disabled === true);
+
+        // ---------- 5. 全部显示 ----------
+        doc.getElementById('menu-options-reset').click();
+        await new Promise(function (r) { setTimeout(r, 100); });
+
+        log('重置后侧栏无隐藏标记',
+            doc.querySelectorAll('#sidebar-nav [data-menu-hidden="1"]').length === 0,
+            doc.querySelectorAll('#sidebar-nav [data-menu-hidden="1"]').length + ' 个残留');
+        log('重置后「日期提醒」恢复显示', displayOf(win, reminderNav) !== 'none',
+            displayOf(win, reminderNav));
+        var afterReset = [];
+        try { afterReset = JSON.parse(win.localStorage.getItem(STORE) || '[]'); } catch (e) {}
+        log('重置后 localStorage 已清空', afterReset.length === 0, JSON.stringify(afterReset));
+
+        // ---------- 6. 持久化：隐藏后重新加载 ----------
+        win.localStorage.setItem(STORE, JSON.stringify(['memo', 'bookmarks']));
+        var frame2 = document.createElement('iframe');
+        frame2.style.cssText = 'width:1280px;height:400px;border:1px solid #ccc;margin-top:8px';
+        frame2.src = '/settings?probe=reload';
+        document.body.appendChild(frame2);
+
+        await waitFor(function () {
+            var d2 = frame2.contentDocument;
+            return d2 && d2.querySelector('#sidebar-nav [data-menu-key="memo"]');
+        }, 25000, '第二次加载的侧栏');
+
+        var doc2 = frame2.contentDocument;
+        var win2 = frame2.contentWindow;
+        // 首屏应用可能稍晚于 DOM 插入
+        await waitFor(function () {
+            return doc2.querySelector('#sidebar-nav [data-menu-key="memo"]')
+                .getAttribute('data-menu-hidden') === '1';
+        }, 8000, '重载后应用偏好').catch(function () { /* 交给下面断言报错 */ });
+
+        log('重新加载后偏好仍生效（memo 隐藏）',
+            displayOf(win2, doc2.querySelector('#sidebar-nav [data-menu-key="memo"]')) === 'none',
+            displayOf(win2, doc2.querySelector('#sidebar-nav [data-menu-key="memo"]')));
+        log('重新加载后未隐藏项保持可见（orders）',
+            displayOf(win2, doc2.querySelector('#sidebar-nav [data-menu-key="orders"]')) !== 'none',
+            displayOf(win2, doc2.querySelector('#sidebar-nav [data-menu-key="orders"]')));
+
+        // 收尾：恢复干净状态，避免污染开发时看到的侧栏
+        win2.localStorage.removeItem(STORE);
+    }
+
+    iframe.addEventListener('load', function () {
+        run().catch(function (err) {
+            log('探针流程异常：' + err.message, false);
+        }).then(finish);
+    });
+
+    // 兜底：无论卡在哪，12s 后也要出结果，别让 dump-dom 抓到空页
+    setTimeout(finish, 12000);
+})();
+</script>
+</body>
+</html>

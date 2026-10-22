@@ -178,6 +178,30 @@ test('上传相关源码不再硬编码 backend/data/uploads', function () {
     });
 });
 
+test('trial 不能删掉 admin 的附件，也不能删旧共享目录', function () {
+    var adminDir = dataPaths.userUploadsDir('admin');
+    fs.mkdirSync(adminDir, { recursive: true });
+    var adminFile = path.join(adminDir, 'secret.pdf');
+    fs.writeFileSync(adminFile, 'admin');
+
+    var legacyDir = dataPaths.UPLOADS_DIR;
+    fs.mkdirSync(legacyDir, { recursive: true });
+    var legacyFile = path.join(legacyDir, 'shared.pdf');
+    fs.writeFileSync(legacyFile, 'shared');
+
+    var trial = { wtSession: { username: 'trial' } };
+    assert.equal(uploads.deleteByUrl('/uploads/admin/secret.pdf', trial), false);
+    assert.equal(fs.readFileSync(adminFile, 'utf8'), 'admin');
+    assert.equal(uploads.deleteByFilename('shared.pdf', trial), false);
+    assert.equal(fs.readFileSync(legacyFile, 'utf8'), 'shared');
+
+    var admin = { wtSession: { username: 'admin' } };
+    assert.equal(uploads.deleteByUrl('/uploads/admin/secret.pdf', admin), true);
+    assert.equal(fs.existsSync(adminFile), false);
+    assert.equal(uploads.deleteByFilename('shared.pdf', admin), true);
+    assert.equal(fs.existsSync(legacyFile), false);
+});
+
 test('/uploads 必须挂 attachUserContext（否则越权检查会退化成「所有人都是主账号」）', function () {
     var src = fs.readFileSync(path.join(BACKEND, 'server.js'), 'utf8');
     var line = src.split('\n').filter(function (l) {

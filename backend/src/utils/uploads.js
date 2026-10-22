@@ -114,18 +114,41 @@ function resolveFromUrl(url) {
 function resolveExistingFile(filename, req) {
     var name = safeBasename(filename);
     if (!name) return null;
-    var candidates = [
-        path.join(userUploadsPath(usernameFromRequest(req)), name),
-        path.join(dataPaths.UPLOADS_DIR, name)
-    ];
-    for (var i = 0; i < candidates.length; i++) {
-        if (isExistingFile(candidates[i])) return candidates[i];
-    }
-    return null;
+    var me = usernameFromRequest(req);
+    var mine = path.join(userUploadsPath(me), name);
+    if (isExistingFile(mine)) return mine;
+    // 旧共享目录只属于主账号。trial 不能靠「自己目录没有」删到别人的历史文件。
+    if (me !== legacyOwnerUsername()) return null;
+    var legacy = path.join(dataPaths.UPLOADS_DIR, name);
+    return isExistingFile(legacy) ? legacy : null;
 }
 
-function deleteByUrl(url) {
-    var filePath = resolveFromUrl(url);
+/**
+ * 当前用户可以删除的那个文件。不属于他时返回 null，调用方不得 unlink。
+ * 规则与静态读取一致：用户段必须是自己；老扁平目录只有主账号能碰。
+ */
+function resolveDeletable(url, req) {
+    var parsed = parseUploadsUrl(url);
+    if (!parsed) return null;
+    var me = usernameFromRequest(req);
+
+    if (parsed.username) {
+        if (parsed.username !== me) {
+            console.warn('[uploads] 拒绝跨用户删除: ' + me + ' -> ' +
+                parsed.username + '/' + parsed.filename);
+            return null;
+        }
+        var mine = path.join(userUploadsPath(me), parsed.filename);
+        if (isExistingFile(mine)) return mine;
+        if (me !== legacyOwnerUsername()) return null;
+        var legacyMine = path.join(dataPaths.UPLOADS_DIR, parsed.filename);
+        return isExistingFile(legacyMine) ? legacyMine : null;
+    }
+
+    return resolveExistingFile(parsed.filename, req);
+}
+
+function unlinkFile(filePath) {
     if (!isExistingFile(filePath)) return false;
     try {
         fs.unlinkSync(filePath);
@@ -136,16 +159,19 @@ function deleteByUrl(url) {
     }
 }
 
+function deleteByUrl(url, req) {
+    return unlinkFile(resolveDeletable(url, req));
+}
+
 function deleteByFilename(filename, req) {
-    var filePath = resolveExistingFile(filename, req);
-    if (!filePath) return false;
-    try {
-        fs.unlinkSync(filePath);
-        return true;
-    } catch (e) {
-        console.warn('[uploads] 删除失败:', filePath, e.message);
-        return false;
-    }
+    return unlinkFile(resolveExistingFile(filename, req));
+}
+
+function attachmentOwnedBy(file, req) {
+    if (!file) return false;
+    if (file.url) return !!resolveDeletable(file.url, req);
+    if (file.filename) return !!resolveExistingFile(file.filename, req);
+    return false;
 }
 
 /**
@@ -246,7 +272,9 @@ module.exports = {
     resolveFromUrl: resolveFromUrl,
     resolveReadableUpload: resolveReadableUpload,
     resolveExistingFile: resolveExistingFile,
+    resolveDeletable: resolveDeletable,
     deleteByUrl: deleteByUrl,
     deleteByFilename: deleteByFilename,
+    attachmentOwnedBy: attachmentOwnedBy,
     staticHandler: staticHandler
 };

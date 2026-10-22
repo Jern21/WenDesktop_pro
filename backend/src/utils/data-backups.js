@@ -9,6 +9,54 @@ var DATA_DIR = dataPaths.DATA_DIR;
 var BACKUP_DIR = dataPaths.BACKUP_DIR;
 var MAX_BACKUPS_PER_FILE = 50;
 
+/** 允许整包恢复的数据集。键以外的名字（包括 auth）一律拒绝。 */
+var DATASET_SHAPES = {
+    accounts: 'array',
+    bookmarks: 'array',
+    'bug-reports': 'array',
+    customers: 'array',
+    ledger: 'array',
+    memos: 'array',
+    orders: 'array',
+    'platform-posts': 'array',
+    posters: 'array',
+    projects: 'array',
+    quotes: 'array',
+    reminders: 'array',
+    resume: 'array',
+    settings: 'object'
+};
+
+function shapeOf(data, expected) {
+    if (expected === 'array') return Array.isArray(data);
+    return data !== null && typeof data === 'object' && !Array.isArray(data);
+}
+
+function validateBundle(backup) {
+    if (!backup || typeof backup !== 'object' || Array.isArray(backup) || !backup._meta || typeof backup._meta !== 'object') {
+        var formatErr = new Error('无效的备份数据格式');
+        formatErr.status = 400;
+        throw formatErr;
+    }
+    var problems = [];
+    Object.keys(backup).forEach(function (key) {
+        if (key === '_meta') return;
+        if (!Object.prototype.hasOwnProperty.call(DATASET_SHAPES, key)) {
+            problems.push(key + ' 不是可恢复的数据集');
+            return;
+        }
+        if (!shapeOf(backup[key], DATASET_SHAPES[key])) {
+            problems.push(key + ' 的结构应为' + (DATASET_SHAPES[key] === 'array' ? '数组' : '对象'));
+        }
+    });
+    if (problems.length) {
+        var err = new Error('备份校验失败：' + problems.join('；'));
+        err.status = 400;
+        err.failures = problems;
+        throw err;
+    }
+}
+
 function ensureDir(dir) {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -256,6 +304,11 @@ function restoreBackup(fileName, backupName, scope) {
     }
 
     var data = JSON.parse(fs.readFileSync(backupPath, 'utf-8'));
+    if (Object.prototype.hasOwnProperty.call(DATASET_SHAPES, fileName) && !shapeOf(data, DATASET_SHAPES[fileName])) {
+        var shapeErr = new Error(fileName + ' 的备份结构不可读');
+        shapeErr.status = 400;
+        throw shapeErr;
+    }
     writeJsonFile(fileName, data, { scope: scope });
 
     return {
@@ -263,6 +316,47 @@ function restoreBackup(fileName, backupName, scope) {
         name: backupName,
         restoredAt: new Date().toISOString()
     };
+}
+
+function restoreBundle(backup, scope) {
+    validateBundle(backup);
+    scope = resolveScope(scope);
+    var keys = Object.keys(backup).filter(function (key) { return key !== '_meta'; });
+    var snapshots = keys.map(function (key) {
+        var filePath = getDataFilePath(key, scope);
+        var existed = fs.existsSync(filePath);
+        return {
+            key: key,
+            filePath: filePath,
+            existed: existed,
+            prev: existed ? fs.readFileSync(filePath) : null
+        };
+    });
+
+    function rollback() {
+        snapshots.slice().reverse().forEach(function (snap) {
+            try {
+                if (!snap.existed) {
+                    if (fs.existsSync(snap.filePath)) fs.unlinkSync(snap.filePath);
+                    return;
+                }
+                fs.writeFileSync(snap.filePath, snap.prev);
+            } catch (e) {
+                console.error('[Restore] 回滚失败:', snap.key, e.message);
+            }
+        });
+    }
+
+    try {
+        keys.forEach(function (key) {
+            writeJsonFile(key, backup[key], { scope: scope });
+        });
+    } catch (e) {
+        rollback();
+        if (!e.status) e.status = 500;
+        throw e;
+    }
+    return keys;
 }
 
 function createAllBackups(scope) {
@@ -326,6 +420,8 @@ module.exports = {
     listDataFiles: listDataFiles,
     getBackupPath: getBackupPath,
     restoreBackup: restoreBackup,
+    restoreBundle: restoreBundle,
+    validateBundle: validateBundle,
     getBackupSummary: getBackupSummary,
     getItemCount: getItemCount
 };
