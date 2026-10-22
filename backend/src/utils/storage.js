@@ -25,21 +25,62 @@ function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+/**
+ * 数据文件读取失败（损坏 / 无权限 / 结构不对）时抛出。
+ *
+ * 为什么要单独一个错误类型：调用方（路由层）需要把「文件坏了」和
+ * 「业务逻辑出错」区分开 —— 前者必须立刻停止写入并提示人工介入，
+ * 绝不能像以前那样静默返回空数组、让后续写入把原文件覆盖掉。
+ */
+class StorageError extends Error {
+    constructor(fileName, filePath, cause) {
+        super('数据文件读取失败：' + fileName + '.json（' + (cause && cause.message) + '）');
+        this.name = 'StorageError';
+        this.fileName = fileName;
+        this.filePath = filePath;
+        this.cause = cause;
+    }
+}
+
 class Storage {
     /**
      * @param {string} fileName - 文件名（不含 .json 后缀）
      */
     constructor(fileName) {
         this.fileName = fileName;
-        this.filePath = dataBackups.getDataFilePath(fileName);
-        this._ensureFile();
+        // ⚠️ 这里**不能**把路径算出来存成属性。
+        //
+        // 所有 Storage 实例都是「模块加载时」创建的（routes 顶层的
+        // `var orders = new Storage('orders')`），那一刻请求还没进来、
+        // userContext 是空的 —— 一旦在构造时固化 filePath，
+        // 它就会永久指向根目录 data/，此后**所有用户都读写同一份根目录文件**，
+        // 用户隔离直接失效（表现：trial 登录进去订单/客户/海报全是 0 条，
+        // 而 users/trial/*.json 里明明有数据）。
+        //
+        // 所以路径必须每次用时现算（见下面的 filePath getter）。
+    }
+
+    /**
+     * 当前用户的数据文件绝对路径 —— **动态解析**。
+     *
+     * 用 getter 而不是在构造时赋值：userContext 是「每个请求」切换的，
+     * 路径也必须跟着请求走。写路径同理（data-backups 每次都会
+     * ensureDir(getActiveDataDir())，所以这里不需要预先建目录）。
+     */
+    get filePath() {
+        return dataBackups.getDataFilePath(this.fileName);
     }
 
     /**
      * 确保数据文件存在，不存在则创建空数组
+     *
+     * ⚠️ 不要把它挪回 constructor。
+     * 模块加载时 userContext 是空的，那时建文件会在**根目录**造一堆空 json，
+     * 而且建出来的那份跟用户实际读写的那份不是同一个文件。
+     * 现在写路径自己会建目录（`data-backups.writeJsonFile` 里 ensureDir），
+     * 读路径对「文件不存在」返回空数组，所以不需要提前建。
      */
     _ensureFile() {
-        dataBackups.ensureDir(dataBackups.DATA_DIR);
         if (!fs.existsSync(this.filePath)) {
             this._write([], { backup: false });
         }
@@ -47,17 +88,49 @@ class Storage {
 
     /**
      * 读取整个 JSON 数组
+     *
+     * ⚠️ 这里刻意「读不懂就抛」，不再 catch 成 []。
+     * 返空数组会被 create/update/remove 当成「当前没有数据」，
+     * 于是下一次写入就用新数据覆盖整个文件 ——
+     * 把「数据损坏」伪装成「没有数据」，且全程没有任何告警、没有中断。
+     * 正确做法是让异常一路抛到响应层，宁可报 500 也不要静默毁数据。
+     *
+     * 只有「文件不存在」和「文件是空的」这两种情况才算真的没有数据。
+     *
      * @returns {Array}
+     * @throws {StorageError}
      */
     _read() {
+        if (!fs.existsSync(this.filePath)) return [];
+
+        let raw;
         try {
-            const raw = fs.readFileSync(this.filePath, 'utf-8');
-            const data = JSON.parse(raw);
-            return Array.isArray(data) ? data : [];
+            raw = fs.readFileSync(this.filePath, 'utf-8');
         } catch (e) {
-            console.error('[Storage] 读取文件失败:', this.filePath, e.message);
+            throw new StorageError(this.fileName, this.filePath, e);
+        }
+
+        // 空文件：可能是写入过程被打断，按空数据处理（此时确实没有可丢的内容）
+        if (raw.trim() === '') {
+            console.warn('[Storage] 数据文件为空，按空数据处理:', this.filePath);
             return [];
         }
+
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (e) {
+            throw new StorageError(this.fileName, this.filePath, e);
+        }
+
+        if (!Array.isArray(data)) {
+            throw new StorageError(
+                this.fileName,
+                this.filePath,
+                new Error('顶层结构不是数组，实际为 ' + (data === null ? 'null' : typeof data))
+            );
+        }
+        return data;
     }
 
     /**
@@ -90,6 +163,63 @@ class Storage {
      */
     listBackups() {
         return dataBackups.listBackups(this.fileName);
+    }
+
+    /**
+     * 这份备份能不能用：必须是数组且能解析。
+     * 只看大小不够 —— 备份也可能是在数据已经坏掉之后拍的。
+     */
+    _isUsableBackup(backupName) {
+        try {
+            const raw = fs.readFileSync(dataBackups.getBackupPath(this.fileName, backupName), 'utf-8');
+            return Array.isArray(JSON.parse(raw));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * 从备份恢复数据文件。
+     *
+     * 配合 _read() 抛错使用：数据坏了之后写入会被阻断，
+     * 但不应该只能靠人去 backups 目录里手工翻文件 —— 这里给出显式恢复入口。
+     *
+     * @param {string} [backupName] 指定备份；不传则从新到旧挑第一份可解析为数组的
+     * @returns {{restoredFrom: string, count: number, restoredAt: string}}
+     */
+    recoverFromBackup(backupName) {
+        const list = dataBackups.listBackups(this.fileName);
+        if (!list.length) {
+            throw new Error('没有可用备份：' + this.fileName);
+        }
+
+        let chosen = null;
+        if (backupName) {
+            if (!list.some(b => b.name === backupName)) {
+                throw new Error('找不到指定备份：' + backupName);
+            }
+            if (!this._isUsableBackup(backupName)) {
+                throw new Error('指定备份无法解析为数组：' + backupName);
+            }
+            chosen = backupName;
+        } else {
+            // 最新的一份未必可用（它可能就是坏掉那版拍的），从新到旧往下找
+            for (const item of list) {
+                if (this._isUsableBackup(item.name)) { chosen = item.name; break; }
+            }
+            if (!chosen) {
+                throw new Error('所有备份都无法解析为数组：' + this.fileName);
+            }
+        }
+
+        const result = dataBackups.restoreBackup(this.fileName, chosen);
+        // 恢复后立刻自检，别把"恢复成功"建立在假设上
+        const count = this._read().length;
+        return {
+            restoredFrom: chosen,
+            count: count,
+            restoredAt: result.restoredAt
+        };
     }
 
     /**
@@ -171,7 +301,15 @@ class Storage {
         });
         if (idx === -1) return null;
 
-        all[idx] = Object.assign({}, all[idx], patch, {
+        // id / createdAt 是身份字段，路由层漏了白名单也不能被请求体改掉。
+        var safe = Object.assign({}, patch && typeof patch === 'object' ? patch : {});
+        delete safe.id;
+        delete safe.createdAt;
+
+        var original = all[idx];
+        all[idx] = Object.assign({}, original, safe, {
+            id: original.id,
+            createdAt: original.createdAt,
             updatedAt: new Date().toISOString()
         });
         this._write(all);
@@ -228,3 +366,4 @@ class Storage {
 
 module.exports = Storage;
 module.exports.generateId = generateId;
+module.exports.StorageError = StorageError;

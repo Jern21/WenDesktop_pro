@@ -24,6 +24,7 @@ var router = express.Router();
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
 var orderRules = require('../utils/order-rules');
+var customerOrders = require('../utils/customer-orders');
 
 var orders = new Storage('orders');
 var customers = new Storage('customers');
@@ -58,18 +59,7 @@ function goodRateOf(list) {
     return Math.round(good / rated.length * 100);
 }
 
-function repeatRateOf(list) {
-    var counts = {};
-    list.forEach(function (o) {
-        var key = o.customerId || o.customerNick || o.customer;
-        if (!key) return;
-        counts[key] = (counts[key] || 0) + 1;
-    });
-    var keys = Object.keys(counts);
-    if (!keys.length) return 0;
-    var repeat = keys.filter(function (k) { return counts[k] >= 2; }).length;
-    return Math.round(repeat / keys.length * 100);
-}
+var repeatRateOf = customerOrders.repeatRate;
 
 function normalizeStatsRange(req, defaultRange) {
     var range = ((req.query && (req.query.range || req.query.period)) || defaultRange || 'all').toLowerCase();
@@ -187,14 +177,7 @@ function filterPostsByRange(allPosts, meta, previous) {
     });
 }
 
-function uniqueOrderCustomerCount(list) {
-    var seen = {};
-    list.forEach(function (o) {
-        var key = o.customerId || o.customerNick || o.customerName || o.customerPhone;
-        if (key) seen[key] = true;
-    });
-    return Object.keys(seen).length;
-}
+var uniqueOrderCustomerCount = customerOrders.uniqueCustomerCount;
 
 // ========== 首页顶部指标（含真实环比） ==========
 router.get('/home-metrics', resp.asyncHandler(function (req, res) {

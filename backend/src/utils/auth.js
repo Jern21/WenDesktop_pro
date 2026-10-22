@@ -20,6 +20,7 @@ var crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
 var dataPaths = require('./data-paths');
+var userContext = require('./user-context');
 
 // 支持用 AUTH_DATA_DIR 单独覆盖认证数据目录（测试时隔离用），
 // 否则跟随全局的 APP_DATA_DIR / backend/data
@@ -240,31 +241,70 @@ function signingSecret() {
         .digest();
 }
 
-function issueToken(ttlMs) {
+function issueToken(ttlMs, username) {
     var expires = Date.now() + (ttlMs || DEFAULT_TTL_MS);
-    var payload = String(expires);
+    var user = normalizeUsername(username || getUsername());
+    var payload = Buffer.from(JSON.stringify({ exp: expires, user: user }), 'utf8').toString('base64url');
     var sig = crypto.createHmac('sha256', signingSecret())
         .update(payload)
         .digest('base64url');
     return payload + '.' + sig;
 }
 
-function verifyToken(token) {
-    if (!token || typeof token !== 'string') return false;
+function parseToken(token) {
+    if (!token || typeof token !== 'string') return null;
     var idx = token.indexOf('.');
-    if (idx === -1) return false;
+    if (idx === -1) return null;
 
-    var payload = token.slice(0, idx);
+    var payloadPart = token.slice(0, idx);
     var sig = token.slice(idx + 1);
 
     var expected = crypto.createHmac('sha256', signingSecret())
-        .update(payload)
+        .update(payloadPart)
         .digest('base64url');
 
-    if (!timingSafeEqualStr(sig, expected)) return false;
+    if (!timingSafeEqualStr(sig, expected)) return null;
 
-    var expires = Number(payload);
-    return isFinite(expires) && Date.now() < expires;
+    // 兼容旧版仅时间戳的 token
+    if (/^\d+$/.test(payloadPart)) {
+        var legacyExp = Number(payloadPart);
+        if (!isFinite(legacyExp) || Date.now() >= legacyExp) return null;
+        return { exp: legacyExp, username: getUsername() };
+    }
+
+    try {
+        var json = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+        if (!json || !json.exp || Date.now() >= json.exp) return null;
+        return {
+            exp: json.exp,
+            username: normalizeUsername(json.user || getUsername())
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+function verifyToken(token) {
+    return !!parseToken(token);
+}
+
+function getSessionFromRequest(req) {
+    if (!AUTH_ENABLED) {
+        return { username: getUsername(), isTrial: false, trusted: true };
+    }
+    var parsed = parseToken(getTokenFromRequest(req));
+    if (parsed) {
+        return {
+            username: parsed.username,
+            isTrial: isTrialLogin(parsed.username),
+            trusted: false
+        };
+    }
+    // 本机免登录：无有效 cookie 时回落到默认 admin；有 trial/admin 登录态时以上已解析
+    if (TRUST_LOCALHOST && isLoopback(req)) {
+        return { username: getUsername(), isTrial: false, trusted: true };
+    }
+    return null;
 }
 
 // ========== 请求辅助 ==========
@@ -306,13 +346,11 @@ function isLoopback(req) {
 }
 
 function isAuthenticated(req) {
-    if (!AUTH_ENABLED) return true;
-    if (TRUST_LOCALHOST && isLoopback(req)) return true;
-    return verifyToken(getTokenFromRequest(req));
+    return !!getSessionFromRequest(req);
 }
 
-function setCookie(res, req, maxAgeMs) {
-    var token = issueToken(maxAgeMs);
+function setCookie(res, req, maxAgeMs, username) {
+    var token = issueToken(maxAgeMs, username);
     var parts = [
         COOKIE_NAME + '=' + encodeURIComponent(token),
         'Path=/',
@@ -362,7 +400,7 @@ function pageGuard() {
         if (!AUTH_ENABLED) return next();
         if (TRUST_LOCALHOST && isLoopback(req)) return next();
         if (isPublicPath(req.path)) return next();
-        if (verifyToken(getTokenFromRequest(req))) return next();
+        if (getSessionFromRequest(req)) return next();
 
         var accept = req.headers.accept || '';
         if (accept.indexOf('text/html') !== -1) {
@@ -379,19 +417,45 @@ function pageGuard() {
 /**
  * API 守卫：未登录返回 401 JSON
  */
+function attachUserContext(req, res, next) {
+    var session = getSessionFromRequest(req);
+    if (!session) return next();
+    req.wtSession = session;
+    userContext.enter(session.username);
+    var cleanup = function () {
+        userContext.leave();
+        res.removeListener('finish', cleanup);
+        res.removeListener('close', cleanup);
+    };
+    res.on('finish', cleanup);
+    res.on('close', cleanup);
+    next();
+}
+
 function apiGuard() {
     return function (req, res, next) {
-        if (!AUTH_ENABLED) return next();
-        // 健康检查不涉及任何数据，放行便于监控/探活
+        if (!AUTH_ENABLED) {
+            return attachUserContext(req, res, next);
+        }
         if (req.originalUrl === '/api/health') return next();
-        if (TRUST_LOCALHOST && isLoopback(req)) return next();
-        if (verifyToken(getTokenFromRequest(req))) return next();
-
-        res.status(401).json({
-            success: false,
-            error: '未登录或登录已过期',
-            code: 'UNAUTHORIZED'
-        });
+        var session = getSessionFromRequest(req);
+        if (!session) {
+            return res.status(401).json({
+                success: false,
+                error: '未登录或登录已过期',
+                code: 'UNAUTHORIZED'
+            });
+        }
+        req.wtSession = session;
+        userContext.enter(session.username);
+        var cleanup = function () {
+            userContext.leave();
+            res.removeListener('finish', cleanup);
+            res.removeListener('close', cleanup);
+        };
+        res.on('finish', cleanup);
+        res.on('close', cleanup);
+        next();
     };
 }
 
@@ -410,6 +474,8 @@ module.exports = {
     changePassword: changePassword,
     issueToken: issueToken,
     verifyToken: verifyToken,
+    parseToken: parseToken,
+    getSessionFromRequest: getSessionFromRequest,
     isAuthenticated: isAuthenticated,
     isLoopback: isLoopback,
     setCookie: setCookie,

@@ -26,9 +26,34 @@ var PORT = process.env.PORT || 3456;
 // ========== 认证初始化（必须在挂载路由前完成） ==========
 var authInit = auth.init();
 
-// ========== 存量敏感字段加密迁移 ==========
-// 把账号密码、AI 生图 API Key 从明文转成密文。幂等，每次启动跑一遍没有副作用。
-// 放在路由挂载之前，保证任何一次请求读到的都已经是加密后的数据。
+// ========== 启动期的数据迁移（两件事，性质完全不同，别混） ==========
+//
+// ① 敏感字段加密迁移（secret-migration.runAll）
+//    账号密码、AI 生图 API Key：明文 → 密文。
+//    幂等、无害，必须每次启动跑，放在路由挂载之前，保证任何请求读到的都是密文。
+//
+// ② 用户数据归属迁移（user-data-migrate）
+//    把根目录旧数据归属给 trial 账号。这是**一次性改数据**的动作，
+//    **不能**在启动时自动跑 —— 否则任何新数据目录首启都会被搬一遍
+//    （测试临时目录、换机器、全新部署），结果是示例数据全归到免密的
+//    trial 账号、admin 进去空无一物。
+//      手动执行：node backend/src/utils/user-data-migrate.js
+//      部署脚本确需自动跑：USER_SCOPE_MIGRATE=1 （显式声明才执行）
+require('./src/utils/user-data-migrate').maybeRunOnStartup({
+    getUsers: function () {
+        return {
+            trial: auth.getTrialUsername(),
+            admin: auth.getUsername()
+        };
+    }
+});
+
+// 可选：把散落在各处的旧数据**合并**到 trial（显式开关，默认不跑）
+if (process.env.ASSIGN_DATA_TO_TRIAL === '1') {
+    require('./src/utils/assign-data-to-trial').runAssignAllToTrial();
+}
+
+// ① 每次启动都跑
 require('./src/utils/secret-migration').runAll();
 
 // ========== 中间件 ==========
@@ -89,6 +114,7 @@ app.use('/api/resume', require('./src/routes/resume'));
 app.use('/api/upload', require('./src/routes/upload'));
 app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/stats', require('./src/routes/stats'));
+app.use('/api/ledger', require('./src/routes/ledger'));
 app.use('/api/image-gen', require('./src/routes/image-gen'));
 app.use('/api/accounts', require('./src/routes/accounts'));
 app.use('/api/bookmarks', require('./src/routes/bookmarks'));
@@ -138,12 +164,8 @@ app.get('/CHANGELOG.json', function (req, res) {
 // 托管 frontend 下的静态资源
 app.use(express.static(frontendDir));
 
-// 托管上传的文件（图片、PDF 等）
-var uploadsDir = path.join(__dirname, 'data', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadsDir));
+// 托管上传的文件：用户目录 + 旧的扁平 uploads 目录，路径由 utils/uploads 解析
+app.use('/uploads', require('./src/utils/uploads').staticHandler());
 
 // SPA 路由回退：所有非 /api 的 GET 请求都返回对应文件，找不到就回退到 app.html
 //

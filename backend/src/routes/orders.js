@@ -19,8 +19,15 @@ var router = express.Router();
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
 var orderRules = require('../utils/order-rules');
+var orderPayload = require('../utils/order-payload');
 
 var orders = new Storage('orders');
+
+/** 白名单外的字段被丢弃时留个痕，方便发现前端多传/传错字段名 */
+function warnIgnoredFields(action, ignored) {
+    if (!ignored || !ignored.length) return;
+    console.warn('[orders] ' + action + ' 忽略非法字段:', ignored.join(', '));
+}
 
 // ========== 辅助函数 ==========
 
@@ -45,71 +52,8 @@ function generateOrderNo() {
     return prefix + seq;
 }
 
-function clampPercent(value) {
-    var num = parseInt(value, 10) || 0;
-    return Math.min(Math.max(num, 0), 100);
-}
-
-function normalizePaymentFields(body) {
-    body = body || {};
-    var amount = parseFloat(body.amount) || 0;
-    var paymentStatus = body.paymentStatus || '未付款';
-    var paymentRecords = paymentStatus === '未付款' ? [] : orderRules.normalizePaymentRecords(body.paymentRecords);
-    var paidByRecords = paymentRecords.reduce(function (sum, item) {
-        return sum + (parseFloat(item.amount) || 0);
-    }, 0);
-    var paymentRatio = clampPercent(body.paymentRatio);
-
-    if (paymentStatus === '未付款') {
-        paymentRatio = 0;
-    } else if (paidByRecords > 0 && amount > 0) {
-        paymentRatio = Math.min(Math.round(paidByRecords / amount * 100), 100);
-    } else if (paymentStatus === '已结清') {
-        paymentRatio = 100;
-    }
-
-    return {
-        paymentStatus: paymentStatus,
-        paymentRatio: paymentRatio,
-        payDate: body.payDate || '',
-        paymentRecords: paymentRecords
-    };
-}
-
-function normalizeFile(file) {
-    if (!file || typeof file !== 'object') return null;
-    var name = file.name || file.originalName || file.filename || '';
-    var type = file.type || file.mimetype || '';
-    var record = {
-        name: name,
-        originalName: file.originalName || name,
-        filename: file.filename || '',
-        size: Number(file.size) || 0,
-        type: type,
-        mimetype: file.mimetype || type,
-        url: file.url || ''
-    };
-    return record.url || record.name || record.filename ? record : null;
-}
-
-function normalizeUploadedFiles(files) {
-    files = files || {};
-    var result = {};
-    ['screenshot', 'showcase', 'quote', 'taskBook'].forEach(function (key) {
-        var file = normalizeFile(files[key]);
-        result[key] = file || null;
-    });
-
-    var paymentFiles = files.paymentRecord;
-    if (Array.isArray(paymentFiles)) {
-        result.paymentRecord = paymentFiles.map(normalizeFile).filter(Boolean).slice(0, 10);
-    } else {
-        var singlePaymentFile = normalizeFile(paymentFiles);
-        result.paymentRecord = singlePaymentFile ? [singlePaymentFile] : [];
-    }
-
-    return result;
-}
+// 付款字段推导、附件归一化、字段白名单与校验统一放在 utils/order-payload.js，
+// 创建与更新共用同一份规则（以前 PUT 完全绕过校验，能把 id / 金额 / 必填项改坏）。
 
 // ========== 统计摘要 ==========
 router.get('/stats/summary', resp.asyncHandler(function (req, res) {
@@ -290,68 +234,29 @@ router.get('/:id', resp.asyncHandler(function (req, res) {
 
 // ========== 新建 ==========
 router.post('/', resp.asyncHandler(function (req, res) {
-    var body = req.body || {};
+    // 白名单 + 归一化 + 必填校验；校验失败抛 OrderPayloadError(status=400)
+    var built = orderPayload.buildCreatePayload(req.body || {});
+    warnIgnoredFields('创建', built.ignored);
 
-    // 必填校验
-    if (!body.customerNick) return resp.error(res, '客户昵称为必填项');
-    if (!body.projectType) return resp.error(res, '项目类型为必填项');
-    if (!body.projectName) return resp.error(res, '项目名称为必填项');
-    if (!body.amount || parseFloat(body.amount) <= 0) return resp.error(res, '成交金额必须大于 0');
-    if (!body.orderDate) return resp.error(res, '接单日期为必填项');
-
-    var paymentFields = normalizePaymentFields(body);
-    var record = orders.create({
-        // 订单编号（自动生成）
-        orderNo: body.orderNo || generateOrderNo(),
-        // 客户信息
-        customerId: body.customerId || '',
-        customerNick: body.customerNick,
-        customerName: body.customerName || '',
-        customerPhone: body.customerPhone || '',
-        customerSource: body.customerSource || '其他',
-        customerTags: body.customerTags || [],
-        // 项目信息
-        projectType: body.projectType,
-        projectName: body.projectName,
-        projectDesc: body.projectDesc || '',
-        // 商务信息
-        amount: parseFloat(body.amount) || 0,
-        cost: parseFloat(body.cost) || 0,
-        hours: parseFloat(body.hours) || 0,
-        // 时间节点
-        orderDate: body.orderDate,
-        confirmDate: body.confirmDate || '',
-        draftDate: body.draftDate || '',
-        finalDate: body.finalDate || '',
-        // 状态管理
-        orderStatus: body.orderStatus || 'pending',
-        paymentStatus: paymentFields.paymentStatus,
-        paymentRatio: paymentFields.paymentRatio,
-        payDate: paymentFields.payDate,
-        paymentRecords: paymentFields.paymentRecords,
-        // 附件与关联
-        gitUrl: body.gitUrl || '',
-        quoteRef: body.quoteRef || '',
-        uploadedFiles: normalizeUploadedFiles(body.uploadedFiles)
-    });
+    // 订单编号一律由服务端生成：客户端能指定编号就能造出重复单号，
+    // 而 generateOrderNo() 是按"当天已有数量"推算序号的，一旦重复就再也对不上。
+    var record = orders.create(Object.assign({}, built.payload, {
+        orderNo: generateOrderNo()
+    }));
 
     return resp.success(res, record, 201);
 }));
 
 // ========== 更新 ==========
 router.put('/:id', resp.asyncHandler(function (req, res) {
-    var body = req.body || {};
     var existing = orders.findById(req.params.id);
     if (!existing) return resp.notFound(res, '订单不存在');
 
-    var patch = Object.assign({}, body);
-    var merged = Object.assign({}, existing, body);
-    Object.assign(patch, normalizePaymentFields(merged));
-    if (Object.prototype.hasOwnProperty.call(body, 'uploadedFiles')) {
-        patch.uploadedFiles = normalizeUploadedFiles(body.uploadedFiles);
-    }
+    // 只允许白名单字段进入 patch；id / createdAt / updatedAt / orderNo 会被丢弃
+    var built = orderPayload.buildUpdatePayload(req.body || {}, existing);
+    warnIgnoredFields('更新', built.ignored);
 
-    var updated = orders.update(req.params.id, patch);
+    var updated = orders.update(req.params.id, built.patch);
     return resp.success(res, updated);
 }));
 

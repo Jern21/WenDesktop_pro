@@ -364,7 +364,7 @@
             item = item || {};
             return {
                 date: String(item.date || item.payDate || item.time || '').trim(),
-                amount: parseFloat(item.amount) || 0,
+                amount: Math.max(0, parseFloat(item.amount) || 0),
                 note: String(item.note || item.remark || '').trim()
             };
         }).filter(function (item) {

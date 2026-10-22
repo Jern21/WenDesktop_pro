@@ -58,9 +58,14 @@
                 var renderedPages = [];
 
                 // ==================== API ====================
+                function request(url, options) {
+                    options = options || {};
+                    options.signal = ctx.signal;
+                    return global.api.call(url, options);
+                }
+
                 function loadJobs() {
-                    return fetch('/api/resume')
-                        .then(function (r) { return r.json(); })
+                    return request('/api/resume')
                         .then(function (res) {
                             if (res.success) {
                                 jobs = res.data || [];
@@ -78,6 +83,7 @@
                             }
                         })
                         .catch(function (err) {
+                            if (err && err.name === 'AbortError') return;
                             console.error('加载简历列表失败:', err);
                         });
                 }
@@ -87,11 +93,10 @@
                     return dateStr.split('T')[0];
                 }
 
-                function escapeHtml(str) {
-                    if (!str) return '';
-                    return String(str).replace(/[&<>"']/g, function (c) {
-                        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-                    });
+                var escapeHtml = App.dom.escapeHtml;
+
+                function showToast(msg, type) {
+                    App.ui.toast(msg, type || 'success');
                 }
 
                 // ==================== Initialization ====================
@@ -322,20 +327,18 @@
                     var fileInput = document.getElementById('new-job-pdf');
 
                     if (!title) {
-                        alert('请填写岗位名称');
+                        showToast('请填写岗位名称', 'error');
                         return;
                     }
 
                     // 先创建简历记录
-                    fetch('/api/resume', {
+                    request('/api/resume', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: title, company: company })
+                        body: { title: title, company: company }
                     })
-                    .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (!res.success) {
-                            alert(res.error || '创建失败');
+                            showToast(res.error || '创建失败', 'error');
                             return null;
                         }
                         var newRecord = res.data;
@@ -357,21 +360,19 @@
                                         formData.append('file', file);
                                         formData.append('pageCount', pageCount);
 
-                                        fetch('/api/resume/' + newRecord.id + '/pdf', {
+                                        request('/api/resume/' + newRecord.id + '/pdf', {
                                             method: 'POST',
                                             body: formData
                                         })
-                                        .then(function (r2) { return r2.json(); })
                                         .then(function () { resolve(); });
                                     }).catch(function () {
                                         // 获取页数失败也继续上传
                                         var formData = new FormData();
                                         formData.append('file', file);
-                                        fetch('/api/resume/' + newRecord.id + '/pdf', {
+                                        request('/api/resume/' + newRecord.id + '/pdf', {
                                             method: 'POST',
                                             body: formData
                                         })
-                                        .then(function (r2) { return r2.json(); })
                                         .then(function () { resolve(); });
                                     });
                                 };
@@ -391,8 +392,9 @@
                         }
                     })
                     .catch(function (err) {
+                        if (err && err.name === 'AbortError') return;
                         console.error('创建简历失败:', err);
-                        alert('创建简历失败: ' + (err.message || err));
+                        showToast('创建简历失败: ' + (err.message || err), 'error');
                     });
                 }
 
@@ -431,14 +433,13 @@
                     formData.append('file', file);
                     formData.append('pageCount', pageCount);
 
-                    fetch('/api/resume/' + currentJobId + '/pdf', {
+                    request('/api/resume/' + currentJobId + '/pdf', {
                         method: 'POST',
                         body: formData
                     })
-                    .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (!res.success) {
-                            alert(res.error || '上传失败');
+                            showToast(res.error || '上传失败', 'error');
                             return;
                         }
                         return loadJobs();
@@ -451,15 +452,16 @@
                         }
                     })
                     .catch(function (err) {
+                        if (err && err.name === 'AbortError') return;
                         console.error('上传失败:', err);
-                        alert('上传失败: ' + (err.message || err));
+                        showToast('上传失败: ' + (err.message || err), 'error');
                     });
                 }
 
                 function downloadCurrentPdf() {
                     var job = jobs.find(function (j) { return j.id === currentJobId; });
                     if (!job || !job.pdfUrl) {
-                        alert('没有可下载的 PDF');
+                        showToast('没有可下载的 PDF', 'error');
                         return;
                     }
 
@@ -494,19 +496,17 @@
                     var company = document.getElementById('edit-job-company').value.trim();
 
                     if (!title) {
-                        alert('请填写岗位名称');
+                        showToast('请填写岗位名称', 'error');
                         return;
                     }
 
-                    fetch('/api/resume/' + currentJobId, {
+                    request('/api/resume/' + currentJobId, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: title, company: company })
+                        body: { title: title, company: company }
                     })
-                    .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (!res.success) {
-                            alert(res.error || '保存失败');
+                            showToast(res.error || '保存失败', 'error');
                             return;
                         }
                         closeEditModal();
@@ -520,8 +520,9 @@
                         }
                     })
                     .catch(function (err) {
+                        if (err && err.name === 'AbortError') return;
                         console.error('保存失败:', err);
-                        alert('保存失败: ' + (err.message || err));
+                        showToast('保存失败: ' + (err.message || err), 'error');
                     });
                 }
 
@@ -533,11 +534,10 @@
 
                     if (!confirm('确定要删除「' + job.title + '」的简历吗？此操作不可撤销。')) return;
 
-                    fetch('/api/resume/' + currentJobId, { method: 'DELETE' })
-                    .then(function (r) { return r.json(); })
+                    request('/api/resume/' + currentJobId, { method: 'DELETE' })
                     .then(function (res) {
                         if (!res.success) {
-                            alert(res.error || '删除失败');
+                            showToast(res.error || '删除失败', 'error');
                             return;
                         }
                         currentJobId = null;
@@ -546,8 +546,9 @@
                         return loadJobs();
                     })
                     .catch(function (err) {
+                        if (err && err.name === 'AbortError') return;
                         console.error('删除失败:', err);
-                        alert('删除失败: ' + (err.message || err));
+                        showToast('删除失败: ' + (err.message || err), 'error');
                     });
                 }
 

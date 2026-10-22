@@ -10,13 +10,11 @@
 
 var express = require('express');
 var router = express.Router();
-var path = require('path');
-var fs = require('fs');
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
+var uploads = require('../utils/uploads');
 
 var reports = new Storage('bug-reports');
-var UPLOAD_DIR = path.join(__dirname, '..', '..', 'data', 'uploads');
 
 function normalizeAttachments(value) {
     if (!Array.isArray(value)) return [];
@@ -34,16 +32,12 @@ function normalizeAttachments(value) {
 }
 
 function removeUploadFile(file) {
-    if (!file || !file.filename) return;
-    var filename = path.basename(file.filename);
-    if (filename !== file.filename) return;
-    var filePath = path.join(UPLOAD_DIR, filename);
-    if (!fs.existsSync(filePath)) return;
-    try {
-        fs.unlinkSync(filePath);
-    } catch (e) {
-        console.warn('[BugReports] 删除附件失败:', filename, e.message);
+    if (!file) return;
+    if (file.url) {
+        uploads.deleteByUrl(file.url);
+        return;
     }
+    if (file.filename) uploads.deleteByFilename(file.filename);
 }
 
 router.get('/', resp.asyncHandler(function (req, res) {

@@ -56,16 +56,27 @@ function clearFail(req) {
 
 router.get('/status', function (req, res) {
     var local = auth.isLoopback(req);
+    var session = auth.getSessionFromRequest(req);
+    var authed = auth.isAuthenticated(req);
+    var user = null;
+    if (authed && session) {
+        user = {
+            username: session.username,
+            displayName: session.username,
+            isTrial: !!session.isTrial
+        };
+    }
     res.json({
         success: true,
         data: {
             enabled: auth.enabled,
-            authenticated: auth.isAuthenticated(req),
+            authenticated: authed,
             trustedLocal: auth.trustLocalhost && local,
             authRequired: auth.enabled && !(auth.trustLocalhost && local),
             usernameHint: auth.getUsername ? auth.getUsername() : 'admin',
             trialLoginAvailable: auth.trialLoginEnabled && auth.trialLoginEnabled(),
-            trialUsername: auth.getTrialUsername ? auth.getTrialUsername() : 'trial'
+            trialUsername: auth.getTrialUsername ? auth.getTrialUsername() : 'trial',
+            user: user
         }
     });
 });
@@ -118,13 +129,14 @@ router.post('/login', function (req, res) {
     var ttl = trial
         ? auth.TRIAL_TTL_MS
         : (remember ? auth.DEFAULT_TTL_MS : 12 * 60 * 60 * 1000);
-    var token = auth.setCookie(res, req, ttl);
+    var loginUser = auth.normalizeUsername(username);
+    var token = auth.setCookie(res, req, ttl, loginUser);
 
     res.json({
         success: true,
         data: {
-            // 同时返回 token，便于非浏览器客户端用 Authorization: Bearer
             token: token,
+            username: loginUser,
             expiresIn: ttl,
             trial: trial
         }
@@ -163,7 +175,8 @@ router.post('/password', function (req, res) {
     }
 
     // 密码已变更，旧 token 全部失效，重新签发一个给当前客户端
-    auth.setCookie(res, req, auth.DEFAULT_TTL_MS);
+    var session = auth.getSessionFromRequest(req);
+    auth.setCookie(res, req, auth.DEFAULT_TTL_MS, session ? session.username : auth.getUsername());
     res.json({ success: true, data: { message: '密码已更新，其他设备需重新登录' } });
 });
 

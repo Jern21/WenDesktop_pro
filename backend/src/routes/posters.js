@@ -16,26 +16,22 @@
 
 var express = require('express');
 var router = express.Router();
-var path = require('path');
-var fs = require('fs');
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
+var uploads = require('../utils/uploads');
+var pickFields = require('../utils/pick-fields').pickFields;
+var warnIgnored = require('../utils/pick-fields').warnIgnored;
 
 var posters = new Storage('posters');
 
-// 上传目录（与 upload.js 一致）
-var UPLOAD_DIR = path.join(__dirname, '..', '..', 'data', 'uploads');
-
-// ========== 辅助：根据 URL 删除物理文件 ==========
+var POSTER_EDITABLE = [
+    'title', 'platform', 'labelText', 'labelColor', 'ratio', 'sortOrder',
+    'tags', 'onlineDate', 'offlineDate', 'target', 'effect', 'remark',
+    'sourceUrl', 'projectRef', 'image', 'imageHtml'
+];
 
 function deleteFileByUrl(url) {
-    if (!url || url.indexOf('/uploads/') !== 0) return;
-    var filename = path.basename(url);
-    if (filename.indexOf('..') !== -1) return; // 安全检查
-    var filePath = path.join(UPLOAD_DIR, filename);
-    if (fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath); } catch (e) {}
-    }
+    uploads.deleteByUrl(url);
 }
 
 // ========== 批量删除 ==========
@@ -152,12 +148,21 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
     var existing = posters.findById(req.params.id);
     if (!existing) return resp.notFound(res, '海报不存在');
 
-    // 如果图片被替换，删除旧图片文件
-    if (req.body.image !== undefined && existing.image && req.body.image !== existing.image) {
+    var picked = pickFields(req.body, POSTER_EDITABLE);
+    warnIgnored('posters 更新', picked.ignored);
+
+    if (Object.prototype.hasOwnProperty.call(picked.fields, 'title') && !String(picked.fields.title || '').trim()) {
+        return resp.error(res, '海报标题为必填项');
+    }
+    if (Object.prototype.hasOwnProperty.call(picked.fields, 'platform') && !String(picked.fields.platform || '').trim()) {
+        return resp.error(res, '发布平台为必填项');
+    }
+
+    if (picked.fields.image !== undefined && existing.image && picked.fields.image !== existing.image) {
         deleteFileByUrl(existing.image);
     }
 
-    var updated = posters.update(req.params.id, req.body || {});
+    var updated = posters.update(req.params.id, picked.fields);
     return resp.success(res, updated);
 }));
 

@@ -139,7 +139,7 @@
                             }
 
                             function fallbackAvatar(name) {
-                                var label = String(name || 'JERN').trim().charAt(0) || 'J';
+                                var label = String(name || '用').trim().charAt(0) || '用';
                                 var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">' +
                                     '<rect width="128" height="128" rx="64" fill="#2563eb"/>' +
                                     '<text x="50%" y="50%" dy=".08em" text-anchor="middle" dominant-baseline="middle" ' +
@@ -150,11 +150,11 @@
 
                             function defaultProfile() {
                                 return {
-                                    nickname: 'JERN',
+                                    nickname: '',
                                     realName: '',
                                     phone: '',
                                     email: '',
-                                    role: '全栈开发工程师',
+                                    role: '',
                                     city: '',
                                     bio: '',
                                     avatar: ''

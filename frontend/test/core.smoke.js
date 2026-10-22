@@ -146,7 +146,21 @@ async function main() {
         assert.ok(out.indexOf('onmouseover="alert') === -1, '属性逃逸未被阻断: ' + out);
     });
 
-    console.log('\n[3] 金额与日期格式化');
+    console.log('\n[3] 分页按钮 HTML');
+    test('paginationButtonsHtml 输出页码和每页条数', function () {
+        assert.ok(typeof App.ui.paginationButtonsHtml === 'function');
+        var html = App.ui.paginationButtonsHtml({
+            page: 1,
+            pageSize: 10,
+            total: 25,
+            sizeSelectId: 'page-size-select'
+        });
+        assert.ok(html.indexOf('data-page="2"') !== -1, '应包含第 2 页按钮');
+        assert.ok(html.indexOf('id="page-size-select"') !== -1, '应包含每页条数');
+        assert.ok(html.indexOf('page-prev') !== -1, '应包含上一页');
+    });
+
+    console.log('\n[4] 金额与日期格式化');
     test('formatMoney 保留两位并加符号', function () {
         assert.strictEqual(App.dom.formatMoney(1234.5), '¥1,234.50');
     });

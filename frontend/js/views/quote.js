@@ -105,27 +105,16 @@
                                 return calcSubtotal() - parseFloat(quoteData.discount || 0);
                             }
 
-                            function escapeHtml(value) {
-                                return String(value || '')
-                                    .replace(/&/g, '&amp;')
-                                    .replace(/</g, '&lt;')
-                                    .replace(/>/g, '&gt;')
-                                    .replace(/"/g, '&quot;');
+                            var escapeHtml = App.dom.escapeHtml;
+
+                            function request(url, options) {
+                                options = options || {};
+                                options.signal = ctx.signal;
+                                return global.api.call(url, options);
                             }
 
-                            // ========== Toast 提示 ==========
-
-                            var toastTimer = null;
-                            function showToast(msg) {
-                                var toast = document.getElementById('toast');
-                                if (!toast) return;
-                                var span = toast.querySelector('span');
-                                if (span) span.textContent = msg || '操作成功';
-                                toast.classList.remove('translate-y-10', 'opacity-0');
-                                if (toastTimer) clearTimeout(toastTimer);
-                                toastTimer = setTimeout(function () {
-                                    toast.classList.add('translate-y-10', 'opacity-0');
-                                }, 2500);
+                            function showToast(msg, type) {
+                                App.ui.toast(msg, type || 'success');
                             }
 
                             // ========== 渲染表单明细行 ==========
@@ -402,24 +391,21 @@
                                 var url = (!asTemplate && quoteData.id) ? '/api/quotes/' + encodeURIComponent(quoteData.id) : '/api/quotes';
                                 var method = (!asTemplate && quoteData.id) ? 'PUT' : 'POST';
 
-                                fetch(url, {
-                                    method: method,
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(data)
-                                }).then(function (r) { return r.json(); }).then(function (res) {
+                                request(url, { method: method, body: data }).then(function (res) {
                                     if (res.success) {
                                         if (!asTemplate) quoteData.id = res.data.id;
                                         showToast(asTemplate ? '已保存为模板！' : '报价单已保存！');
-                                        loadTemplateList(); // 刷新模板列表
+                                        loadTemplateList();
                                     } else {
-                                        showToast('保存失败：' + (res.error || '未知错误'));
+                                        showToast('保存失败：' + (res.error || '未知错误'), 'error');
                                     }
                                     if (btn && !asTemplate) {
                                         btn.innerHTML = originalHtml;
                                         btn.disabled = false;
                                     }
                                 }).catch(function (err) {
-                                    showToast('保存失败：' + err.message);
+                                    if (err && err.name === 'AbortError') return;
+                                    showToast('保存失败：' + err.message, 'error');
                                     if (btn && !asTemplate) {
                                         btn.innerHTML = originalHtml;
                                         btn.disabled = false;
@@ -496,7 +482,7 @@
                             }
 
                             function loadTemplateList() {
-                                fetch('/api/quotes').then(function (r) { return r.json(); }).then(function (res) {
+                                request('/api/quotes').then(function (res) {
                                     if (!res.success) return;
                                     var list = Array.isArray(res.data) ? res.data : [];
                                     var container = document.getElementById('template-list');
@@ -528,12 +514,13 @@
                                     return;
                                 }
 
-                                fetch('/api/quotes/' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (res) {
-                                    if (!res.success) { showToast('加载失败：' + (res.error || '')); return; }
+                                request('/api/quotes/' + encodeURIComponent(id)).then(function (res) {
+                                    if (!res.success) { showToast('加载失败：' + (res.error || ''), 'error'); return; }
                                     var d = res.data;
                                     applyTemplateData(d);
                                 }).catch(function (err) {
-                                    showToast('加载失败：' + err.message);
+                                    if (err && err.name === 'AbortError') return;
+                                    showToast('加载失败：' + err.message, 'error');
                                 });
                             }
 

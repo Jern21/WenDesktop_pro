@@ -87,13 +87,12 @@
                         return window.__infiniteCanvasActiveInstance === instanceId && document.getElementById('infinite-canvas-page');
                     }
 
-                    function escapeHtml(value) {
-                        return String(value || '')
-                            .replace(/&/g, '&amp;')
-                            .replace(/</g, '&lt;')
-                            .replace(/>/g, '&gt;')
-                            .replace(/"/g, '&quot;')
-                            .replace(/'/g, '&#39;');
+                    var escapeHtml = App.dom.escapeHtml;
+
+                    function request(url, options) {
+                        options = options || {};
+                        options.signal = ctx.signal;
+                        return global.api.call(url, options);
                     }
 
                     // ========== API 调用相关 ==========
@@ -112,8 +111,7 @@
 
                     // 检查 API 是否已配置，未配置时显示提示
                     function checkApiConfig() {
-                        fetch(getApiBase() + '/config')
-                            .then(function (r) { return r.json(); })
+                        request(getApiBase() + '/config')
                             .then(function (result) {
                                 if (result.success && result.data) {
                                     var configured = result.data.apiKeyConfigured && result.data.apiUrl;
@@ -125,17 +123,18 @@
                                     }
                                 }
                             })
-                            .catch(function () {});
+                            .catch(function (err) {
+                                if (err && err.name === 'AbortError') return;
+                            });
                     }
 
                     // 调用后端 API 生成图片，返回 Promise<string(imageUrl)>
                     function generateImageViaApi(prompt, ratio) {
-                        return fetch(getApiBase() + '/generate', {
+                        return request(getApiBase() + '/generate', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ prompt: prompt, ratio: ratio })
+                            body: { prompt: prompt, ratio: ratio },
+                            timeout: 120000
                         })
-                            .then(function (r) { return r.json(); })
                             .then(function (result) {
                                 if (result.success && result.data && result.data.imageUrl) {
                                     return result.data.imageUrl;
@@ -503,24 +502,7 @@
                     }
 
                     function showToast(message, type) {
-                        var toast = document.createElement('div');
-                        var icon = 'ph-info';
-                        var bgStyle = 'bg-white border-zinc-200 text-zinc-600';
-                        if (type === 'success') {
-                            icon = 'ph-check';
-                            bgStyle = 'bg-white border-zinc-200/80 text-zinc-800';
-                        } else if (type === 'error') {
-                            icon = 'ph-warning-circle';
-                            bgStyle = 'bg-red-50 border-red-100 text-red-600';
-                        }
-                        toast.className = 'px-4 py-2.5 rounded-xl border text-[11px] font-medium flex items-center gap-2.5 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto shadow-md backdrop-blur-md max-w-xs ' + bgStyle;
-                        toast.innerHTML = '<i class="ph ' + icon + ' text-sm"></i><span class="flex-1">' + escapeHtml(message) + '</span>';
-                        toastContainer.appendChild(toast);
-                        setTimeout(function () { toast.classList.remove('translate-y-2', 'opacity-0'); }, 20);
-                        setTimeout(function () {
-                            toast.classList.add('opacity-0', 'translate-y-1');
-                            setTimeout(function () { toast.remove(); }, 300);
-                        }, 2800);
+                        App.ui.toast(message, type || 'success');
                     }
 
                     function setupCanvasInteraction() {

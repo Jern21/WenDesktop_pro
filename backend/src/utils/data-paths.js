@@ -13,14 +13,44 @@
  */
 'use strict';
 
+var fs = require('fs');
 var path = require('path');
 
 var DATA_DIR = process.env.APP_DATA_DIR || path.join(__dirname, '..', '..', 'data');
+var USERS_DIR = path.join(DATA_DIR, 'users');
+
+function normalizeUsername(username) {
+    var s = String(username == null ? '' : username).trim().toLowerCase();
+    return s || 'admin';
+}
+
+function userDataDir(username) {
+    return path.join(USERS_DIR, normalizeUsername(username));
+}
+
+function ensureUserDataDir(username) {
+    var dir = userDataDir(username);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+}
+
+function userUploadsDir(username) {
+    var dir = path.join(ensureUserDataDir(username), 'uploads');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return dir;
+}
 
 module.exports = {
     DATA_DIR: DATA_DIR,
+    USERS_DIR: USERS_DIR,
     BACKUP_DIR: path.join(DATA_DIR, 'backups'),
     UPLOADS_DIR: path.join(DATA_DIR, 'uploads'),
+    normalizeUsername: normalizeUsername,
+    userDataDir: userDataDir,
+    ensureUserDataDir: ensureUserDataDir,
+    userUploadsDir: userUploadsDir,
     /** 取数据文件的绝对路径，如 file('accounts.json') */
     file: function (name) {
         return path.join(DATA_DIR, name);

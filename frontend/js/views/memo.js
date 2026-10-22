@@ -95,6 +95,12 @@
 
             // ---------- 数据 ----------
 
+            function request(url, options) {
+                options = options || {};
+                options.signal = ctx.signal;
+                return global.api.call(url, options);
+            }
+
             function load() {
                 var params = new URLSearchParams();
                 if (state.category) params.append('category', state.category);
@@ -102,8 +108,7 @@
                 params.append('sortBy', state.sort);
 
                 var token = ++load.seq;
-                return fetch('/api/memos?' + params.toString(), { signal: ctx.signal })
-                    .then(function (r) { return r.json(); })
+                return request('/api/memos?' + params.toString())
                     .then(function (res) {
                         // 慢请求后到，丢弃（旧代码没有这个保护，快速切换分类会看到错乱数据）
                         if (token !== load.seq) return;
@@ -315,11 +320,9 @@
             }
 
             function togglePin(id) {
-                return fetch('/api/memos/' + encodeURIComponent(id) + '/pin', {
-                    method: 'PUT',
-                    signal: ctx.signal
+                return request('/api/memos/' + encodeURIComponent(id) + '/pin', {
+                    method: 'PUT'
                 })
-                    .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (res && res.success) {
                             App.ui.toast(res.data.pinned ? '已置顶' : '已取消置顶', 'success');
@@ -348,11 +351,9 @@
                     confirmText: '删除'
                 }).then(function (ok) {
                     if (!ok) return;
-                    return fetch('/api/memos/' + encodeURIComponent(id), {
-                        method: 'DELETE',
-                        signal: ctx.signal
+                    return request('/api/memos/' + encodeURIComponent(id), {
+                        method: 'DELETE'
                     })
-                        .then(function (r) { return r.json(); })
                         .then(function (res) {
                             if (res && res.success) {
                                 App.ui.toast('已删除', 'success');
@@ -377,19 +378,16 @@
                 var title = input.value.trim();
                 if (!title) return Promise.resolve();
 
-                return fetch('/api/memos', {
+                return request('/api/memos', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: ctx.signal,
-                    body: JSON.stringify({
+                    body: {
                         title: title,
                         category: (categoryEl && categoryEl.value) || '其他',
                         tags: [],
                         content: title,
                         pinned: false
-                    })
+                    }
                 })
-                    .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (res && res.success) {
                             input.value = '';
@@ -409,19 +407,16 @@
                 var isEdit = !!data.id && !!state.map[data.id];
                 var url = isEdit ? '/api/memos/' + encodeURIComponent(data.id) : '/api/memos';
 
-                return fetch(url, {
+                return request(url, {
                     method: isEdit ? 'PUT' : 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: ctx.signal,
-                    body: JSON.stringify({
+                    body: {
                         title: data.title,
                         category: data.category,
                         tags: data.tags,
                         content: data.content,
                         pinned: data.pinned
-                    })
+                    }
                 })
-                    .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (res && res.success) {
                             App.ui.toast(isEdit ? '备忘已更新' : '备忘已创建', 'success');

@@ -86,8 +86,13 @@ test('签发的 token 可校验通过', function () {
 });
 test('篡改 payload 后失效', function () {
     var parts = token.split('.');
-    var forged = (Number(parts[0]) + 999999) + '.' + parts[1];
-    assert.strictEqual(auth.verifyToken(forged), false);
+    var parsed = auth.parseToken(token);
+    assert.ok(parsed, '应能解析 token');
+    var forgedPayload = Buffer.from(JSON.stringify({
+        exp: parsed.exp + 999999,
+        user: parsed.username
+    }), 'utf8').toString('base64url');
+    assert.strictEqual(auth.verifyToken(forgedPayload + '.' + parts[1]), false);
 });
 test('篡改签名后失效', function () {
     var parts = token.split('.');

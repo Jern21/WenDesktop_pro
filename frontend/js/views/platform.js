@@ -80,10 +80,12 @@
                     };
 
                     // ========== 工具函数 ==========
-                    function escapeHtml(s) {
-                        return String(s || '').replace(/[&<>"']/g, function (c) {
-                            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-                        });
+                    var escapeHtml = App.dom.escapeHtml;
+
+                    function request(url, options) {
+                        options = options || {};
+                        options.signal = ctx.signal;
+                        return global.api.call(url, options);
                     }
 
                     function formatDateTime(dateStr) {
@@ -135,8 +137,7 @@
                         params.append('page', currentPage);
                         params.append('pageSize', pageSize);
 
-                        return fetch('/api/platform-posts?' + params.toString())
-                            .then(function (r) { return r.json(); })
+                        return request('/api/platform-posts?' + params.toString())
                             .then(function (res) {
                                 if (res.success) {
                                     totalCount = res.data.total;
@@ -151,8 +152,7 @@
                     }
 
                     function loadOverview() {
-                        return fetch('/api/platform-posts/stats/overview')
-                            .then(function (r) { return r.json(); })
+                        return request('/api/platform-posts/stats/overview')
                             .then(function (res) {
                                 if (res.success) {
                                     overviewData = res.data;
@@ -166,8 +166,7 @@
                     }
 
                     function deletePost(id) {
-                        return fetch('/api/platform-posts/' + id, { method: 'DELETE' })
-                            .then(function (r) { return r.json(); });
+                        return request('/api/platform-posts/' + id, { method: 'DELETE' });
                     }
 
                     // ========== 渲染 Tabs ==========
@@ -259,30 +258,24 @@
                     function renderPagination() {
                         var container = document.getElementById('pagination-bar');
                         if (!container) return;
-
-                        var totalPages = Math.ceil(totalCount / pageSize) || 1;
-                        var html = '<div>共 ' + totalCount + ' 条</div><div class="flex items-center gap-2">';
-
-                        // 上一页
-                        html += '<button onclick="window._platformPage.goPage(' + (currentPage - 1) + ')" class="w-8 h-8 rounded flex items-center justify-center border ' + (currentPage <= 1 ? 'border-gray-200 text-gray-300' : 'border-gray-200 hover:bg-gray-50 text-gray-600') + '"' + (currentPage <= 1 ? ' disabled' : '') + '><i class="ph ph-caret-left"></i></button>';
-
-                        // 页码
-                        var startPage = Math.max(1, currentPage - 2);
-                        var endPage = Math.min(totalPages, startPage + 4);
-                        if (startPage > 1) startPage = Math.max(1, endPage - 4);
-
-                        for (var i = startPage; i <= endPage; i++) {
-                            var isActive = i === currentPage;
-                            html += '<button onclick="window._platformPage.goPage(' + i + ')" class="w-8 h-8 rounded flex items-center justify-center ' + (isActive ? 'border border-brand-500 bg-brand-50 text-brand-600 font-medium' : 'hover:bg-gray-50') + '">' + i + '</button>';
-                        }
-
-                        // 下一页
-                        html += '<button onclick="window._platformPage.goPage(' + (currentPage + 1) + ')" class="w-8 h-8 rounded flex items-center justify-center border ' + (currentPage >= totalPages ? 'border-gray-200 text-gray-300' : 'border-gray-200 hover:bg-gray-50 text-gray-600') + '"' + (currentPage >= totalPages ? ' disabled' : '') + '><i class="ph ph-caret-right"></i></button>';
-
-                        html += '<select onchange="window._platformPage.setPageSize(this.value)" class="ml-2 border border-gray-200 rounded px-2 py-1 bg-white outline-none"><option value="10"' + (pageSize === 10 ? ' selected' : '') + '>10条/页</option><option value="20"' + (pageSize === 20 ? ' selected' : '') + '>20条/页</option><option value="50"' + (pageSize === 50 ? ' selected' : '') + '>50条/页</option></select>';
-
-                        html += '</div>';
-                        container.innerHTML = html;
+                        var html = App.ui.paginationButtonsHtml({
+                            page: currentPage,
+                            pageSize: pageSize,
+                            total: totalCount,
+                            sizeSelectId: 'platform-page-size'
+                        });
+                        container.innerHTML = '<div>共 ' + totalCount + ' 条</div><div class="flex items-center gap-2">' + html + '</div>';
+                        App.ui.bindPagination(container, {
+                            page: currentPage,
+                            pageSize: pageSize,
+                            total: totalCount,
+                            sizeSelectId: 'platform-page-size',
+                            onChange: function (page, size) {
+                                currentPage = page;
+                                pageSize = size;
+                                loadPosts();
+                            }
+                        });
                     }
 
                     // ========== 渲染概览 ==========
@@ -327,8 +320,7 @@
                         if (!container) return;
 
                         // 从 API 获取 pending 状态的帖子
-                        fetch('/api/platform-posts?status=pending&pageSize=5')
-                            .then(function (r) { return r.json(); })
+                        request('/api/platform-posts?status=pending&pageSize=5')
                             .then(function (res) {
                                 if (res.success && res.data.list.length > 0) {
                                     var html = res.data.list.map(function (post) {
@@ -364,8 +356,7 @@
 
                     // ========== 加载分类列表 ==========
                     function loadCategories() {
-                        fetch('/api/platform-posts?pageSize=100')
-                            .then(function (r) { return r.json(); })
+                        request('/api/platform-posts?pageSize=100')
                             .then(function (res) {
                                 if (res.success) {
                                     var cats = {};
@@ -409,31 +400,27 @@
 
                     function duplicatePost(id) {
                         // 复制：获取原帖数据，创建一条新记录
-                        fetch('/api/platform-posts/' + id)
-                            .then(function (r) { return r.json(); })
+                        request('/api/platform-posts/' + id)
                             .then(function (res) {
-                                if (res.success) {
-                                    var orig = res.data;
-                                    return fetch('/api/platform-posts', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            title: orig.title + ' [副本]',
-                                            platform: orig.platform,
-                                            category: orig.category,
-                                            content: orig.content,
-                                            images: orig.images || [],
-                                            videoUrl: orig.videoUrl || '',
-                                            videoDuration: orig.videoDuration || '',
-                                            publishType: 'manual',
-                                            status: 'draft',
-                                            stats: { views: 0, likes: 0, comments: 0, shares: 0, inquiries: 0, revenue: 0 },
-                                            tags: orig.tags || []
-                                        })
-                                    });
-                                }
+                                if (!res.success) return null;
+                                var orig = res.data;
+                                return request('/api/platform-posts', {
+                                    method: 'POST',
+                                    body: {
+                                        title: orig.title + ' [副本]',
+                                        platform: orig.platform,
+                                        category: orig.category,
+                                        content: orig.content,
+                                        images: orig.images || [],
+                                        videoUrl: orig.videoUrl || '',
+                                        videoDuration: orig.videoDuration || '',
+                                        publishType: 'manual',
+                                        status: 'draft',
+                                        stats: { views: 0, likes: 0, comments: 0, shares: 0, inquiries: 0, revenue: 0 },
+                                        tags: orig.tags || []
+                                    }
+                                });
                             })
-                            .then(function (r) { return r.json(); })
                             .then(function (res) {
                                 if (res && res.success) {
                                     showToast('已复制为新草稿');
@@ -464,20 +451,8 @@
                     }
 
                     // ========== Toast ==========
-                    function showToast(msg) {
-                        var existing = document.getElementById('platform-toast');
-                        if (existing) existing.remove();
-                        var toast = document.createElement('div');
-                        toast.id = 'platform-toast';
-                        toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] px-4 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg transition-all duration-300';
-                        toast.style.opacity = '0';
-                        toast.textContent = msg;
-                        document.body.appendChild(toast);
-                        requestAnimationFrame(function () { toast.style.opacity = '1'; });
-                        setTimeout(function () {
-                            toast.style.opacity = '0';
-                            setTimeout(function () { toast.remove(); }, 300);
-                        }, 2000);
+                    function showToast(msg, type) {
+                        App.ui.toast(msg, type || 'success');
                     }
 
                     // ========== 事件绑定 ==========

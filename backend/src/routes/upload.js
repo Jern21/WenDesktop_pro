@@ -17,19 +17,15 @@ var multer = require('multer');
 var path = require('path');
 var fs = require('fs');
 var resp = require('../utils/response');
-
-var UPLOAD_DIR = path.join(__dirname, '..', '..', 'data', 'uploads');
-
-// 确保上传目录存在
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+var uploads = require('../utils/uploads');
 
 // ========== Multer 配置 ==========
 
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, UPLOAD_DIR);
+        var dir = uploads.dirForRequest(req);
+        fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
     },
     filename: function (req, file, cb) {
         var ext = path.extname(file.originalname).toLowerCase();
@@ -55,6 +51,16 @@ var upload = multer({
     }
 });
 
+function filePayload(req, file) {
+    return {
+        url: uploads.publicUrl(file.filename, req),
+        filename: file.filename,
+        originalName: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype
+    };
+}
+
 // ========== 单文件上传 ==========
 
 router.post('/', function (req, res, next) {
@@ -66,13 +72,7 @@ router.post('/', function (req, res, next) {
         if (!req.file) {
             return resp.error(res, '请选择要上传的文件');
         }
-        return resp.success(res, {
-            url: '/uploads/' + req.file.filename,
-            filename: req.file.filename,
-            originalName: req.file.originalname,
-            size: req.file.size,
-            mimetype: req.file.mimetype
-        }, 201);
+        return resp.success(res, filePayload(req, req.file), 201);
     });
 });
 
@@ -88,13 +88,7 @@ router.post('/multiple', function (req, res, next) {
             return resp.error(res, '请选择要上传的文件');
         }
         var results = req.files.map(function (f) {
-            return {
-                url: '/uploads/' + f.filename,
-                filename: f.filename,
-                originalName: f.originalname,
-                size: f.size,
-                mimetype: f.mimetype
-            };
+            return filePayload(req, f);
         });
         return resp.success(res, results, 201);
     });
@@ -103,24 +97,16 @@ router.post('/multiple', function (req, res, next) {
 // ========== 删除文件 ==========
 
 router.delete('/:filename', function (req, res) {
-    var filename = path.basename(req.params.filename);
-    var filePath = path.join(UPLOAD_DIR, filename);
-
-    // 安全检查：防止路径遍历
-    if (filename.indexOf('..') !== -1 || filename.indexOf('/') !== -1 || filename.indexOf('\\') !== -1) {
+    var filename = uploads.safeBasename(req.params.filename);
+    if (!filename) {
         return resp.error(res, '无效的文件名', 400);
     }
 
-    if (!fs.existsSync(filePath)) {
+    if (!uploads.deleteByFilename(filename, req)) {
         return resp.notFound(res, '文件不存在');
     }
 
-    try {
-        fs.unlinkSync(filePath);
-        return resp.success(res, { filename: filename });
-    } catch (e) {
-        return resp.error(res, '删除文件失败: ' + e.message, 500);
-    }
+    return resp.success(res, { filename: filename });
 });
 
 module.exports = router;

@@ -121,13 +121,12 @@
                             // ========== 工具函数 ==========
 
                             function api(url, options) {
-                                options = options || {};
-                                options.headers = options.headers || {};
-                                if (options.body && typeof options.body !== 'string') {
-                                    options.headers['Content-Type'] = 'application/json';
-                                    options.body = JSON.stringify(options.body);
+                                if (!global.api || !global.api.call) {
+                                    return Promise.reject(new Error('公共 api 未加载'));
                                 }
-                                return fetch(url, options).then(function (r) { return r.json(); });
+                                options = options || {};
+                                options.signal = ctx.signal;
+                                return global.api.call(url, options);
                             }
 
                             function moneyNumber(value) {
@@ -257,7 +256,7 @@
                                     item = item || {};
                                     return {
                                         date: String(item.date || item.payDate || item.time || '').trim(),
-                                        amount: moneyNumber(item.amount),
+                                        amount: Math.max(0, moneyNumber(item.amount)),
                                         note: String(item.note || item.remark || '').trim()
                                     };
                                 }).filter(function (item) {
@@ -551,65 +550,26 @@
                             function renderPagination() {
                                 var container = document.getElementById('orders-pagination');
                                 if (!container) return;
-                                var total = state.total;
-                                var page = state.page;
-                                var pageSize = state.pageSize;
-                                var totalPages = Math.ceil(total / pageSize) || 1;
-
                                 var info = document.getElementById('pagination-info');
-                                if (info) info.textContent = '共 ' + total + ' 条';
+                                if (info) info.textContent = '共 ' + state.total + ' 条';
 
-                                var pagesHtml = '';
-                                // 上一页
-                                pagesHtml += '<button class="page-prev w-8 h-8 rounded flex items-center justify-center border border-gray-200 hover:bg-gray-50 ' + (page <= 1 ? 'opacity-40 pointer-events-none' : '') + '"><i class="ph ph-caret-left"></i></button>';
-
-                                // 页码按钮
-                                var maxVisible = 5;
-                                var startPage = Math.max(1, page - 2);
-                                var endPage = Math.min(totalPages, startPage + maxVisible - 1);
-                                if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
-
-                                for (var i = startPage; i <= endPage; i++) {
-                                    if (i === page) {
-                                        pagesHtml += '<button class="page-btn w-8 h-8 rounded flex items-center justify-center border border-brand-500 bg-brand-50 text-brand-600 font-medium" data-page="' + i + '">' + i + '</button>';
-                                    } else {
-                                        pagesHtml += '<button class="page-btn w-8 h-8 rounded flex items-center justify-center hover:bg-gray-50" data-page="' + i + '">' + i + '</button>';
-                                    }
-                                }
-
-                                if (endPage < totalPages) {
-                                    pagesHtml += '<span>...</span>';
-                                    pagesHtml += '<button class="page-btn w-8 h-8 rounded flex items-center justify-center hover:bg-gray-50" data-page="' + totalPages + '">' + totalPages + '</button>';
-                                }
-
-                                // 下一页
-                                pagesHtml += '<button class="page-next w-8 h-8 rounded flex items-center justify-center border border-gray-200 hover:bg-gray-50 ' + (page >= totalPages ? 'opacity-40 pointer-events-none' : '') + '"><i class="ph ph-caret-right"></i></button>';
-
-                                // 每页条数
-                                pagesHtml += '<select id="page-size-select" class="ml-2 border border-gray-200 rounded px-2 py-1 bg-white outline-none">';
-                                [10, 20, 50].forEach(function (s) {
-                                    pagesHtml += '<option value="' + s + '"' + (s === pageSize ? ' selected' : '') + '>' + s + '条/页</option>';
+                                var pagesHtml = App.ui.paginationButtonsHtml({
+                                    page: state.page,
+                                    pageSize: state.pageSize,
+                                    total: state.total,
+                                    sizeSelectId: 'page-size-select'
                                 });
-                                pagesHtml += '</select>';
-
-                                container.innerHTML = '<div>共 ' + total + ' 条</div><div class="flex items-center gap-2">' + pagesHtml + '</div>';
-
-                                // 绑定分页事件
-                                container.querySelectorAll('.page-btn').forEach(function (btn) {
-                                    btn.addEventListener('click', function () {
-                                        state.page = parseInt(btn.getAttribute('data-page'));
+                                container.innerHTML = '<div>共 ' + state.total + ' 条</div><div class="flex items-center gap-2">' + pagesHtml + '</div>';
+                                App.ui.bindPagination(container, {
+                                    page: state.page,
+                                    pageSize: state.pageSize,
+                                    total: state.total,
+                                    sizeSelectId: 'page-size-select',
+                                    onChange: function (page, pageSize) {
+                                        state.page = page;
+                                        state.pageSize = pageSize;
                                         loadOrders();
-                                    });
-                                });
-                                var prevBtn = container.querySelector('.page-prev');
-                                if (prevBtn) prevBtn.addEventListener('click', function () { if (state.page > 1) { state.page--; loadOrders(); } });
-                                var nextBtn = container.querySelector('.page-next');
-                                if (nextBtn) nextBtn.addEventListener('click', function () { if (state.page < totalPages) { state.page++; loadOrders(); } });
-                                var sizeSel = document.getElementById('page-size-select');
-                                if (sizeSel) sizeSel.addEventListener('change', function () {
-                                    state.pageSize = parseInt(sizeSel.value);
-                                    state.page = 1;
-                                    loadOrders();
+                                    }
                                 });
                             }
 

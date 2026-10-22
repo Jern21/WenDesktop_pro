@@ -15,10 +15,11 @@
 
 var express = require('express');
 var router = express.Router();
-var path = require('path');
-var fs = require('fs');
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
+var uploads = require('../utils/uploads');
+var pickFields = require('../utils/pick-fields').pickFields;
+var warnIgnored = require('../utils/pick-fields').warnIgnored;
 
 var posts = new Storage('platform-posts');
 
@@ -31,19 +32,13 @@ router.post('/seed', resp.asyncHandler(function (req, res) {
     return resp.success(res, { count: records.length });
 }));
 
-// 上传目录（与 upload.js 一致）
-var UPLOAD_DIR = path.join(__dirname, '..', '..', 'data', 'uploads');
-
-// ========== 辅助：根据 URL 删除物理文件 ==========
+var POST_EDITABLE = [
+    'title', 'platform', 'category', 'content', 'images', 'videoUrl', 'videoDuration',
+    'publishTime', 'publishType', 'status', 'stats', 'posterId', 'tags'
+];
 
 function deleteFileByUrl(url) {
-    if (!url || url.indexOf('/uploads/') !== 0) return;
-    var filename = path.basename(url);
-    if (filename.indexOf('..') !== -1) return; // 安全检查
-    var filePath = path.join(UPLOAD_DIR, filename);
-    if (fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath); } catch (e) {}
-    }
+    uploads.deleteByUrl(url);
 }
 
 // 批量删除图片文件
@@ -178,9 +173,18 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
     var existing = posts.findById(req.params.id);
     if (!existing) return resp.notFound(res, '发布记录不存在');
 
-    // 如果图片列表被替换，删除不再使用的旧图片文件
-    if (req.body.images !== undefined && Array.isArray(existing.images)) {
-        var newImages = req.body.images || [];
+    var picked = pickFields(req.body, POST_EDITABLE);
+    warnIgnored('platform-posts 更新', picked.ignored);
+
+    if (Object.prototype.hasOwnProperty.call(picked.fields, 'title') && !String(picked.fields.title || '').trim()) {
+        return resp.error(res, '内容标题为必填项');
+    }
+    if (Object.prototype.hasOwnProperty.call(picked.fields, 'platform') && !String(picked.fields.platform || '').trim()) {
+        return resp.error(res, '发布平台为必填项');
+    }
+
+    if (picked.fields.images !== undefined && Array.isArray(existing.images)) {
+        var newImages = picked.fields.images || [];
         existing.images.forEach(function (oldUrl) {
             if (newImages.indexOf(oldUrl) === -1) {
                 deleteFileByUrl(oldUrl);
@@ -188,7 +192,7 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
         });
     }
 
-    var updated = posts.update(req.params.id, req.body || {});
+    var updated = posts.update(req.params.id, picked.fields);
     return resp.success(res, updated);
 }));
 

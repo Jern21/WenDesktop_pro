@@ -39,8 +39,20 @@ function atomicWriteJson(filePath, data) {
 /**
  * 账号密码：逐条把明文 password 换成密文
  */
-function migrateAccounts() {
-    var filePath = path.join(DATA_DIR, 'accounts.json');
+function listUserDataDirs() {
+    var dirs = [];
+    if (fs.existsSync(dataPaths.USERS_DIR)) {
+        fs.readdirSync(dataPaths.USERS_DIR).forEach(function (name) {
+            var full = path.join(dataPaths.USERS_DIR, name);
+            if (fs.statSync(full).isDirectory()) dirs.push(full);
+        });
+    }
+    dirs.push(DATA_DIR);
+    return dirs;
+}
+
+function migrateAccountsInDir(dataDir) {
+    var filePath = path.join(dataDir, 'accounts.json');
     var list = readJson(filePath);
     if (!Array.isArray(list)) return { file: 'accounts.json', skipped: true };
 
@@ -66,14 +78,14 @@ function migrateAccounts() {
     });
 
     if (changed > 0) atomicWriteJson(filePath, next);
-    return { file: 'accounts.json', changed: changed, total: total };
+    return { file: path.relative(DATA_DIR, filePath) || 'accounts.json', changed: changed, total: total };
 }
 
 /**
  * AI 生图 API Key：settings.json → imageGen.apiKey
  */
-function migrateSettings() {
-    var filePath = path.join(DATA_DIR, 'settings.json');
+function migrateSettingsInDir(dataDir) {
+    var filePath = path.join(dataDir, 'settings.json');
     var settings = readJson(filePath);
     if (!settings || typeof settings !== 'object') return { file: 'settings.json', skipped: true };
 
@@ -95,7 +107,33 @@ function migrateSettings() {
         imageGen: Object.assign({}, imageGen, { apiKey: encrypted })
     });
     atomicWriteJson(filePath, next);
-    return { file: 'settings.json', changed: 1, total: 1 };
+    return { file: path.relative(DATA_DIR, filePath) || 'settings.json', changed: 1, total: 1 };
+}
+
+function migrateAccounts() {
+    var results = [];
+    listUserDataDirs().forEach(function (dir) {
+        results.push(migrateAccountsInDir(dir));
+    });
+    return results.reduce(function (acc, r) {
+        if (!acc) return r;
+        acc.changed = (acc.changed || 0) + (r.changed || 0);
+        acc.total = (acc.total || 0) + (r.total || 0);
+        return acc;
+    }, { file: 'accounts.json', changed: 0, total: 0 });
+}
+
+function migrateSettings() {
+    var results = [];
+    listUserDataDirs().forEach(function (dir) {
+        results.push(migrateSettingsInDir(dir));
+    });
+    return results.reduce(function (acc, r) {
+        if (!acc) return r;
+        acc.changed = (acc.changed || 0) + (r.changed || 0);
+        acc.total = (acc.total || 0) + (r.total || 0);
+        return acc;
+    }, { file: 'settings.json', changed: 0, total: 0 });
 }
 
 /**

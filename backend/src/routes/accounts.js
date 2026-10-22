@@ -18,10 +18,11 @@ var fs = require('fs');
 var path = require('path');
 var resp = require('../utils/response');
 var secretBox = require('../utils/secret-box');
-var dataPaths = require('../utils/data-paths');
+var dataBackups = require('../utils/data-backups');
 
-var DATA_DIR = dataPaths.DATA_DIR;
-var ACCOUNTS_FILE = dataPaths.file('accounts.json');
+function accountsFile() {
+    return dataBackups.getDataFilePath('accounts');
+}
 
 // 默认平台列表
 var DEFAULT_PLATFORMS = [
@@ -37,11 +38,10 @@ var DEFAULT_PLATFORMS = [
 
 // 确保数据文件存在
 function ensureDataFile() {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(ACCOUNTS_FILE)) {
-        fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify([], null, 2), 'utf-8');
+    var file = accountsFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    if (!fs.existsSync(file)) {
+        fs.writeFileSync(file, JSON.stringify([], null, 2), 'utf-8');
     }
 }
 
@@ -55,7 +55,7 @@ function readAccounts() {
     ensureDataFile();
     var list;
     try {
-        list = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf-8'));
+        list = JSON.parse(fs.readFileSync(accountsFile(), 'utf-8'));
     } catch (e) {
         return [];
     }
@@ -84,9 +84,9 @@ function saveAccounts(accounts) {
         return copy;
     });
 
-    var tmp = ACCOUNTS_FILE + '.' + process.pid + '.tmp';
+    var tmp = accountsFile() + '.' + process.pid + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(toWrite, null, 2), 'utf-8');
-    fs.renameSync(tmp, ACCOUNTS_FILE);
+    fs.renameSync(tmp, accountsFile());
 }
 
 // ========== 获取所有账号 ==========

@@ -297,6 +297,100 @@
         return handle;
     }
 
+    // ========== 分页 ==========
+
+    /**
+     * 页码按钮 HTML（上一页 / 页码 / 下一页 / 每页条数）。
+     * 页面自己决定包一层、写 info 文案，以及点完之后干什么。
+     */
+    function paginationButtonsHtml(options) {
+        options = options || {};
+        var page = parseInt(options.page, 10) || 1;
+        var pageSize = parseInt(options.pageSize, 10) || 10;
+        var total = parseInt(options.total, 10) || 0;
+        var totalPages = Math.ceil(total / pageSize) || 1;
+        var maxVisible = parseInt(options.maxVisible, 10) || 5;
+        var prevClass = options.prevClass || 'page-prev';
+        var nextClass = options.nextClass || 'page-next';
+        var btnClass = options.btnClass || 'page-btn';
+        var sizeSelectId = options.sizeSelectId || '';
+        var sizes = options.sizes || [10, 20, 50];
+
+        var startPage = Math.max(1, page - 2);
+        var endPage = Math.min(totalPages, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+
+        var disabled = ' opacity-40 pointer-events-none';
+        var html = '';
+        html += '<button type="button" class="' + prevClass + ' w-8 h-8 rounded flex items-center justify-center border border-gray-200 hover:bg-gray-50' +
+            (page <= 1 ? disabled : '') + '"><i class="ph ph-caret-left"></i></button>';
+
+        var i;
+        for (i = startPage; i <= endPage; i++) {
+            if (i === page) {
+                html += '<button type="button" class="' + btnClass + ' w-8 h-8 rounded flex items-center justify-center border border-brand-500 bg-brand-50 text-brand-600 font-medium" data-page="' + i + '">' + i + '</button>';
+            } else {
+                html += '<button type="button" class="' + btnClass + ' w-8 h-8 rounded flex items-center justify-center hover:bg-gray-50" data-page="' + i + '">' + i + '</button>';
+            }
+        }
+        if (endPage < totalPages) {
+            html += '<span>...</span>';
+            html += '<button type="button" class="' + btnClass + ' w-8 h-8 rounded flex items-center justify-center hover:bg-gray-50" data-page="' + totalPages + '">' + totalPages + '</button>';
+        }
+
+        html += '<button type="button" class="' + nextClass + ' w-8 h-8 rounded flex items-center justify-center border border-gray-200 hover:bg-gray-50' +
+            (page >= totalPages ? disabled : '') + '"><i class="ph ph-caret-right"></i></button>';
+
+        if (sizeSelectId) {
+            html += '<select id="' + sizeSelectId + '" class="ml-2 border border-gray-200 rounded px-2 py-1 bg-white outline-none">';
+            sizes.forEach(function (s) {
+                html += '<option value="' + s + '"' + (s === pageSize ? ' selected' : '') + '>' + s + '条/页</option>';
+            });
+            html += '</select>';
+        }
+        return html;
+    }
+
+    function bindPagination(container, options) {
+        if (!container) return;
+        options = options || {};
+        var page = parseInt(options.page, 10) || 1;
+        var pageSize = parseInt(options.pageSize, 10) || 10;
+        var total = parseInt(options.total, 10) || 0;
+        var totalPages = Math.ceil(total / pageSize) || 1;
+        var prevClass = options.prevClass || 'page-prev';
+        var nextClass = options.nextClass || 'page-next';
+        var btnClass = options.btnClass || 'page-btn';
+        var onChange = options.onChange;
+        if (typeof onChange !== 'function') return;
+
+        Array.prototype.slice.call(container.querySelectorAll('.' + btnClass)).forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                onChange(parseInt(btn.getAttribute('data-page'), 10), pageSize);
+            });
+        });
+        var prevBtn = container.querySelector('.' + prevClass);
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (page > 1) onChange(page - 1, pageSize);
+            });
+        }
+        var nextBtn = container.querySelector('.' + nextClass);
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (page < totalPages) onChange(page + 1, pageSize);
+            });
+        }
+        var sizeSel = options.sizeSelectId
+            ? (document.getElementById(options.sizeSelectId) || container.querySelector('#' + options.sizeSelectId))
+            : null;
+        if (sizeSel) {
+            sizeSel.addEventListener('change', function () {
+                onChange(1, parseInt(sizeSel.value, 10) || pageSize);
+            });
+        }
+    }
+
     // ========== Loading ==========
 
     var loadingNode = null;
@@ -328,6 +422,8 @@
         toast: toast,
         confirm: confirm,
         modal: modal,
+        paginationButtonsHtml: paginationButtonsHtml,
+        bindPagination: bindPagination,
         showLoading: showLoading,
         hideLoading: hideLoading,
         closeAll: closeAll,

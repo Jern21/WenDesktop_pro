@@ -17,6 +17,10 @@
     var SCRIPT_SRC = 'js/project-page.js';
     var SCRIPT_FLAG = 'data-project-page';
     var loadPromise = null;
+    // 抓到 project-page.js 暴露的入口，存在闭包里跨挂载存活。
+    // 不能只靠 window.__projectPage：那是「挂载期间新增的 window 键」，
+    // 会被 core/view.js 的 restoreGlobals 在离开时删掉。
+    var pageApi = null;
 
     /**
      * 按需加载 project-page.js（只加载一次）
@@ -40,6 +44,13 @@
                 reject(new Error('project-page.js 加载失败'));
             };
             document.head.appendChild(s);
+        }).then(function () {
+            // 脚本执行完毕，把入口抓进闭包
+            pageApi = global.__projectPage || null;
+            if (!pageApi) {
+                console.warn('[project] project-page.js 未暴露 __projectPage，' +
+                    '全局入口（openEditForm）在二次进入时可能失效');
+            }
         });
 
         return loadPromise;
@@ -77,6 +88,13 @@
                         '<p class="mt-3 text-sm text-gray-500">项目管理脚本加载失败，请刷新重试</p>' +
                     '</div>';
                 return;
+            }
+
+            // 每次挂载都重新暴露全局入口：
+            // 上一次离开时 view.js 的 restoreGlobals 已经把 openEditForm 删掉了，
+            // 而脚本不会重新执行，只能靠这里主动补回来。
+            if (pageApi && typeof pageApi.exposeGlobals === 'function') {
+                pageApi.exposeGlobals();
             }
 
             // 脚本加载完成时 spa:ready 可能已经派发过了，这里补发一次，

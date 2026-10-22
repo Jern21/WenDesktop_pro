@@ -1693,8 +1693,30 @@ break;
             }
         }
 
+        // ========== 全局入口（可重复执行）==========
+        /*
+         * 顶部栏「新建项目」按钮是内联 onclick="openEditForm(null)"，
+         * 只能从 window 上找这个函数；看板里的「新建项目」卡片同理（见上文 innerHTML）。
+         *
+         * 但 SPA 的 core/view.js 在离开视图时会把「挂载期间新增的 window 键」全部删掉
+         * （restoreGlobals），openEditForm 正好落在其中。
+         * 本脚本又只被加载一次（views/project.js 用 loadPromise 缓存），
+         * 原先的顶层赋值不会重跑 —— 于是第二次进入时按钮一点就
+         * "Uncaught ReferenceError: openEditForm is not defined"。
+         *
+         * 所以赋值必须收进这个函数，由 init() 与视图每次 mount 时调用（幂等）。
+         */
+        function exposeGlobals() {
+            window.openEditForm = function (projectName) {
+                openEditForm(projectName || null);
+            };
+        }
+
         // ========== 初始化 ==========
         function init() {
+            // 先把全局入口补回来，再干别的
+            exposeGlobals();
+
             clearStaticProjectDemo();
 
             // Scope toggle
@@ -1756,8 +1778,13 @@ break;
             initWhenProjectPageMounted();
         }
 
-        if (!window.__projectPageSpaReadyBound) {
-            window.__projectPageSpaReadyBound = true;
+        // 防止脚本被重复执行时叠加 spa:ready 监听。
+        // 哨兵刻意挂在 document 上而不是 window：
+        // window 上的自有键会被 core/view.js 的 restoreGlobals 删掉，
+        // 但 addEventListener 注册的监听删不掉 —— 哨兵若被删而监听还在，
+        // 状态就与真实绑定情况脱节。document 不在回收范围内，可作为脚本级单例标志。
+        if (!document._projectPageSpaReadyBound) {
+            document._projectPageSpaReadyBound = true;
             window.addEventListener('spa:ready', function (e) {
                 var page = (e.detail && e.detail.page) || '';
                 if (page && page.indexOf('project') === -1) return;
@@ -1765,9 +1792,12 @@ break;
             });
         }
 
-        // 暴露到 window，供顶部栏按钮 onclick 调用（null 表示新建）
-        window.openEditForm = function(projectName) {
-            openEditForm(projectName || null);
+        // 暴露给 views/project.js 的显式契约。
+        // 视图在 ensureScript() 之后把这个对象抓进自己的闭包，每次 mount 调 exposeGlobals()，
+        // 因此即使 window 上的键被 SPA 清掉，重新进入页面也能立刻恢复。
+        window.__projectPage = {
+            init: init,
+            exposeGlobals: exposeGlobals
         };
     })();
 

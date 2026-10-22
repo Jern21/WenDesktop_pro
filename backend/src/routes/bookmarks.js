@@ -18,9 +18,11 @@ var fs = require('fs');
 var path = require('path');
 var resp = require('../utils/response');
 
-var dataPaths = require('../utils/data-paths');
-var DATA_DIR = dataPaths.DATA_DIR;
-var BOOKMARKS_FILE = path.join(DATA_DIR, 'bookmarks.json');
+var dataBackups = require('../utils/data-backups');
+
+function bookmarksFile() {
+    return dataBackups.getDataFilePath('bookmarks');
+}
 
 // 默认分类列表
 var DEFAULT_CATEGORIES = [
@@ -34,11 +36,10 @@ var DEFAULT_CATEGORIES = [
 
 // 确保数据文件存在
 function ensureDataFile() {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(BOOKMARKS_FILE)) {
-        fs.writeFileSync(BOOKMARKS_FILE, JSON.stringify([], null, 2), 'utf-8');
+    var file = bookmarksFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    if (!fs.existsSync(file)) {
+        fs.writeFileSync(file, JSON.stringify([], null, 2), 'utf-8');
     }
 }
 
@@ -46,7 +47,7 @@ function ensureDataFile() {
 function readBookmarks() {
     ensureDataFile();
     try {
-        var raw = fs.readFileSync(BOOKMARKS_FILE, 'utf-8');
+        var raw = fs.readFileSync(bookmarksFile(), 'utf-8');
         return JSON.parse(raw);
     } catch (e) {
         return [];
@@ -56,7 +57,7 @@ function readBookmarks() {
 // 保存收藏数据
 function saveBookmarks(bookmarks) {
     ensureDataFile();
-    fs.writeFileSync(BOOKMARKS_FILE, JSON.stringify(bookmarks, null, 2), 'utf-8');
+    fs.writeFileSync(bookmarksFile(), JSON.stringify(bookmarks, null, 2), 'utf-8');
 }
 
 // ========== 获取所有收藏 ==========

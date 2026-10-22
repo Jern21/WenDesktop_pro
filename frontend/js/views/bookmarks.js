@@ -45,10 +45,15 @@
 
             // ---------- 数据 ----------
 
+            function request(url, options) {
+                options = options || {};
+                options.signal = ctx.signal;
+                return global.api.call(url, options);
+            }
+
             async function loadCategories() {
                 try {
-                    var res = await fetch('/api/bookmarks/categories', { signal: ctx.signal });
-                    var result = await res.json();
+                    var result = await request('/api/bookmarks/categories');
                     if (!result.success) return;
 
                     state.categoryConfig = {};
@@ -77,8 +82,7 @@
 
             async function loadBookmarks() {
                 try {
-                    var res = await fetch('/api/bookmarks', { signal: ctx.signal });
-                    var result = await res.json();
+                    var result = await request('/api/bookmarks');
                     if (result.success) {
                         state.list = result.data || [];
                         render();
@@ -254,16 +258,13 @@
                 };
 
                 try {
-                    var res = await fetch(
+                    var result = await request(
                         state.editingId ? '/api/bookmarks/' + encodeURIComponent(state.editingId) : '/api/bookmarks',
                         {
                             method: state.editingId ? 'PUT' : 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            signal: ctx.signal,
-                            body: JSON.stringify(payload)
+                            body: payload
                         }
                     );
-                    var result = await res.json();
                     if (result.success) {
                         App.ui.toast('保存成功', 'success');
                         await loadBookmarks();
@@ -287,11 +288,9 @@
                 if (!ok) return;
 
                 try {
-                    var res = await fetch('/api/bookmarks/' + encodeURIComponent(id), {
-                        method: 'DELETE',
-                        signal: ctx.signal
+                    var result = await request('/api/bookmarks/' + encodeURIComponent(id), {
+                        method: 'DELETE'
                     });
-                    var result = await res.json();
                     if (result.success) {
                         App.ui.toast('删除成功', 'success');
                         await loadBookmarks();
@@ -307,8 +306,11 @@
 
             function recordClick(id) {
                 // 不阻塞链接跳转，fire-and-forget
-                fetch('/api/bookmarks/' + encodeURIComponent(id) + '/click', { method: 'POST' })
-                    .catch(function (e) { console.error('[bookmarks] 记录点击失败:', e); });
+                request('/api/bookmarks/' + encodeURIComponent(id) + '/click', { method: 'POST' })
+                    .catch(function (e) {
+                        if (e && e.name === 'AbortError') return;
+                        console.error('[bookmarks] 记录点击失败:', e);
+                    });
             }
 
             async function uploadIcon(file) {
@@ -317,12 +319,10 @@
                 formData.append('file', file);
 
                 try {
-                    var res = await fetch('/api/upload', {
+                    var result = await request('/api/upload', {
                         method: 'POST',
-                        body: formData,
-                        signal: ctx.signal
+                        body: formData
                     });
-                    var result = await res.json();
                     if (result.success) {
                         state.icon = result.data.url;
                         var preview = $('#bookmark-icon-preview');

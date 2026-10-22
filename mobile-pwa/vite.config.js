@@ -24,6 +24,10 @@ export default defineConfig(function ({ mode }) {
                 '/uploads': {
                     target: apiTarget,
                     changeOrigin: true
+                },
+                '/assets': {
+                    target: apiTarget,
+                    changeOrigin: true
                 }
             }
         },
@@ -33,19 +37,20 @@ export default defineConfig(function ({ mode }) {
             host: true,
             proxy: {
                 '/api': { target: apiTarget, changeOrigin: true },
-                '/uploads': { target: apiTarget, changeOrigin: true }
+                '/uploads': { target: apiTarget, changeOrigin: true },
+                '/assets': { target: apiTarget, changeOrigin: true }
             }
         },
         plugins: [
             VitePWA({
                 registerType: 'autoUpdate',
-                includeAssets: ['icon.svg'],
+                includeAssets: ['icon.svg', 'assets/gif/logo.gif'],
                 manifest: {
                     name: '文的项目工作台 · 移动版',
                     short_name: '文工作台',
                     description: '接单工作台移动端 PWA',
-                    theme_color: '#2563eb',
-                    background_color: '#f9fafb',
+                    theme_color: '#f5f5f7',
+                    background_color: '#f5f5f7',
                     display: 'standalone',
                     orientation: 'portrait-primary',
                     start_url: '/',

@@ -22,22 +22,26 @@ var express = require('express');
 var router = express.Router();
 var multer = require('multer');
 var path = require('path');
-var fs = require('fs');
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
+var uploads = require('../utils/uploads');
+var pickFields = require('../utils/pick-fields').pickFields;
+var warnIgnored = require('../utils/pick-fields').warnIgnored;
 
 var resumes = new Storage('resume');
 
-// ========== PDF 上传配置 ==========
+var RESUME_EDITABLE = [
+    'title', 'company', 'pdfUrl', 'pdfName', 'pageCount',
+    'name', 'phone', 'email', 'location', 'github', 'summary',
+    'skills', 'projects', 'workExperience', 'education',
+    'versionLabel', 'active'
+];
 
-var UPLOAD_DIR = path.join(__dirname, '..', '..', 'data', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+// ========== PDF 上传配置 ==========
 
 var pdfStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, UPLOAD_DIR);
+        cb(null, uploads.dirForRequest(req));
     },
     filename: function (req, file, cb) {
         var ext = path.extname(file.originalname).toLowerCase() || '.pdf';
@@ -103,7 +107,7 @@ router.post('/upload-pdf', function (req, res, next) {
             return resp.error(res, '请选择 PDF 文件');
         }
         return resp.success(res, {
-            url: '/uploads/' + req.file.filename,
+            url: uploads.publicUrl(req.file.filename, req),
             filename: req.file.filename,
             originalName: req.file.originalname,
             size: req.file.size
@@ -152,11 +156,19 @@ router.post('/', resp.asyncHandler(function (req, res) {
 // ========== 更新 ==========
 
 router.put('/:id', resp.asyncHandler(function (req, res) {
-    var updated = resumes.update(req.params.id, req.body || {});
+    var existing = resumes.findById(req.params.id);
+    if (!existing) return resp.notFound(res, '简历不存在');
+
+    var picked = pickFields(req.body, RESUME_EDITABLE);
+    warnIgnored('resume 更新', picked.ignored);
+    if (Object.prototype.hasOwnProperty.call(picked.fields, 'title') && !String(picked.fields.title || '').trim()) {
+        return resp.error(res, '岗位名称为必填项');
+    }
+
+    var updated = resumes.update(req.params.id, picked.fields);
     if (!updated) return resp.notFound(res, '简历不存在');
 
-    // 如果设为激活，取消其他简历的激活
-    if (req.body.active) {
+    if (picked.fields.active) {
         _deactivateOthers(req.params.id);
     }
 
@@ -177,17 +189,10 @@ router.post('/:id/pdf', function (req, res, next) {
         var record = resumes.findById(req.params.id);
         if (!record) return resp.notFound(res, '简历不存在');
 
-        // 删除旧 PDF 文件
-        if (record.pdfUrl) {
-            var oldFilename = path.basename(record.pdfUrl);
-            var oldPath = path.join(UPLOAD_DIR, oldFilename);
-            if (fs.existsSync(oldPath)) {
-                try { fs.unlinkSync(oldPath); } catch (e) {}
-            }
-        }
+        if (record.pdfUrl) uploads.deleteByUrl(record.pdfUrl);
 
         var updated = resumes.update(req.params.id, {
-            pdfUrl: '/uploads/' + req.file.filename,
+            pdfUrl: uploads.publicUrl(req.file.filename, req),
             pdfName: req.file.originalname,
             pageCount: parseInt(req.body.pageCount) || 0
         });
@@ -213,14 +218,7 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
     var record = resumes.findById(req.params.id);
     if (!record) return resp.notFound(res, '简历不存在');
 
-    // 删除关联的 PDF 文件
-    if (record.pdfUrl) {
-        var filename = path.basename(record.pdfUrl);
-        var filePath = path.join(UPLOAD_DIR, filename);
-        if (fs.existsSync(filePath)) {
-            try { fs.unlinkSync(filePath); } catch (e) {}
-        }
-    }
+    if (record.pdfUrl) uploads.deleteByUrl(record.pdfUrl);
 
     resumes.remove(req.params.id);
     return resp.success(res, { id: req.params.id });

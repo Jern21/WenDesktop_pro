@@ -144,11 +144,17 @@
                         };
 
                         // ========== 工具函数 ==========
-                        function escapeAttr(s) {
-                            return String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        var escapeHtml = App.dom.escapeHtml;
+                        var escapeAttr = App.dom.escapeAttr;
+
+                        function request(url, options) {
+                            options = options || {};
+                            options.signal = ctx.signal;
+                            return global.api.call(url, options);
                         }
-                        function escapeHtml(s) {
-                            return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;');
+
+                        function showToast(msg, type) {
+                            App.ui.toast(msg, type || 'success');
                         }
 
                         function customerAvatarDataUrl(name) {
@@ -178,8 +184,7 @@
                             var qs = params.toString();
                             if (qs) url += '?' + qs;
 
-                            return fetch(url)
-                                .then(function (r) { return r.json(); })
+                            return request(url)
                                 .then(function (res) {
                                     if (res.success) {
                                         customerCache = res.data || [];
@@ -205,6 +210,7 @@
                                     }
                                 })
                                 .catch(function (err) {
+                                    if (err && err.name === 'AbortError') return;
                                     console.error('加载客户列表失败:', err);
                                     customerCache = [];
                                     customerMap = {};
@@ -320,92 +326,41 @@
                         }
 
                         // ========== 渲染分页 ==========
+                        function afterPageChange() {
+                            renderTable();
+                            renderPagination();
+                            var pl = getCurrentPageList();
+                            if (pl.length > 0) selectCustomer(pl[0].id);
+                        }
+
                         function renderPagination() {
                             var container = document.getElementById('cust-pagination-btns');
                             var info = document.getElementById('cust-pagination-info');
                             if (!container || !info) return;
 
-                            var total = customerCache.length;
-                            var page = pagination.page;
-                            var pageSize = pagination.pageSize;
-                            var totalPages = Math.ceil(total / pageSize) || 1;
-
-                            info.textContent = '共 ' + total + ' 条';
-
-                            var html = '';
-                            // 上一页
-                            html += '<button class="cust-page-prev w-8 h-8 rounded flex items-center justify-center border border-gray-200 hover:bg-gray-50 ' + (page <= 1 ? 'opacity-40 pointer-events-none' : '') + '"><i class="ph ph-caret-left"></i></button>';
-
-                            // 页码按钮
-                            var maxVisible = 5;
-                            var startPage = Math.max(1, page - 2);
-                            var endPage = Math.min(totalPages, startPage + maxVisible - 1);
-                            if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
-
-                            for (var i = startPage; i <= endPage; i++) {
-                                if (i === page) {
-                                    html += '<button class="cust-page-btn w-8 h-8 rounded flex items-center justify-center border border-brand-500 bg-brand-50 text-brand-600 font-medium" data-page="' + i + '">' + i + '</button>';
-                                } else {
-                                    html += '<button class="cust-page-btn w-8 h-8 rounded flex items-center justify-center hover:bg-gray-50" data-page="' + i + '">' + i + '</button>';
+                            info.textContent = '共 ' + customerCache.length + ' 条';
+                            container.innerHTML = App.ui.paginationButtonsHtml({
+                                page: pagination.page,
+                                pageSize: pagination.pageSize,
+                                total: customerCache.length,
+                                prevClass: 'cust-page-prev',
+                                nextClass: 'cust-page-next',
+                                btnClass: 'cust-page-btn',
+                                sizeSelectId: 'cust-page-size'
+                            });
+                            App.ui.bindPagination(container, {
+                                page: pagination.page,
+                                pageSize: pagination.pageSize,
+                                total: customerCache.length,
+                                prevClass: 'cust-page-prev',
+                                nextClass: 'cust-page-next',
+                                btnClass: 'cust-page-btn',
+                                sizeSelectId: 'cust-page-size',
+                                onChange: function (page, pageSize) {
+                                    pagination.page = page;
+                                    pagination.pageSize = pageSize;
+                                    afterPageChange();
                                 }
-                            }
-
-                            if (endPage < totalPages) {
-                                html += '<span>...</span>';
-                                html += '<button class="cust-page-btn w-8 h-8 rounded flex items-center justify-center hover:bg-gray-50" data-page="' + totalPages + '">' + totalPages + '</button>';
-                            }
-
-                            // 下一页
-                            html += '<button class="cust-page-next w-8 h-8 rounded flex items-center justify-center border border-gray-200 hover:bg-gray-50 ' + (page >= totalPages ? 'opacity-40 pointer-events-none' : '') + '"><i class="ph ph-caret-right"></i></button>';
-
-                            // 每页条数
-                            html += '<select id="cust-page-size" class="ml-2 border border-gray-200 rounded px-2 py-1 bg-white outline-none">';
-                            [10, 20, 50].forEach(function (s) {
-                                html += '<option value="' + s + '"' + (s === pageSize ? ' selected' : '') + '>' + s + '条/页</option>';
-                            });
-                            html += '</select>';
-
-                            container.innerHTML = html;
-
-                            // 绑定分页事件
-                            container.querySelectorAll('.cust-page-btn').forEach(function (btn) {
-                                btn.addEventListener('click', function () {
-                                    pagination.page = parseInt(btn.getAttribute('data-page'));
-                                    renderTable();
-                                    renderPagination();
-                                    var pl = getCurrentPageList();
-                                    if (pl.length > 0) selectCustomer(pl[0].id);
-                                });
-                            });
-                            var prevBtn = container.querySelector('.cust-page-prev');
-                            if (prevBtn) prevBtn.addEventListener('click', function () {
-                                if (pagination.page > 1) {
-                                    pagination.page--;
-                                    renderTable();
-                                    renderPagination();
-                                    var pl = getCurrentPageList();
-                                    if (pl.length > 0) selectCustomer(pl[0].id);
-                                }
-                            });
-                            var nextBtn = container.querySelector('.cust-page-next');
-                            if (nextBtn) nextBtn.addEventListener('click', function () {
-                                var tp = Math.ceil(customerCache.length / pagination.pageSize) || 1;
-                                if (pagination.page < tp) {
-                                    pagination.page++;
-                                    renderTable();
-                                    renderPagination();
-                                    var pl = getCurrentPageList();
-                                    if (pl.length > 0) selectCustomer(pl[0].id);
-                                }
-                            });
-                            var sizeSel = document.getElementById('cust-page-size');
-                            if (sizeSel) sizeSel.addEventListener('change', function () {
-                                pagination.pageSize = parseInt(sizeSel.value);
-                                pagination.page = 1;
-                                renderTable();
-                                renderPagination();
-                                var pl = getCurrentPageList();
-                                if (pl.length > 0) selectCustomer(pl[0].id);
                             });
                         }
 
@@ -506,18 +461,18 @@
                                 showToast('订单表单组件未加载');
                                 return;
                             }
-                            fetch('/api/orders/' + encodeURIComponent(orderId))
-                                .then(function (r) { return r.json(); })
+                            request('/api/orders/' + encodeURIComponent(orderId))
                                 .then(function (res) {
                                     if (!res.success || !res.data) {
-                                        showToast(res.error || '订单不存在');
+                                        showToast(res.error || '订单不存在', 'error');
                                         return;
                                     }
                                     window.openOrderForm(res.data);
                                 })
                                 .catch(function (err) {
+                                    if (err && err.name === 'AbortError') return;
                                     console.error('打开关联订单失败:', err);
-                                    showToast('打开订单失败');
+                                    showToast('打开订单失败', 'error');
                                 });
                         }
 
@@ -679,8 +634,7 @@
                         }
 
                         function loadCustomerDetail(id) {
-                            fetch('/api/customers/' + encodeURIComponent(id) + '/detail')
-                                .then(function (r) { return r.json(); })
+                            request('/api/customers/' + encodeURIComponent(id) + '/detail')
                                 .then(function (res) {
                                     if (!res.success || !res.data) return;
                                     if (selectedCustomerId !== id) return;
@@ -728,15 +682,13 @@
                                 showToast('请输入跟进内容');
                                 return;
                             }
-                            fetch('/api/customers/' + encodeURIComponent(selectedCustomerId) + '/follows', {
+                            request('/api/customers/' + encodeURIComponent(selectedCustomerId) + '/follows', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ content: content })
+                                body: { content: content }
                             })
-                                .then(function (r) { return r.json(); })
                                 .then(function (res) {
                                     if (!res.success) {
-                                        showToast(res.error || '保存失败');
+                                        showToast(res.error || '保存失败', 'error');
                                         return;
                                     }
                                     if (input) input.value = '';
@@ -754,15 +706,13 @@
                             }
                             var input = document.getElementById('detail-notes-input');
                             var notes = input ? input.value : '';
-                            fetch('/api/customers/' + encodeURIComponent(selectedCustomerId), {
+                            request('/api/customers/' + encodeURIComponent(selectedCustomerId), {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ notes: notes })
+                                body: { notes: notes }
                             })
-                                .then(function (r) { return r.json(); })
                                 .then(function (res) {
                                     if (!res.success) {
-                                        showToast(res.error || '保存失败');
+                                        showToast(res.error || '保存失败', 'error');
                                         return;
                                     }
                                     if (customerMap[selectedCustomerId]) customerMap[selectedCustomerId].notes = notes;
@@ -867,8 +817,7 @@
                             });
 
                             modal.querySelector('#cust-delete-confirm').addEventListener('click', function () {
-                                fetch('/api/customers/' + cid, { method: 'DELETE' })
-                                    .then(function (r) { return r.json(); })
+                                request('/api/customers/' + cid, { method: 'DELETE' })
                                     .then(function (res) {
                                         if (res.success) {
                                             showToast('客户已删除');
@@ -877,12 +826,13 @@
                                             }
                                             loadCustomers();
                                         } else {
-                                            showToast(res.error || '删除失败');
+                                            showToast(res.error || '删除失败', 'error');
                                         }
                                     })
                                     .catch(function (err) {
+                                        if (err && err.name === 'AbortError') return;
                                         console.error('删除失败:', err);
-                                        showToast('删除失败');
+                                        showToast('删除失败', 'error');
                                     });
                                 closeModal();
                             });
@@ -1016,12 +966,10 @@
                                     method = 'PUT';
                                 }
 
-                                fetch(apiUrl, {
+                                request(apiUrl, {
                                     method: method,
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(formData)
+                                    body: formData
                                 })
-                                .then(function (r) { return r.json(); })
                                 .then(function (res) {
                                     if (res.success) {
                                         showToast(isEdit ? '客户信息已更新' : '客户已添加');
@@ -1032,12 +980,13 @@
                                             }
                                         });
                                     } else {
-                                        showToast(res.error || '保存失败');
+                                        showToast(res.error || '保存失败', 'error');
                                     }
                                 })
                                 .catch(function (err) {
+                                    if (err && err.name === 'AbortError') return;
                                     console.error('保存失败:', err);
-                                    showToast('保存失败');
+                                    showToast('保存失败', 'error');
                                 });
                             });
 
@@ -1058,31 +1007,6 @@
                                     return;
                                 }
                             }
-                        }
-
-                        // ========== Toast ==========
-                        var toastTimer = null;
-                        function showToast(msg) {
-                            var existing = document.getElementById('cust-action-toast');
-                            if (existing) existing.remove();
-                            if (toastTimer) clearTimeout(toastTimer);
-
-                            var toast = document.createElement('div');
-                            toast.id = 'cust-action-toast';
-                            toast.style.cssText = 'position:fixed;bottom:2.5rem;left:50%;transform:translateX(-50%) translateY(2.5rem);background:#1e293b;color:#fff;padding:0.5rem 1rem;border-radius:0.5rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;opacity:0;transition:all 0.3s ease;pointer-events:none;z-index:90;';
-                            toast.innerHTML = '<i class="ph-fill ph-check-circle" style="color:#4ade80"></i><span>' + escapeAttr(msg) + '</span>';
-                            document.body.appendChild(toast);
-
-                            requestAnimationFrame(function () {
-                                toast.style.opacity = '1';
-                                toast.style.transform = 'translateX(-50%) translateY(0)';
-                            });
-
-                            toastTimer = setTimeout(function () {
-                                toast.style.opacity = '0';
-                                toast.style.transform = 'translateX(-50%) translateY(2.5rem)';
-                                setTimeout(function () { toast.remove(); }, 300);
-                            }, 2500);
                         }
 
                         // ========== 绑定事件 ==========

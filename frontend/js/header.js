@@ -24,8 +24,8 @@
 
     function getDefaultUserProfile() {
         return {
-            nickname: 'JERN',
-            role: '全栈开发工程师',
+            nickname: '',
+            role: '',
             avatar: ''
         };
     }
@@ -35,7 +35,7 @@
     }
 
     function makeProfileAvatar(name) {
-        var label = String(name || 'JERN').trim().charAt(0) || 'J';
+        var label = String(name || '用').trim().charAt(0) || '用';
         var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">' +
             '<rect width="96" height="96" rx="48" fill="#2563eb"/>' +
             '<text x="50%" y="50%" dy=".08em" text-anchor="middle" dominant-baseline="middle" ' +
@@ -47,7 +47,7 @@
     function applyUserProfileToHeader(profile) {
         var normalized = normalizeUserProfile(profile);
         window.__userProfile = normalized;
-        var name = normalized.nickname || 'JERN';
+        var name = normalized.nickname || normalized.username || '用户';
         var avatar = normalized.avatar || makeProfileAvatar(name);
         var avatarEl = document.getElementById('header-user-avatar');
         var nameEl = document.getElementById('header-user-name');
@@ -56,13 +56,23 @@
     }
 
     function loadHeaderProfile() {
-        var apiBase = (window.ROOT_URL || window.PAGE_BASE || '') + 'api/settings';
-        fetch(apiBase)
-            .then(function (res) { return res.json(); })
-            .then(function (result) {
-                if (result.success && result.data) {
-                    applyUserProfileToHeader(result.data.profile);
+        var apiRoot = (window.ROOT_URL || window.PAGE_BASE || '') + 'api';
+        Promise.all([
+            fetch(apiRoot + '/auth/status', { credentials: 'same-origin' }).then(function (res) { return res.json(); }),
+            fetch(apiRoot + '/settings', { credentials: 'same-origin' }).then(function (res) { return res.json(); })
+        ])
+            .then(function (pair) {
+                var statusRes = pair[0];
+                var settingsRes = pair[1];
+                var sessionUser = statusRes.success && statusRes.data ? statusRes.data.user : null;
+                var profile = settingsRes.success && settingsRes.data ? settingsRes.data.profile : null;
+                var merged = Object.assign(getDefaultUserProfile(), profile || {});
+                if (sessionUser) {
+                    merged.username = sessionUser.username;
+                    if (!merged.nickname) merged.nickname = sessionUser.displayName || sessionUser.username;
+                    if (!merged.role) merged.role = sessionUser.isTrial ? '试用账号' : '';
                 }
+                applyUserProfileToHeader(merged);
             })
             .catch(function () {
                 applyUserProfileToHeader(window.__userProfile || getDefaultUserProfile());
@@ -573,7 +583,7 @@
 
     function renderAvatar() {
         var profile = normalizeUserProfile(window.__userProfile);
-        var name = profile.nickname || 'JERN';
+        var name = profile.nickname || profile.username || '用户';
         var avatar = profile.avatar || makeProfileAvatar(name);
         return [
             '<div class="relative group" id="header-user-menu">',

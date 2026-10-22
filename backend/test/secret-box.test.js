@@ -154,6 +154,20 @@ var PORT = 3987;
 var HTTP_DIR = path.join(os.tmpdir(), 'wt-secret-int-' + process.pid);
 var child = null;
 
+/**
+ * 服务端实际读写的用户目录。
+ *
+ * 开启认证 + 本机信任后，本机请求被当成 APP_USERNAME 这个账号，
+ * 数据落在 `<HTTP_DIR>/users/<user>/`，不再是根目录。
+ * 这里必须和 `_start-secret-server.js` 里的 APP_USERNAME 保持一致 ——
+ * 对不上的话就是"测试读根目录、服务读用户目录"，文件永远找不到。
+ */
+var HTTP_USER = 'admin';
+
+function httpDataFile(name) {
+    return path.join(HTTP_DIR, 'users', HTTP_USER, name);
+}
+
 function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
 /**
@@ -207,7 +221,7 @@ async function main() {
     var BASE = 'http://127.0.0.1:' + PORT;
 
     // ---- 启动时的迁移应该已经把种子数据加密了 ----
-    var diskAccounts = JSON.parse(fs.readFileSync(path.join(HTTP_DIR, 'accounts.json'), 'utf-8'));
+    var diskAccounts = JSON.parse(fs.readFileSync(httpDataFile('accounts.json'), 'utf-8'));
     var seeded = diskAccounts.filter(function (a) { return a.id === 'seed-1'; })[0];
     check('启动迁移：磁盘上的种子密码已是密文',
         box.isEncrypted(seeded.password), String(seeded.password).slice(0, 12));
@@ -232,13 +246,13 @@ async function main() {
     var newId = created.data && created.data.id;
     check('创建响应里密码是明文', created.data && created.data.password === 'NewPass!234');
 
-    var diskAfterCreate = JSON.parse(fs.readFileSync(path.join(HTTP_DIR, 'accounts.json'), 'utf-8'));
+    var diskAfterCreate = JSON.parse(fs.readFileSync(httpDataFile('accounts.json'), 'utf-8'));
     var createdOnDisk = diskAfterCreate.filter(function (a) { return a.id === newId; })[0];
     check('新账号密码落盘即密文',
         !!createdOnDisk && box.isEncrypted(createdOnDisk.password),
         createdOnDisk ? String(createdOnDisk.password).slice(0, 12) : '未找到');
     check('磁盘上找不到明文密码',
-        fs.readFileSync(path.join(HTTP_DIR, 'accounts.json'), 'utf-8').indexOf('NewPass!234') === -1);
+        fs.readFileSync(httpDataFile('accounts.json'), 'utf-8').indexOf('NewPass!234') === -1);
 
     // ---- 更新密码 ----
     // ⚠️ 校验要走接口读回来：本进程的密钥属于 UNIT_DIR，
@@ -254,12 +268,12 @@ async function main() {
         !!updatedFromApi && updatedFromApi.password === 'UpdatedPass!567',
         updatedFromApi ? updatedFromApi.password : '未找到');
 
-    var diskAfterUpdate = JSON.parse(fs.readFileSync(path.join(HTTP_DIR, 'accounts.json'), 'utf-8'));
+    var diskAfterUpdate = JSON.parse(fs.readFileSync(httpDataFile('accounts.json'), 'utf-8'));
     var updated = diskAfterUpdate.filter(function (a) { return a.id === newId; })[0];
     check('更新后落盘仍是密文', box.isEncrypted(updated.password));
     check('更新后密文确实换了（不是沿用旧的）', updated.password !== createdOnDisk.password);
     check('旧密码没留在文件里',
-        fs.readFileSync(path.join(HTTP_DIR, 'accounts.json'), 'utf-8').indexOf('NewPass!234') === -1);
+        fs.readFileSync(httpDataFile('accounts.json'), 'utf-8').indexOf('NewPass!234') === -1);
 
     // ---- settings：apiKey 不裸奔 ----
     var settingsRes = await (await fetch(BASE + '/api/settings')).json();
@@ -268,7 +282,7 @@ async function main() {
         !!apiKeyOut && String(apiKeyOut).indexOf('****') !== -1 && String(apiKeyOut).indexOf('PlainSeedKey') === -1,
         apiKeyOut);
 
-    var diskSettings = JSON.parse(fs.readFileSync(path.join(HTTP_DIR, 'settings.json'), 'utf-8'));
+    var diskSettings = JSON.parse(fs.readFileSync(httpDataFile('settings.json'), 'utf-8'));
     check('settings.json 里 apiKey 是密文', box.isEncrypted(diskSettings.imageGen.apiKey));
 
     // 把脱敏值原样 PUT 回去，真实密钥不能被覆盖
@@ -277,7 +291,7 @@ async function main() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageGen: { apiKey: apiKeyOut } })
     });
-    var diskSettings2 = JSON.parse(fs.readFileSync(path.join(HTTP_DIR, 'settings.json'), 'utf-8'));
+    var diskSettings2 = JSON.parse(fs.readFileSync(httpDataFile('settings.json'), 'utf-8'));
     // 密文本身会变（AES-GCM 每次用随机 IV，同一明文两次加密结果不同），
     // 所以不能比密文字节，要比「解出来的值」。
     check('脱敏值回写后密钥值未变',

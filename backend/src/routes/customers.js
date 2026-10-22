@@ -25,10 +25,18 @@ var router = express.Router();
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
 var orderRules = require('../utils/order-rules');
+var customerOrders = require('../utils/customer-orders');
+var pickFields = require('../utils/pick-fields').pickFields;
+var warnIgnored = require('../utils/pick-fields').warnIgnored;
 
 var customers = new Storage('customers');
 var orders = new Storage('orders');
 var paidAmount = orderRules.paidAmount;
+
+var CUSTOMER_EDITABLE = [
+    'name', 'phone', 'source', 'type', 'level', 'followStatus', 'desc', 'tags',
+    'followTime', 'addTime', 'status', 'notes', 'avatar', 'followLogs'
+];
 
 function formatMoney(num) {
     var n = Math.round(num || 0);
@@ -42,20 +50,13 @@ function formatDateTime(d) {
         ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
-/** 按 customerId 或客户昵称/姓名匹配订单 */
-function matchOrders(customer, allOrders) {
-    var name = (customer.name || '').trim();
-    var phone = (customer.phone || '').trim();
-    return (allOrders || []).filter(function (o) {
-        if (o.customerId && o.customerId === customer.id) return true;
-        var nick = (o.customerNick || '').trim();
-        var cname = (o.customerName || '').trim();
-        var ophone = (o.customerPhone || '').trim();
-        return !!((name && (nick === name || cname === name)) || (phone && ophone && phone === ophone));
-    }).sort(function (a, b) {
-        return String(b.orderDate || b.createdAt || '').localeCompare(String(a.orderDate || a.createdAt || ''));
-    });
-}
+/**
+ * 按 customerId 或客户昵称/姓名匹配订单
+ *
+ * 规则已抽到 utils/customer-orders.js（数据归属规则必须可单测）：
+ * 订单一旦显式绑定了 customerId，就只认这个 ID。
+ */
+var matchOrders = customerOrders.matchOrders;
 
 /** 用订单数据聚合客户消费字段 */
 function enrichCustomer(customer, allOrders) {
@@ -255,14 +256,17 @@ router.post('/', resp.asyncHandler(function (req, res) {
 // ========== 更新 ==========
 
 router.put('/:id', resp.asyncHandler(function (req, res) {
-    var body = req.body || {};
-    // 订单聚合字段由后端计算，禁止前端覆盖
-    delete body.orderCount;
-    delete body.totalAmount;
-    delete body.amount;
-    delete body.firstDeal;
+    var existing = customers.findById(req.params.id);
+    if (!existing) return resp.notFound(res, '客户不存在');
 
-    var updated = customers.update(req.params.id, body);
+    var picked = pickFields(req.body, CUSTOMER_EDITABLE);
+    warnIgnored('customers 更新', picked.ignored);
+
+    if (Object.prototype.hasOwnProperty.call(picked.fields, 'name') && !String(picked.fields.name || '').trim()) {
+        return resp.error(res, '客户姓名为必填项');
+    }
+
+    var updated = customers.update(req.params.id, picked.fields);
     if (!updated) return resp.notFound(res, '客户不存在');
     return resp.success(res, enrichCustomer(updated, orders.findAll()));
 }));

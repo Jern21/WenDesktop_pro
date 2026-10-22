@@ -3,6 +3,7 @@
 var fs = require('fs');
 var path = require('path');
 var dataPaths = require('./data-paths');
+var userContext = require('./user-context');
 
 var DATA_DIR = dataPaths.DATA_DIR;
 var BACKUP_DIR = dataPaths.BACKUP_DIR;
@@ -24,14 +25,22 @@ function assertSafeFileName(fileName) {
     }
 }
 
+function getActiveDataDir() {
+    var user = userContext.get();
+    if (user) {
+        return dataPaths.ensureUserDataDir(user);
+    }
+    return DATA_DIR;
+}
+
 function getDataFilePath(fileName) {
     assertSafeFileName(fileName);
-    return path.join(DATA_DIR, fileName + '.json');
+    return path.join(getActiveDataDir(), fileName + '.json');
 }
 
 function getBackupDir(fileName) {
     assertSafeFileName(fileName);
-    return path.join(BACKUP_DIR, fileName);
+    return path.join(getActiveDataDir(), 'backups', fileName);
 }
 
 function uniqueTimestamp() {
@@ -69,7 +78,7 @@ function writeJsonFile(fileName, data, options) {
     var tmpPath = filePath + '.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8) + '.tmp';
 
     try {
-        ensureDir(DATA_DIR);
+        ensureDir(getActiveDataDir());
         if (options.backup !== false) {
             createBackup(fileName);
         }

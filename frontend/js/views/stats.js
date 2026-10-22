@@ -59,6 +59,14 @@
                             return path + '?' + query.toString();
                         }
 
+                        function statsGet(url) {
+                            return global.api.get(url, null, { signal: ctx.signal }).catch(function (err) {
+                                if (err && err.name === 'AbortError') return { success: false, aborted: true };
+                                console.error('[stats]', err);
+                                return { success: false, error: err && err.message };
+                            });
+                        }
+
                         function setGrowth(id, value, hasComparison) {
                             var el = document.getElementById(id);
                             if (!el) return;
@@ -117,8 +125,7 @@
                             if (!checkEl) return;
 
                             // 加载当前范围概览数据
-                            fetch(buildStatsUrl('/api/stats/monthly-overview'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/monthly-overview'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
                                     var data = res.data;
@@ -282,8 +289,7 @@
                             var dom = document.getElementById('revenueChart');
                             if (!dom) return;
 
-                            fetch(buildStatsUrl('/api/stats/revenue'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/revenue'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
 
@@ -370,8 +376,7 @@
                             var dom = document.getElementById('platformChart');
                             if (!dom) return;
 
-                            fetch(buildStatsUrl('/api/stats/platform'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/platform'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
 
@@ -425,8 +430,7 @@
                             var dom = document.getElementById('projectTypeChart');
                             if (!dom) return;
 
-                            fetch(buildStatsUrl('/api/stats/project-type'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/project-type'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
 
@@ -480,8 +484,7 @@
                             var dom = document.getElementById('ordersTrendChart');
                             if (!dom) return;
 
-                            fetch(buildStatsUrl('/api/stats/orders-monthly', { type: ordersTrendType }))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/orders-monthly', { type: ordersTrendType }))
                                 .then(function(res) {
                                     if (!res.success || !res.data || !res.data.data) return;
 
@@ -551,8 +554,7 @@
                             var dom = document.getElementById('customerLevelChart');
                             if (!dom) return;
 
-                            fetch(buildStatsUrl('/api/stats/customer-level'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/customer-level'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
 
@@ -610,8 +612,7 @@
                             var dom = document.getElementById('funnelChart');
                             if (!dom) return;
 
-                            fetch(buildStatsUrl('/api/stats/funnel'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/funnel'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
 
@@ -663,8 +664,7 @@
                             var tbody = document.getElementById('monthly-detail-tbody');
                             if (!tbody) return;
 
-                            fetch(buildStatsUrl('/api/stats/monthly-detail'))
-                                .then(function(r) { return r.json(); })
+                            statsGet(buildStatsUrl('/api/stats/monthly-detail'))
                                 .then(function(res) {
                                     if (!res.success || !res.data) {
                                         tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-red-400">加载失败</td></tr>';

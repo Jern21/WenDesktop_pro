@@ -17,6 +17,16 @@ test('order payment helpers calculate paid amount and cost consistently', functi
     ]), 700);
 });
 
+test('付款记录负数金额夹成 0，与前端预览口径一致', function () {
+    var records = rules.normalizePaymentRecords([
+        { date: '2026-01-01', amount: -100, note: '退款' },
+        { date: '2026-01-02', amount: '80' }
+    ]);
+    assert.equal(records[0].amount, 0);
+    assert.equal(records[1].amount, 80);
+    assert.equal(rules.paymentRecordAmount({ paymentRecords: records }), 80);
+});
+
 test('active processing excludes overdue and terminal orders', function () {
     var today = new Date(2026, 6, 13);
 

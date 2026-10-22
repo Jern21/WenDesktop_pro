@@ -72,23 +72,28 @@
                         var useTextIcon = false;
 
                         // ========== API 请求 ==========
+                        function request(url, options) {
+                            options = options || {};
+                            options.signal = ctx.signal;
+                            return global.api.call(url, options);
+                        }
+
                         async function loadAccounts() {
                             try {
-                                var response = await fetch('/api/accounts');
-                                var result = await response.json();
+                                var result = await request('/api/accounts');
                                 if (result.success) {
                                     accounts = result.data;
                                     renderAccounts();
                                 }
                             } catch (e) {
+                                if (e && e.name === 'AbortError') return;
                                 console.error('加载账号失败:', e);
                             }
                         }
 
                         async function loadPlatforms() {
                             try {
-                                var response = await fetch('/api/accounts/platforms');
-                                var result = await response.json();
+                                var result = await request('/api/accounts/platforms');
                                 if (result.success) {
                                     // 构建平台配置
                                     result.data.forEach(function(p) {
@@ -107,6 +112,7 @@
                                         }).join('');
                                 }
                             } catch (e) {
+                                if (e && e.name === 'AbortError') return;
                                 console.error('加载平台列表失败:', e);
                             }
                         }
@@ -224,27 +230,8 @@
                             }, 10);
                         }
 
-                        // ========== Toast 提示（订单管理同款）==========
-                        var toastTimer = null;
-                        function showToast(msg) {
-                            var existing = document.getElementById('account-action-toast');
-                            if (existing) existing.remove();
-                            if (toastTimer) clearTimeout(toastTimer);
-
-                            var toast = document.createElement('div');
-                            toast.id = 'account-action-toast';
-                            toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none z-[90]';
-                            toast.innerHTML = '<i class="ph-fill ph-check-circle text-green-400"></i><span>' + msg + '</span>';
-                            document.body.appendChild(toast);
-
-                            requestAnimationFrame(function () {
-                                toast.classList.remove('translate-y-10', 'opacity-0');
-                            });
-
-                            toastTimer = setTimeout(function () {
-                                toast.classList.add('translate-y-10', 'opacity-0');
-                                setTimeout(function () { toast.remove(); }, 300);
-                            }, 2500);
+                        function showToast(msg, type) {
+                            App.ui.toast(msg, type || 'success');
                         }
 
                         // 复制文本到剪贴板
@@ -350,15 +337,15 @@
                             var customPlatform = document.getElementById('custom-platform').value.trim();
 
                             if (!platform) {
-                                alert('请选择平台');
+                                showToast('请选择平台', 'error');
                                 return;
                             }
                             if (platform === 'other' && !customPlatform) {
-                                alert('请输入平台名称');
+                                showToast('请输入平台名称', 'error');
                                 return;
                             }
                             if (!username) {
-                                alert('请输入账号/用户名');
+                                showToast('请输入账号/用户名', 'error');
                                 return;
                             }
 
@@ -376,22 +363,21 @@
                             try {
                                 var url = currentEditingId ? '/api/accounts/' + currentEditingId : '/api/accounts';
                                 var method = currentEditingId ? 'PUT' : 'POST';
-                                var response = await fetch(url, {
+                                var result = await request(url, {
                                     method: method,
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(accountData)
+                                    body: accountData
                                 });
-                                var result = await response.json();
                                 if (result.success) {
                                     showToast('保存成功');
                                     await loadAccounts();
                                     closeAccountForm();
                                 } else {
-                                    ui.toast.error(result.message || '保存失败');
+                                    showToast(result.message || '保存失败', 'error');
                                 }
                             } catch (e) {
+                                if (e && e.name === 'AbortError') return;
                                 console.error('保存账号失败:', e);
-                                ui.toast.error('保存失败，请重试');
+                                showToast('保存失败，请重试', 'error');
                             }
                         }
 
@@ -400,19 +386,24 @@
                         }
 
                         function deleteAccount(id) {
-                            ui.confirm('确定删除这个账号吗？删除后无法恢复。', async function() {
+                            App.ui.confirm({
+                                title: '删除账号',
+                                message: '确定删除这个账号吗？删除后无法恢复。',
+                                confirmText: '删除'
+                            }).then(async function (ok) {
+                                if (!ok) return;
                                 try {
-                                    var response = await fetch('/api/accounts/' + id, { method: 'DELETE' });
-                                    var result = await response.json();
+                                    var result = await request('/api/accounts/' + id, { method: 'DELETE' });
                                     if (result.success) {
                                         showToast('删除成功');
                                         await loadAccounts();
                                     } else {
-                                        ui.toast.error(result.message || '删除失败');
+                                        showToast(result.message || '删除失败', 'error');
                                     }
                                 } catch (e) {
+                                    if (e && e.name === 'AbortError') return;
                                     console.error('删除账号失败:', e);
-                                    ui.toast.error('删除失败，请重试');
+                                    showToast('删除失败，请重试', 'error');
                                 }
                             });
                         }
@@ -441,11 +432,10 @@
                             formData.append('file', file);
 
                             try {
-                                var response = await fetch('/api/upload', {
+                                var result = await request('/api/upload', {
                                     method: 'POST',
                                     body: formData
                                 });
-                                var result = await response.json();
 
                                 if (result.success) {
                                     currentIconData = result.data.url;
@@ -456,11 +446,12 @@
                                     useTextIcon = false;
                                     document.getElementById('text-icon-preview').classList.add('hidden');
                                 } else {
-                                    alert('图标上传失败: ' + (result.error || '未知错误'));
+                                    showToast('图标上传失败: ' + (result.error || '未知错误'), 'error');
                                 }
                             } catch (e) {
+                                if (e && e.name === 'AbortError') return;
                                 console.error('上传图标失败:', e);
-                                alert('图标上传失败，请重试');
+                                showToast('图标上传失败，请重试', 'error');
                             }
                         }
 
@@ -519,12 +510,7 @@
                         }
 
                         // ========== 工具函数 ==========
-                        function escapeHtml(text) {
-                            if (!text) return '';
-                            var div = document.createElement('div');
-                            div.textContent = text;
-                            return div.innerHTML;
-                        }
+                        var escapeHtml = App.dom.escapeHtml;
 
                         // ========== 事件绑定 ==========
                         document.getElementById('account-platform').addEventListener('change', function() {

@@ -67,14 +67,7 @@
 
                     // ===================== 工具函数 =====================
 
-                    function escapeHtml(value) {
-                        return String(value || '')
-                            .replace(/&/g, '&amp;')
-                            .replace(/</g, '&lt;')
-                            .replace(/>/g, '&gt;')
-                            .replace(/"/g, '&quot;')
-                            .replace(/'/g, '&#39;');
-                    }
+                    var escapeHtml = App.dom.escapeHtml;
 
                     function rgbToHex(color) {
                         if (!color) return '#10b981';
@@ -415,33 +408,14 @@
 
                     function api(url, options) {
                         options = options || {};
-                        options.headers = options.headers || {};
-                        if (options.body && typeof options.body !== 'string') {
-                            options.headers['Content-Type'] = 'application/json';
-                            options.body = JSON.stringify(options.body);
-                        }
-                        return fetch(url, options).then(function (r) { return r.json(); });
+                        options.signal = ctx.signal;
+                        return global.api.call(url, options);
                     }
 
                     // ===================== Toast 提示 =====================
 
-                    var toastTimer = null;
-                    function showToast(msg) {
-                        var existing = document.getElementById('poster-toast');
-                        if (existing) existing.remove();
-                        if (toastTimer) clearTimeout(toastTimer);
-                        var toast = document.createElement('div');
-                        toast.id = 'poster-toast';
-                        toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none z-[90]';
-                        toast.innerHTML = '<i class="ph-fill ph-check-circle text-green-400"></i><span>' + escapeHtml(msg) + '</span>';
-                        document.body.appendChild(toast);
-                        requestAnimationFrame(function () {
-                            toast.classList.remove('translate-y-10', 'opacity-0');
-                        });
-                        toastTimer = setTimeout(function () {
-                            toast.classList.add('translate-y-10', 'opacity-0');
-                            setTimeout(function () { toast.remove(); }, 300);
-                        }, 2500);
+                    function showToast(msg, type) {
+                        App.ui.toast(msg, type || 'success');
                     }
 
                     // ===================== 从后端加载海报列表 =====================

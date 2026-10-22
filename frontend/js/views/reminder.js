@@ -54,11 +54,7 @@
                         'use strict';
 
                         // ========== 工具函数 ==========
-                        function escapeHtml(s) {
-                            return String(s || '').replace(/[&<>"']/g, function (c) {
-                                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-                            });
-                        }
+                        var escapeHtml = App.dom.escapeHtml;
                         function todayStr() {
                             var d = new Date();
                             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -103,16 +99,8 @@
                             else if (repeat === 'monthly') d.setMonth(d.getMonth() + 1);
                             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
                         }
-                        function showToast(msg) {
-                            var t = document.getElementById('toast');
-                            if (!t) return;
-                            t.textContent = msg;
-                            t.style.opacity = '1';
-                            t.style.transform = 'translateX(-50%) translateY(0)';
-                            setTimeout(function () {
-                                t.style.opacity = '0';
-                                t.style.transform = 'translateX(-50%) translateY(10px)';
-                            }, 2200);
+                        function showToast(msg, type) {
+                            App.ui.toast(msg, type || 'success');
                         }
                         function catColorBg(color) {
                             var map = {
@@ -180,9 +168,14 @@
                         var eventsBound = false;
 
                         // ========== API 调用 ==========
+                        function request(url, options) {
+                            options = options || {};
+                            options.signal = ctx.signal;
+                            return global.api.call(url, options);
+                        }
+
                         function loadReminders() {
-                            return fetch('/api/reminders')
-                                .then(function (r) { return r.json(); })
+                            return request('/api/reminders')
                                 .then(function (res) {
                                     if (res.success) {
                                         reminders = res.data || [];
@@ -192,35 +185,32 @@
                                     }
                                 })
                                 .catch(function (err) {
+                                    if (err && err.name === 'AbortError') return;
                                     console.error('加载提醒失败:', err);
-                                    showToast('加载提醒数据失败');
+                                    showToast('加载提醒数据失败', 'error');
                                 });
                         }
 
                         function apiCreate(data) {
-                            return fetch('/api/reminders', {
+                            return request('/api/reminders', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(data)
-                            }).then(function (r) { return r.json(); });
+                                body: data
+                            });
                         }
 
                         function apiUpdate(id, data) {
-                            return fetch('/api/reminders/' + id, {
+                            return request('/api/reminders/' + id, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(data)
-                            }).then(function (r) { return r.json(); });
+                                body: data
+                            });
                         }
 
                         function apiDelete(id) {
-                            return fetch('/api/reminders/' + id, { method: 'DELETE' })
-                                .then(function (r) { return r.json(); });
+                            return request('/api/reminders/' + id, { method: 'DELETE' });
                         }
 
                         function apiToggle(id) {
-                            return fetch('/api/reminders/' + id + '/toggle', { method: 'PUT' })
-                                .then(function (r) { return r.json(); });
+                            return request('/api/reminders/' + id + '/toggle', { method: 'PUT' });
                         }
 
                         // ========== 渲染提醒列表 ==========

@@ -20,17 +20,28 @@ var port = process.argv[2] || '3987';
 var dataDir = process.argv[3] || path.join(require('os').tmpdir(), 'wt-secret-http-' + port);
 var authDir = path.join(dataDir, 'auth');
 
+// 数据落在哪个账号名下
+// 开启认证 + 本机信任后，本机请求被当成 APP_USERNAME 这个账号，
+// 服务端读写的是 users/<username>/，不再是根目录。
+// 种子必须种在同一个地方，否则测试读根目录、服务读用户目录，永远对不上。
+var APP_USERNAME = 'admin';
+var userDir = path.join(dataDir, 'users', APP_USERNAME);
+
 fs.mkdirSync(dataDir, { recursive: true });
+fs.mkdirSync(userDir, { recursive: true });
 
 process.env.PORT = port;
 process.env.APP_DATA_DIR = dataDir;
 process.env.AUTH_DATA_DIR = authDir;
+process.env.APP_USERNAME = APP_USERNAME;
 process.env.AUTH_ENABLED = '1';
 process.env.AUTH_TRUST_LOCALHOST = '1';   // 本机请求免登录，测试不用走登录流程
 // 刻意不设 APP_SECRET：走「data/.secret 自动生成」这条真实路径
+// 刻意不设 USER_SCOPE_MIGRATE：数据归属迁移默认不跑（那是手动的一次性操作），
+// 种子直接种在用户目录里，不依赖任何启动期搬迁。
 
 // ---------- 种一份「迁移前」的数据：密码和 apiKey 都是明文 ----------
-fs.writeFileSync(path.join(dataDir, 'accounts.json'), JSON.stringify([
+fs.writeFileSync(path.join(userDir, 'accounts.json'), JSON.stringify([
     {
         id: 'seed-1',
         platform: 'github',
@@ -53,7 +64,7 @@ fs.writeFileSync(path.join(dataDir, 'accounts.json'), JSON.stringify([
     }
 ], null, 2), 'utf-8');
 
-fs.writeFileSync(path.join(dataDir, 'settings.json'), JSON.stringify({
+fs.writeFileSync(path.join(userDir, 'settings.json'), JSON.stringify({
     theme: 'pure-white',
     cleanupDays: 30,
     imageGen: {

@@ -25,11 +25,11 @@ var secretBox = require('../utils/secret-box');
 
 var DEFAULT_SETTINGS = {
     profile: {
-        nickname: 'JERN',
+        nickname: '',
         realName: '',
         phone: '',
         email: '',
-        role: '全栈开发工程师',
+        role: '',
         city: '',
         bio: '',
         avatar: ''
@@ -46,7 +46,10 @@ var DEFAULT_SETTINGS = {
         lastBackup: null
     },
     exportFormat: 'json',
-    cleanupDays: 30
+    cleanupDays: 30,
+    devLedger: {
+        goalAmount: 20000
+    }
 };
 
 // ========== 读取设置 ==========

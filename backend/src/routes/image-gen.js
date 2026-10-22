@@ -25,8 +25,11 @@ var resp = require('../utils/response');
 var secretBox = require('../utils/secret-box');
 var dataPaths = require('../utils/data-paths');
 
-var DATA_DIR = dataPaths.DATA_DIR;
-var SETTINGS_FILE = dataPaths.file('settings.json');
+var dataBackups = require('../utils/data-backups');
+
+function settingsFile() {
+    return dataBackups.getDataFilePath('settings');
+}
 
 var DEFAULT_CONFIG = {
     apiUrl: '',
@@ -93,7 +96,7 @@ function formatResponsePreview(response) {
 function readSettings() {
     var settings;
     try {
-        settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf-8'));
     } catch (e) {
         return {};
     }
@@ -112,9 +115,9 @@ function writeSettings(settings) {
             })
         });
     }
-    var tmp = SETTINGS_FILE + '.' + process.pid + '.tmp';
+    var tmp = settingsFile() + '.' + process.pid + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(toWrite, null, 2), 'utf-8');
-    fs.renameSync(tmp, SETTINGS_FILE);
+    fs.renameSync(tmp, settingsFile());
 }
 
 function getConfig() {

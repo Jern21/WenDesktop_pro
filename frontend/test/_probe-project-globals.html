@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>项目页二次进入探针</title>
+    <script src="../assets/tailwind.min.js"></script>
+</head>
+<body class="p-4 font-mono text-xs bg-white">
+<h1 class="text-sm font-medium mb-2">项目管理：二次进入后 window 全局是否还在</h1>
+<pre id="result" class="mb-3 whitespace-pre-wrap text-xs"></pre>
+<iframe id="frame" src="/project" style="width:1360px;height:820px;border:1px solid #e5e7eb;"></iframe>
+
+<script>
+/*
+ * 核实的说法：
+ *   「视图卸载时 view.js 的 restoreGlobals 会删掉挂载期间新增的全局；
+ *     但 project.js 用模块级 loadPromise 缓存脚本，只加载一次。
+ *     于是 window.openEditForm 首次进入存在，离开后被删，再进入不会恢复。」
+ *
+ * 验证法：走 project → orders → project 两轮，每轮记录 window 上那些
+ * 内联 onclick 依赖的函数是否存在，并真的点一次头顶「新建项目」按钮看有没有报错。
+ */
+(function () {
+    'use strict';
+    var out = [];
+    var fails = [];
+    function log(s) { out.push(s); document.getElementById('result').textContent = out.join('\n'); }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    var frame = document.getElementById('frame');
+    var errors = [];
+
+    function snapshot(w) {
+        return {
+            openEditForm: typeof w.openEditForm,
+            projectPageBound: !!w.document._projectPageSpaReadyBound,
+            projectScriptTags: w.document.querySelectorAll('script[data-project-page]').length
+        };
+    }
+
+    async function goto(w, path, name) {
+        w.App.router.navigate(path);
+        var waited = 0;
+        while (waited < 8000) {
+            await sleep(150); waited += 150;
+            var cur = w.App.views.current ? w.App.views.current() : null;
+            var root = w.document.getElementById('page-view');
+            if (cur && cur.name === name && root && root.children.length > 1) break;
+        }
+        await sleep(1200);
+    }
+
+    function check(label, snap) {
+        var ok = snap.openEditForm === 'function';
+        log('  ' + (ok ? '✓' : '✗') + ' ' + label +
+            '：openEditForm=' + snap.openEditForm +
+            '，脚本标签=' + snap.projectScriptTags +
+            '，spa:ready 哨兵=' + snap.projectPageBound);
+        if (!ok) fails.push(label + ' → openEditForm=' + snap.openEditForm);
+    }
+
+    /** 点顶部栏「新建项目」，断言表单弹窗真的出来了（不只是没报错） */
+    async function clickNewProject(d, errors, label) {
+        var btn = null;
+        var all = d.querySelectorAll('[onclick]');
+        for (var i = 0; i < all.length; i++) {
+            if ((all[i].getAttribute('onclick') || '').indexOf('openEditForm') !== -1) { btn = all[i]; break; }
+        }
+        if (!btn) { fails.push(label + ' → 找不到调用 openEditForm 的按钮'); return; }
+
+        var e0 = errors.length;
+        btn.click();
+        await sleep(900);
+        var modal = d.getElementById('pf-modal');
+        var newErr = errors.length - e0;
+        var ok = !!modal && newErr === 0;
+        log('  ' + (ok ? '✓' : '✗') + ' ' + label + '：点「' + btn.textContent.trim().slice(0, 12) +
+            '」→ 弹窗=' + (modal ? '已出现' : '未出现') + '，新增错误=' + newErr);
+        if (!ok) {
+            fails.push(label + ' → 弹窗=' + (modal ? '有' : '无') + ' 错误=' + newErr);
+            for (var k = e0; k < errors.length; k++) log('    ' + errors[k]);
+        }
+        // 关掉弹窗，免得影响下一轮
+        var closeBtn = d.getElementById('pf-close');
+        if (closeBtn) { closeBtn.click(); await sleep(400); }
+        else if (modal) { modal.remove(); }
+    }
+
+    frame.onload = async function () {
+        var d = frame.contentDocument;
+        var w = frame.contentWindow;
+        w.addEventListener('error', function (e) {
+            errors.push(e.message + ' @ ' + (e.filename ? String(e.filename).split('/').pop() : '?') + ':' + e.lineno);
+        });
+
+        await sleep(2600);
+
+        log('=== 第一轮：进入 /project ===');
+        await goto(w, '/project', 'project');
+        var s1 = snapshot(w);
+        check('首次进入', s1);
+        await clickNewProject(d, errors, '首次进入');
+
+        log('');
+        log('=== 离开到 /orders ===');
+        await goto(w, '/orders', 'orders');
+        var s2 = snapshot(w);
+        log('  离开后 openEditForm=' + s2.openEditForm + '（预期被 restoreGlobals 删除，属正常清理）');
+
+        log('');
+        log('=== 第二轮：回到 /project ===');
+        await goto(w, '/project', 'project');
+        var s3 = snapshot(w);
+        check('二次进入', s3);
+        log('  脚本是否重新执行：脚本标签数 ' + s1.projectScriptTags + ' → ' + s3.projectScriptTags +
+            '（预期不变，说明靠的是主动恢复而不是重载）');
+        await clickNewProject(d, errors, '二次进入');
+
+        log('');
+        log('=== 第三轮：再来一次（确认可反复恢复）===');
+        await goto(w, '/orders', 'orders');
+        await goto(w, '/project', 'project');
+        var s4 = snapshot(w);
+        check('三次进入', s4);
+        await clickNewProject(d, errors, '三次进入');
+
+        log('');
+        log('================ 汇总 ================');
+        log(fails.length === 0 ? '全部通过：全局入口可反复恢复' : '失败 ' + fails.length + ' 项：');
+        fails.forEach(function (f, i2) { log('  ' + (i2 + 1) + '. ' + f); });
+        document.title = fails.length ? 'BUG-REPRODUCED' : 'ALL-PASS';
+    };
+})();
+</script>
+</body>
+</html>
