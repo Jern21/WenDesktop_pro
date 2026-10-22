@@ -11,13 +11,10 @@
 
 个人接单工作台：一套跑在本机的 Web 应用，用来记下客户、订单、报价、项目、发帖和素材，并在手机上查进度、改状态。桌面端是零构建 SPA，移动端是独立的 PWA，两边共用同一套后端和按账号隔离的 JSON 数据。
 
-**桌面端首页**
-
-<img src="docs/screenshots/desktop-home.png" alt="桌面端首页" width="780">
-
-**移动端工作台**
-
-<img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" width="320">
+<p>
+  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="260">
+  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="260">
+</p>
 
 > 版本说明与更新记录：维护仓库根目录 [`CHANGELOG.json`](CHANGELOG.json)（push 到 GitHub 后，应用内顶栏 **更新日志** 会通过 Raw 链接对比本地与线上版本差异）。
 

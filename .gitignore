@@ -19,6 +19,7 @@ desktop.ini
 .env
 .env.local
 .env.*.local
+.cursor/skills/zikl-image/
 
 # ============ 工作文档 ============
 # 个人工作内容/开发清单作为项目文档提交，不在此忽略
