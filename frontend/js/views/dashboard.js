@@ -105,7 +105,13 @@
                         // Initialize ECharts for Trend Chart（接入后端数据）
                         var trendChartInstance = null;
                         var trendResizeBound = false;
-                        var trendDays = 7;
+
+                        function currentTrendRange() {
+                            var selectEl = document.getElementById('trend-range-select');
+                            var value = selectEl ? String(selectEl.value) : '7';
+                            if (value === 'all') return 'all';
+                            return value === '30' ? '30' : '7';
+                        }
 
                         function initTrendChart() {
                             var chartDom = document.getElementById('trendChart');
@@ -119,17 +125,16 @@
 
                             trendChartInstance = echarts.init(chartDom);
 
-                            var selectEl = document.getElementById('trend-range-select');
-                            if (selectEl) {
-                                trendDays = parseInt(selectEl.value, 10) || 7;
-                            }
+                            var trendRange = currentTrendRange();
 
-                            api.get('/api/stats/revenue/daily?days=' + trendDays)
+                            api.get('/api/stats/revenue/daily?days=' + trendRange)
                                 .then(function(res) {
                                     if (!res.success || !res.data) return;
 
                                     var dates = res.data.map(function(item) { return item.date; });
                                     var counts = res.data.map(function(item) { return item.count; });
+                                    var pointCount = dates.length;
+                                    var labelInterval = pointCount > 8 ? Math.ceil(pointCount / 6) - 1 : 0;
                                     var maxCount = Math.max.apply(null, counts.concat([5]));
                                     var yMax = Math.ceil(maxCount / 5) * 5;
 
@@ -166,7 +171,7 @@
                                                 color: '#94a3b8',
                                                 fontSize: 11,
                                                 margin: 12,
-                                                interval: trendDays === 30 ? 4 : 0
+                                                interval: labelInterval
                                             }
                                         },
                                         yAxis: {
@@ -184,8 +189,8 @@
                                             type: 'line',
                                             smooth: true,
                                             symbol: 'circle',
-                                            symbolSize: trendDays === 30 ? 4 : 6,
-                                            showSymbol: true,
+                                            symbolSize: pointCount > 14 ? 4 : 6,
+                                            showSymbol: pointCount <= 36,
                                             itemStyle: {
                                                 color: '#3b82f6',
                                                 borderWidth: 2,
@@ -227,7 +232,6 @@
                             if (!selectEl || selectEl.dataset.bound === '1') return;
                             selectEl.dataset.bound = '1';
                             selectEl.addEventListener('change', function() {
-                                trendDays = parseInt(selectEl.value, 10) || 7;
                                 initTrendChart();
                             });
                         }

@@ -8,7 +8,7 @@
  *   GET    /api/stats/dashboard      - 首页仪表盘统计
  *   GET    /api/stats/monthly-overview - 本月数据概览（含真实环比）
  *   GET    /api/stats/revenue        - 收入趋势（按月）
- *   GET    /api/stats/revenue/daily  - 订单趋势（按日，?days=7|30）
+ *   GET    /api/stats/revenue/daily  - 订单趋势（?days=7|30|all）
  *   GET    /api/stats/platform       - 平台分布
  *   GET    /api/stats/project-type   - 项目类型分布
  *   GET    /api/stats/orders-monthly - 月度订单量
@@ -27,6 +27,7 @@ var orderRules = require('../utils/order-rules');
 var customerOrders = require('../utils/customer-orders');
 var dateRange = require('../utils/date-range');
 var paymentLedger = require('../utils/payment-ledger');
+var orderTrend = require('../utils/order-trend');
 
 var normalizeStatsRange = dateRange.normalizeStatsRange;
 var createRangeMeta = dateRange.createRangeMeta;
@@ -336,39 +337,12 @@ router.get('/revenue', resp.asyncHandler(function (req, res) {
     return resp.success(res, sorted);
 }));
 
-// ========== 收入/订单趋势（按日，支持 days=7|30） ==========
+// ========== 订单趋势（近 7 天 / 近 30 天 / 总览） ==========
 router.get('/revenue/daily', resp.asyncHandler(function (req, res) {
-    var allOrders = orders.findAll();
-    var dayCount = parseInt(req.query.days, 10);
-    if (dayCount !== 30) dayCount = 7;
-
-    var days = {};
-    var orderKeys = [];
-    var today = new Date();
-
-    for (var i = dayCount - 1; i >= 0; i--) {
-        var d = new Date(today);
-        d.setDate(d.getDate() - i);
-        var dateStr = localDateStr(d);
-        var label = dayCount === 7 ? dateStr.substring(5) : dateStr.substring(5);
-        orderKeys.push(dateStr);
-        days[dateStr] = { date: label, fullDate: dateStr, revenue: 0, count: 0 };
-    }
-
-    allOrders.forEach(function (o) {
-        if (!o.orderDate) return;
-        if (days[o.orderDate]) {
-            days[o.orderDate].count++;
-        }
-    });
-    eachPaymentEntry(allOrders, function (o, entry) {
-        if (days[entry.date]) {
-            days[entry.date].revenue += entry.amount;
-        }
-    });
-
-    var sorted = orderKeys.map(function (k) { return days[k]; });
-    return resp.success(res, sorted);
+    return resp.success(res, orderTrend.build(orders.findAll(), {
+        days: req.query.days,
+        today: new Date()
+    }));
 }));
 
 // ========== 平台分布（客源平台分布）==========
