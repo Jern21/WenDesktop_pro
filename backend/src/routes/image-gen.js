@@ -17,19 +17,11 @@
 
 var express = require('express');
 var router = express.Router();
-var fs = require('fs');
-var path = require('path');
 var https = require('https');
 var http = require('http');
 var resp = require('../utils/response');
-var secretBox = require('../utils/secret-box');
-var dataPaths = require('../utils/data-paths');
-
+var settingsRepository = require('../utils/settings-repository');
 var dataBackups = require('../utils/data-backups');
-
-function settingsFile() {
-    return dataBackups.getDataFilePath('settings');
-}
 
 var DEFAULT_CONFIG = {
     apiUrl: '',
@@ -87,41 +79,8 @@ function formatResponsePreview(response) {
     return 'HTTP ' + response.statusCode + ' / ' + contentType + (snippet ? ' / ' + snippet : '');
 }
 
-// ========== 读写 settings.json ==========
-//
-// apiKey 在磁盘上是密文（AES-256-GCM，见 utils/secret-box.js），
-// 内存里是明文，所以调用第三方 API 时不用做任何特殊处理。
-// 返回给前端时一律走 apiKeyMasked（见 GET /config），不会把明文送出去。
-
-function readSettings() {
-    var settings;
-    try {
-        settings = JSON.parse(fs.readFileSync(settingsFile(), 'utf-8'));
-    } catch (e) {
-        return {};
-    }
-    if (settings && settings.imageGen && typeof settings.imageGen.apiKey === 'string') {
-        settings.imageGen.apiKey = secretBox.decryptField(settings.imageGen.apiKey);
-    }
-    return settings;
-}
-
-function writeSettings(settings) {
-    var toWrite = settings;
-    if (settings && settings.imageGen && typeof settings.imageGen.apiKey === 'string') {
-        toWrite = Object.assign({}, settings, {
-            imageGen: Object.assign({}, settings.imageGen, {
-                apiKey: secretBox.encrypt(settings.imageGen.apiKey)
-            })
-        });
-    }
-    var tmp = settingsFile() + '.' + process.pid + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(toWrite, null, 2), 'utf-8');
-    fs.renameSync(tmp, settingsFile());
-}
-
-function getConfig() {
-    var settings = readSettings();
+function getConfig(scope) {
+    var settings = settingsRepository.read(scope || dataBackups.captureScope());
     return Object.assign({}, DEFAULT_CONFIG, settings.imageGen || {});
 }
 
@@ -227,7 +186,8 @@ router.get('/config', resp.asyncHandler(function (req, res) {
 
 // 更新配置
 router.put('/config', resp.asyncHandler(function (req, res) {
-    var settings = readSettings();
+    var scope = dataBackups.captureScope();
+    var settings = settingsRepository.read(scope);
     settings.imageGen = settings.imageGen || {};
 
     var body = req.body || {};
@@ -239,7 +199,7 @@ router.put('/config', resp.asyncHandler(function (req, res) {
         settings.imageGen.apiKey = body.apiKey.trim();
     }
 
-    writeSettings(settings);
+    settingsRepository.save(settings, { scope: scope });
     return resp.success(res, { message: '配置已保存' });
 }));
 

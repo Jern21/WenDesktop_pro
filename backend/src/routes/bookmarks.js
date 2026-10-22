@@ -14,15 +14,11 @@
 
 var express = require('express');
 var router = express.Router();
-var fs = require('fs');
-var path = require('path');
 var resp = require('../utils/response');
-
 var dataBackups = require('../utils/data-backups');
+var JsonFileStore = require('../utils/json-file-store');
 
-function bookmarksFile() {
-    return dataBackups.getDataFilePath('bookmarks');
-}
+var bookmarkStore = new JsonFileStore('bookmarks', { shape: 'array' });
 
 // 默认分类列表
 var DEFAULT_CATEGORIES = [
@@ -34,30 +30,12 @@ var DEFAULT_CATEGORIES = [
     { id: 'other', name: '其他', color: 'other' }
 ];
 
-// 确保数据文件存在
-function ensureDataFile() {
-    var file = bookmarksFile();
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    if (!fs.existsSync(file)) {
-        fs.writeFileSync(file, JSON.stringify([], null, 2), 'utf-8');
-    }
+function readBookmarks(scope) {
+    return bookmarkStore.read(scope || dataBackups.captureScope());
 }
 
-// 读取收藏数据
-function readBookmarks() {
-    ensureDataFile();
-    try {
-        var raw = fs.readFileSync(bookmarksFile(), 'utf-8');
-        return JSON.parse(raw);
-    } catch (e) {
-        return [];
-    }
-}
-
-// 保存收藏数据
-function saveBookmarks(bookmarks) {
-    ensureDataFile();
-    fs.writeFileSync(bookmarksFile(), JSON.stringify(bookmarks, null, 2), 'utf-8');
+function saveBookmarks(bookmarks, scope) {
+    bookmarkStore.write(bookmarks, scope || dataBackups.captureScope());
 }
 
 // ========== 获取所有收藏 ==========
@@ -100,7 +78,8 @@ router.post('/', resp.asyncHandler(function (req, res) {
         return resp.error(res, '标题和网址不能为空', 400);
     }
 
-    var bookmarks = readBookmarks();
+    var scope = dataBackups.captureScope();
+    var bookmarks = readBookmarks(scope);
 
     var newBookmark = {
         id: Date.now().toString(),
@@ -117,7 +96,7 @@ router.post('/', resp.asyncHandler(function (req, res) {
     };
 
     bookmarks.push(newBookmark);
-    saveBookmarks(bookmarks);
+    saveBookmarks(bookmarks, scope);
 
     return resp.success(res, newBookmark);
 }));
@@ -126,7 +105,8 @@ router.post('/', resp.asyncHandler(function (req, res) {
 router.put('/:id', resp.asyncHandler(function (req, res) {
     var id = req.params.id;
     var data = req.body;
-    var bookmarks = readBookmarks();
+    var scope = dataBackups.captureScope();
+    var bookmarks = readBookmarks(scope);
 
     var index = bookmarks.findIndex(function (b) { return b.id === id; });
     if (index === -1) {
@@ -145,14 +125,15 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
         updatedAt: new Date().toISOString()
     };
 
-    saveBookmarks(bookmarks);
+    saveBookmarks(bookmarks, scope);
     return resp.success(res, bookmarks[index]);
 }));
 
 // ========== 删除收藏 ==========
 router.delete('/:id', resp.asyncHandler(function (req, res) {
     var id = req.params.id;
-    var bookmarks = readBookmarks();
+    var scope = dataBackups.captureScope();
+    var bookmarks = readBookmarks(scope);
 
     var index = bookmarks.findIndex(function (b) { return b.id === id; });
     if (index === -1) {
@@ -160,7 +141,7 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
     }
 
     bookmarks.splice(index, 1);
-    saveBookmarks(bookmarks);
+    saveBookmarks(bookmarks, scope);
 
     return resp.success(res, null);
 }));
@@ -168,7 +149,8 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
 // ========== 增加点击次数 ==========
 router.post('/:id/click', resp.asyncHandler(function (req, res) {
     var id = req.params.id;
-    var bookmarks = readBookmarks();
+    var scope = dataBackups.captureScope();
+    var bookmarks = readBookmarks(scope);
 
     var index = bookmarks.findIndex(function (b) { return b.id === id; });
     if (index === -1) {
@@ -178,7 +160,7 @@ router.post('/:id/click', resp.asyncHandler(function (req, res) {
     bookmarks[index].clickCount = (bookmarks[index].clickCount || 0) + 1;
     bookmarks[index].updatedAt = new Date().toISOString();
 
-    saveBookmarks(bookmarks);
+    saveBookmarks(bookmarks, scope);
     return resp.success(res, bookmarks[index]);
 }));
 

@@ -50,7 +50,15 @@ var sandbox = {
         this.detail = init && init.detail;
     },
     dispatchEvent: function () {},
-    addEventListener: function () {},
+    _listeners: [],
+    addEventListener: function (type, handler, options) {
+        sandbox._listeners.push({ target: 'window', type: type, handler: handler, options: options });
+    },
+    removeEventListener: function (type, handler, options) {
+        sandbox._listeners = sandbox._listeners.filter(function (row) {
+            return !(row.target === 'window' && row.type === type && row.handler === handler && row.options === options);
+        });
+    },
     document: {
         getElementById: function () { return null; },
         querySelector: function () { return null; },
@@ -61,7 +69,14 @@ var sandbox = {
                 appendChild: function () {}, setAttribute: function () {}, removeChild: function () {}
             };
         },
-        addEventListener: function () {},
+        addEventListener: function (type, handler, options) {
+            sandbox._listeners.push({ target: 'document', type: type, handler: handler, options: options });
+        },
+        removeEventListener: function (type, handler, options) {
+            sandbox._listeners = sandbox._listeners.filter(function (row) {
+                return !(row.target === 'document' && row.type === type && row.handler === handler && row.options === options);
+            });
+        },
         body: { style: {} },
         head: { appendChild: function () {} }
     },
@@ -258,6 +273,29 @@ async function main() {
         var a2 = await App.views.activate('reenter', {}, '/reenter');
         await a2.mount({});
         assert.strictEqual(mountCount, 2, '第二次进入应正常执行 mount');
+    });
+
+    await testAsync('ctx.listen 在离开后再进入不会把监听越积越多', async function () {
+        function resize() {}
+        App.view('listen-test', {
+            path: '/listen-test',
+            async mount(root, ctx) {
+                ctx.listen(sandbox, 'resize', resize);
+            }
+        });
+        var before = sandbox._listeners.filter(function (row) { return row.type === 'resize' && row.handler === resize; }).length;
+        var first = await App.views.activate('listen-test', {}, '/listen-test');
+        await first.mount({});
+        var during = sandbox._listeners.filter(function (row) { return row.type === 'resize' && row.handler === resize; }).length;
+        assert.strictEqual(during, before + 1);
+        App.views.runCleanup();
+        var afterLeave = sandbox._listeners.filter(function (row) { return row.type === 'resize' && row.handler === resize; }).length;
+        assert.strictEqual(afterLeave, before);
+        var second = await App.views.activate('listen-test', {}, '/listen-test');
+        await second.mount({});
+        App.views.runCleanup();
+        var afterSecond = sandbox._listeners.filter(function (row) { return row.type === 'resize' && row.handler === resize; }).length;
+        assert.strictEqual(afterSecond, before);
     });
 
     // ========== 汇总 ==========

@@ -14,15 +14,9 @@
 
 var express = require('express');
 var router = express.Router();
-var fs = require('fs');
-var path = require('path');
 var resp = require('../utils/response');
-var secretBox = require('../utils/secret-box');
 var dataBackups = require('../utils/data-backups');
-
-function accountsFile() {
-    return dataBackups.getDataFilePath('accounts');
-}
+var accountsRepository = require('../utils/accounts-repository');
 
 // 默认平台列表
 var DEFAULT_PLATFORMS = [
@@ -36,57 +30,12 @@ var DEFAULT_PLATFORMS = [
     { id: 'other', name: '其他', color: 'other' }
 ];
 
-// 确保数据文件存在
-function ensureDataFile() {
-    var file = accountsFile();
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    if (!fs.existsSync(file)) {
-        fs.writeFileSync(file, JSON.stringify([], null, 2), 'utf-8');
-    }
+function readAccounts(scope) {
+    return accountsRepository.read(scope || dataBackups.captureScope());
 }
 
-// 读取账号数据
-//
-// 密码在磁盘上是密文（AES-256-GCM，见 utils/secret-box.js），
-// 内存里始终是明文 —— 上层路由、返回给前端的字段完全不用改，
-// 加密/解密只集中在这两个函数里。
-// 兼容老数据：没有 enc: 前缀的明文会被原样读出来，下次保存时自动变成密文。
-function readAccounts() {
-    ensureDataFile();
-    var list;
-    try {
-        list = JSON.parse(fs.readFileSync(accountsFile(), 'utf-8'));
-    } catch (e) {
-        return [];
-    }
-    if (!Array.isArray(list)) return [];
-
-    return list.map(function (a) {
-        if (!a || typeof a !== 'object') return a;
-        var copy = Object.assign({}, a);
-        if (typeof copy.password === 'string') {
-            copy.password = secretBox.decryptField(copy.password);
-        }
-        return copy;
-    });
-}
-
-// 保存账号数据（写盘前加密；临时文件 + rename 原子写，防写一半断电损坏）
-function saveAccounts(accounts) {
-    ensureDataFile();
-
-    var toWrite = (accounts || []).map(function (a) {
-        if (!a || typeof a !== 'object') return a;
-        var copy = Object.assign({}, a);
-        if (typeof copy.password === 'string') {
-            copy.password = secretBox.encrypt(copy.password);
-        }
-        return copy;
-    });
-
-    var tmp = accountsFile() + '.' + process.pid + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(toWrite, null, 2), 'utf-8');
-    fs.renameSync(tmp, accountsFile());
+function saveAccounts(accounts, scope) {
+    return accountsRepository.save(accounts, scope || dataBackups.captureScope());
 }
 
 // ========== 获取所有账号 ==========
@@ -126,7 +75,8 @@ router.post('/', resp.asyncHandler(function (req, res) {
         return resp.error(res, '平台类型和账号名称不能为空', 400);
     }
 
-    var accounts = readAccounts();
+    var scope = dataBackups.captureScope();
+    var accounts = readAccounts(scope);
 
     var newAccount = {
         id: Date.now().toString(),
@@ -143,7 +93,7 @@ router.post('/', resp.asyncHandler(function (req, res) {
     };
 
     accounts.push(newAccount);
-    saveAccounts(accounts);
+    saveAccounts(accounts, scope);
 
     return resp.success(res, newAccount);
 }));
@@ -152,7 +102,8 @@ router.post('/', resp.asyncHandler(function (req, res) {
 router.put('/:id', resp.asyncHandler(function (req, res) {
     var id = req.params.id;
     var data = req.body;
-    var accounts = readAccounts();
+    var scope = dataBackups.captureScope();
+    var accounts = readAccounts(scope);
 
     var index = accounts.findIndex(function (a) { return a.id === id; });
     if (index === -1) {
@@ -172,14 +123,15 @@ router.put('/:id', resp.asyncHandler(function (req, res) {
         updatedAt: new Date().toISOString()
     };
 
-    saveAccounts(accounts);
+    saveAccounts(accounts, scope);
     return resp.success(res, accounts[index]);
 }));
 
 // ========== 删除账号 ==========
 router.delete('/:id', resp.asyncHandler(function (req, res) {
     var id = req.params.id;
-    var accounts = readAccounts();
+    var scope = dataBackups.captureScope();
+    var accounts = readAccounts(scope);
 
     var index = accounts.findIndex(function (a) { return a.id === id; });
     if (index === -1) {
@@ -187,7 +139,7 @@ router.delete('/:id', resp.asyncHandler(function (req, res) {
     }
 
     accounts.splice(index, 1);
-    saveAccounts(accounts);
+    saveAccounts(accounts, scope);
 
     return resp.success(res, null);
 }));

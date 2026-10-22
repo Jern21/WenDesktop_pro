@@ -10,11 +10,11 @@
 
 var express = require('express');
 var router = express.Router();
-var fs = require('fs');
 var Storage = require('../utils/storage');
 var resp = require('../utils/response');
-var orderRules = require('../utils/order-rules');
-var dataBackups = require('../utils/data-backups');
+var dateRange = require('../utils/date-range');
+var paymentLedger = require('../utils/payment-ledger');
+var settingsRepository = require('../utils/settings-repository');
 
 var orders = new Storage('orders');
 var ledger = new Storage('ledger');
@@ -32,39 +32,10 @@ function normalizeRange(req) {
     return range === 'all' ? 'all' : 'year';
 }
 
-function rangeMeta(range) {
-    var today = new Date();
-    var thisYear = String(today.getFullYear());
-    return { range: range, thisYear: thisYear };
-}
-
-function inRange(dateStr, meta) {
-    if (!dateStr) return false;
-    if (meta.range === 'all') return true;
-    return String(dateStr).indexOf(meta.thisYear) === 0;
-}
-
-function paymentCostForEntry(order, entry) {
-    var amount = parseFloat(order && order.amount) || 0;
-    var cost = parseFloat(order && order.cost) || 0;
-    var paid = parseFloat(entry && entry.amount) || 0;
-    if (amount <= 0 || cost <= 0 || paid <= 0) return 0;
-    return Math.min(cost, cost * Math.min(paid / amount, 1));
-}
-
-function eachOrderPayment(allOrders, iterator) {
-    (allOrders || []).forEach(function (order) {
-        orderRules.paymentEntries(order).forEach(function (entry) {
-            var date = entry.date ? String(entry.date).slice(0, 10) : '';
-            if (!date) return;
-            iterator(order, {
-                date: date,
-                amount: parseFloat(entry.amount) || 0,
-                note: entry.note || ''
-            });
-        });
-    });
-}
+var rangeMeta = dateRange.ledgerRangeMeta;
+var inRange = dateRange.ledgerInRange;
+var paymentCostForEntry = paymentLedger.paymentCostForEntry;
+var eachOrderPayment = paymentLedger.eachPaymentEntry;
 
 function incomeTitle(order, entry) {
     if (entry.note) return entry.note;
@@ -165,9 +136,7 @@ function buildTrend(allOrders, meta) {
 
 function readGoalAmount() {
     try {
-        var file = dataBackups.getDataFilePath('settings');
-        if (!fs.existsSync(file)) return DEFAULT_GOAL;
-        var settings = JSON.parse(fs.readFileSync(file, 'utf-8'));
+        var settings = settingsRepository.read();
         var goal = parseFloat(settings.devLedger && settings.devLedger.goalAmount);
         return goal > 0 ? goal : DEFAULT_GOAL;
     } catch (e) {

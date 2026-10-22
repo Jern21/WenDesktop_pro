@@ -25,6 +25,14 @@ var Storage = require('../utils/storage');
 var resp = require('../utils/response');
 var orderRules = require('../utils/order-rules');
 var customerOrders = require('../utils/customer-orders');
+var dateRange = require('../utils/date-range');
+var paymentLedger = require('../utils/payment-ledger');
+
+var normalizeStatsRange = dateRange.normalizeStatsRange;
+var createRangeMeta = dateRange.createRangeMeta;
+var matchRangeDate = dateRange.matchRangeDate;
+var paymentCostForEntry = paymentLedger.paymentCostForEntry;
+var eachPaymentEntry = paymentLedger.eachPaymentEntry;
 
 var orders = new Storage('orders');
 var customers = new Storage('customers');
@@ -37,7 +45,6 @@ var localDateStr = orderRules.localDateStr;
 var paidAmount = orderRules.paidAmount;
 var paidCost = orderRules.paidCost;
 var hasPayment = orderRules.hasPayment;
-var paymentEntries = orderRules.paymentEntries;
 
 /** 环比增长率；基准为 0 时：当前>0 视为 100，否则 0 */
 function calcGrowth(current, previous) {
@@ -61,37 +68,6 @@ function goodRateOf(list) {
 
 var repeatRateOf = customerOrders.repeatRate;
 
-function normalizeStatsRange(req, defaultRange) {
-    var range = ((req.query && (req.query.range || req.query.period)) || defaultRange || 'all').toLowerCase();
-    if (['all', 'month', 'year'].indexOf(range) === -1) range = defaultRange || 'all';
-    return range;
-}
-
-function createRangeMeta(range) {
-    var today = new Date();
-    var thisMonth = localDateStr(today).substring(0, 7);
-    var lastMonth = localDateStr(new Date(today.getFullYear(), today.getMonth() - 1, 1)).substring(0, 7);
-    var thisYear = String(today.getFullYear());
-    var lastYear = String(today.getFullYear() - 1);
-    var labelMap = { all: '全量汇总', month: thisMonth, year: thisYear };
-    return {
-        range: range,
-        label: labelMap[range] || labelMap.all,
-        thisMonth: thisMonth,
-        lastMonth: lastMonth,
-        thisYear: thisYear,
-        lastYear: lastYear
-    };
-}
-
-function matchRangeDate(dateStr, meta, previous) {
-    if (!dateStr) return false;
-    if (meta.range === 'all') return !previous;
-    if (meta.range === 'month') return String(dateStr).startsWith(previous ? meta.lastMonth : meta.thisMonth);
-    if (meta.range === 'year') return String(dateStr).startsWith(previous ? meta.lastYear : meta.thisYear);
-    return false;
-}
-
 function recordDate(record, fields) {
     for (var i = 0; i < fields.length; i++) {
         if (record && record[fields[i]]) return record[fields[i]];
@@ -103,32 +79,6 @@ function filterOrdersByRange(allOrders, meta, previous) {
     if (meta.range === 'all') return previous ? [] : allOrders.slice();
     return allOrders.filter(function (o) {
         return matchRangeDate(o.orderDate, meta, previous);
-    });
-}
-
-function normalizeEntryDate(value) {
-    return value ? String(value).slice(0, 10) : '';
-}
-
-function paymentCostForEntry(order, entry) {
-    var amount = parseFloat(order && order.amount) || 0;
-    var cost = parseFloat(order && order.cost) || 0;
-    var paid = parseFloat(entry && entry.amount) || 0;
-    if (amount <= 0 || cost <= 0 || paid <= 0) return 0;
-    return Math.min(cost, cost * Math.min(paid / amount, 1));
-}
-
-function eachPaymentEntry(allOrders, iterator) {
-    (allOrders || []).forEach(function (order) {
-        paymentEntries(order).forEach(function (entry) {
-            var date = normalizeEntryDate(entry.date);
-            if (!date) return;
-            iterator(order, {
-                date: date,
-                amount: parseFloat(entry.amount) || 0,
-                note: entry.note || ''
-            });
-        });
     });
 }
 

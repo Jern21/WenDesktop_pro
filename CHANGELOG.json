@@ -1,8 +1,20 @@
 {
-  "latestVersion": "2.0.1",
+  "latestVersion": "2.0.2",
   "repository": "https://github.com/Jern21/myProject_pro",
   "changelogRawUrl": "https://raw.githubusercontent.com/Jern21/myProject_pro/main/CHANGELOG.json",
   "entries": [
+    {
+      "version": "2.0.2",
+      "date": "2026-10-22",
+      "title": "数据隔离与菜单开关",
+      "tag": "功能",
+      "highlights": [
+        "数据按账号隔离：订单 / 客户 / 海报等数据分别落在各自账号目录，账号之间互不可见",
+        "统一请求层与公共 UI：前端改用公共 api.call、Toast 与转义，损坏的读取结果不再被当成空数据",
+        "设置中心新增「菜单选项」：侧栏 19 个菜单项可逐项显示 / 隐藏，切换即时生效并自动保存",
+        "「设置中心」菜单固定显示，避免一键关闭全部菜单后无法回到设置页恢复"
+      ]
+    },
     {
       "version": "2.0.1",
       "date": "2026-10-21",

@@ -276,13 +276,16 @@ function bindWorkbench(container, state) {
 }
 
 function loadWorkbench(container, state) {
-    state = state || { range: 'year', hidden: isAmountHidden(), showAll: false };
+    state = state || { range: 'year', hidden: isAmountHidden(), showAll: false, generation: 0, disposed: false };
+    state.generation = (state.generation || 0) + 1;
+    var generation = state.generation;
     container.innerHTML = '<p class="wb-empty" style="padding:24px">加载中…</p>';
 
     var limit = state.showAll ? 50 : 8;
     api.get('/api/ledger/workbench?range=' + encodeURIComponent(state.range) +
         '&recentLimit=' + limit)
         .then(function (res) {
+            if (state.disposed || state.generation !== generation) return;
             if (!res.success || !res.data) {
                 container.innerHTML = '<p class="wb-error">加载失败</p>';
                 return;
@@ -293,10 +296,18 @@ function loadWorkbench(container, state) {
             bindWorkbench(container, state);
         })
         .catch(function (e) {
+            if (state.disposed || state.generation !== generation) return;
             container.innerHTML = '<p class="wb-error">' + escapeHtml(e.message || '无法加载收支数据') + '</p>';
         });
 }
 
 export function mountWorkbenchPanel(container) {
-    loadWorkbench(container, { range: 'year', hidden: isAmountHidden(), showAll: false });
+    var state = { range: 'year', hidden: isAmountHidden(), showAll: false, generation: 0, disposed: false };
+    loadWorkbench(container, state);
+    return {
+        destroy: function () {
+            state.disposed = true;
+            state.generation += 1;
+        }
+    };
 }

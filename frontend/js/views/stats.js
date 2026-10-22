@@ -366,7 +366,7 @@
                                             }
                                         ]
                                     });
-                                    window.addEventListener('resize', function() { statsCharts.revenue && statsCharts.revenue.resize(); });
+                                    ctx.listen(window, 'resize', function () { statsCharts.revenue && statsCharts.revenue.resize(); });
                                 })
                                 .catch(function(err) { console.error('加载收入趋势失败:', err); });
                         }
@@ -420,7 +420,7 @@
                                             data: data
                                         }]
                                     });
-                                    window.addEventListener('resize', function() { statsCharts.platform && statsCharts.platform.resize(); });
+                                    ctx.listen(window, 'resize', function () { statsCharts.platform && statsCharts.platform.resize(); });
                                 })
                                 .catch(function(err) { console.error('加载平台分布失败:', err); });
                         }
@@ -474,7 +474,7 @@
                                             data: counts
                                         }]
                                     });
-                                    window.addEventListener('resize', function() { statsCharts.projectType && statsCharts.projectType.resize(); });
+                                    ctx.listen(window, 'resize', function () { statsCharts.projectType && statsCharts.projectType.resize(); });
                                 })
                                 .catch(function(err) { console.error('加载项目类型失败:', err); });
                         }
@@ -544,7 +544,7 @@
                                             }
                                         ]
                                     });
-                                    window.addEventListener('resize', function() { statsCharts.ordersTrend && statsCharts.ordersTrend.resize(); });
+                                    ctx.listen(window, 'resize', function () { statsCharts.ordersTrend && statsCharts.ordersTrend.resize(); });
                                 })
                                 .catch(function(err) { console.error('加载订单趋势失败:', err); });
                         }
@@ -602,7 +602,7 @@
                                             data: counts
                                         }]
                                     });
-                                    window.addEventListener('resize', function() { statsCharts.customerLevel && statsCharts.customerLevel.resize(); });
+                                    ctx.listen(window, 'resize', function () { statsCharts.customerLevel && statsCharts.customerLevel.resize(); });
                                 })
                                 .catch(function(err) { console.error('加载客户等级失败:', err); });
                         }
@@ -654,7 +654,7 @@
                                             data: data
                                         }]
                                     });
-                                    window.addEventListener('resize', function() { statsCharts.funnel && statsCharts.funnel.resize(); });
+                                    ctx.listen(window, 'resize', function () { statsCharts.funnel && statsCharts.funnel.resize(); });
                                 })
                                 .catch(function(err) { console.error('加载转化漏斗失败:', err); });
                         }

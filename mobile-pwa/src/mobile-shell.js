@@ -95,22 +95,31 @@ function applyThemeFromStorage() {
     } catch (e) { /* ignore */ }
 }
 
+function destroyActivePanel() {
+    if (shellState.panel && typeof shellState.panel.destroy === 'function') {
+        try { shellState.panel.destroy(); } catch (e) { /* ignore */ }
+    }
+    shellState.panel = null;
+}
+
 function renderPanel(nav) {
     if (!shellState.contentEl) return;
+    destroyActivePanel();
     var panel = nav.panel;
+    var container = shellState.contentEl;
 
-    shellState.contentEl.classList.toggle('mobile-content--flush', panel === 'workbench');
+    container.classList.toggle('mobile-content--flush', panel === 'workbench');
 
     if (panel === 'workbench') {
-        mountWorkbenchPanel(shellState.contentEl);
+        shellState.panel = mountWorkbenchPanel(container);
         return;
     }
     if (panel === 'settings') {
-        mountSettingsPanel(shellState.contentEl);
+        shellState.panel = mountSettingsPanel(container);
         return;
     }
-    mountPlaceholderPanel(
-        shellState.contentEl,
+    shellState.panel = mountPlaceholderPanel(
+        container,
         nav.placeholderTitle || nav.label,
         nav.placeholderHint
     );

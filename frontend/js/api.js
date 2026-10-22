@@ -120,6 +120,53 @@
     }
 
     /**
+     * 把「非 2xx 响应」变成一个能直接展示给用户的 Error。
+     *
+     * 后端统一返回 { success:false, error:'中文文案', code:'XXX' }，
+     * 这句中文是校验层辛苦写的、最贴近具体问题的信息（「客户昵称为必填项」），
+     * 必须透传到界面上。
+     *
+     * 原来这里直接 `throw new Error('HTTP 400: Bad Request')`，从不读 body，
+     * 于是所有页面统一显示「保存失败：HTTP 400: Bad Request」——
+     * 用户完全不知道自己哪一项填错了，后端那句中文等于白写。
+     */
+    function buildHttpError(response, rawBody) {
+        var payload = null;
+        try {
+            payload = rawBody ? JSON.parse(rawBody) : null;
+        } catch (e) {
+            payload = null;   // 不是 JSON（HTML 错误页 / 纯文本），下面按原文处理
+        }
+
+        var message = '';
+        if (payload && typeof payload === 'object') {
+            message = payload.error || payload.message || payload.msg || '';
+        }
+        message = message ? String(message).trim() : '';
+
+        if (!message) {
+            var text = String(rawBody || '').trim();
+            if (!text) {
+                message = '请求失败（HTTP ' + response.status + '）';
+            } else if (text.charAt(0) === '<') {
+                // 服务端崩了、返回的是 HTML 错误页：别把一堆标签糊到用户脸上
+                message = '服务器返回了非预期的响应（HTTP ' + response.status + '），请查看服务端日志';
+            } else {
+                message = text.length > 200 ? text.slice(0, 200) + '…' : text;
+            }
+        }
+
+        var err = new Error(message);
+        err.name = 'HttpError';
+        err.status = response.status;
+        err.statusText = response.statusText;
+        err.code = (payload && payload.code) || ('HTTP_' + response.status);
+        err.body = payload || rawBody;
+        err.isHttpError = true;
+        return err;
+    }
+
+    /**
      * 发起 HTTP 请求
      */
     function request(config) {
@@ -251,7 +298,10 @@
             .then(function (response) {
                 // 解析响应
                 if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    // 必须把 body 读出来再抛：后端的中文校验文案就在这里
+                    return response.text().then(function (raw) {
+                        throw buildHttpError(response, raw);
+                    });
                 }
 
                 // 根据 Content-Type 解析
@@ -279,6 +329,13 @@
 
                 // 调用方主动取消：这是它的意图，不能重试（否则等于无视取消）
                 if (error && error.name === 'AbortError') {
+                    throw interceptedError || error;
+                }
+
+                // 4xx 是「这次请求本身有问题」（字段没填、id 不存在、没权限），
+                // 原样重试结果只会一样，还白白多打一次无效请求。
+                // 只有 5xx / 网络层异常才值得重试。
+                if (error && error.isHttpError && error.status >= 400 && error.status < 500) {
                     throw interceptedError || error;
                 }
 

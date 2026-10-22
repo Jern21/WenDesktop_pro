@@ -744,12 +744,12 @@
                     // ===================== 预览键盘 =====================
 
                     function bindPreviewKeyboard() {
-                        if (window.__posterPreviewKeyboardBound) return;
-                        window.__posterPreviewKeyboardBound = true;
-                        document.addEventListener('keydown', function (e) {
+                        if (bindPreviewKeyboard.done) return;
+                        bindPreviewKeyboard.done = true;
+                        ctx.listen(document, 'keydown', function (e) {
                             if (e.key === 'Escape') closePosterPreview();
                         });
-                        window.addEventListener('spa:cleanup-forms', closePosterPreview);
+                        ctx.listen(window, 'spa:cleanup-forms', closePosterPreview);
                     }
 
                     // ===================== 表单保存回调 =====================

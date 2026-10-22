@@ -17,10 +17,11 @@ var dataPaths = require('./data-paths');
 var userContext = require('./user-context');
 
 function usernameFromRequest(req) {
-    var user = userContext.get();
-    if (!user && req && req.wtSession && req.wtSession.username) {
-        user = req.wtSession.username;
+    // 会话是这次请求的身份。全局上下文里如果串进了别人的名字，不能盖过它。
+    if (req && req.wtSession && req.wtSession.username) {
+        return dataPaths.normalizeUsername(req.wtSession.username);
     }
+    var user = userContext.get();
     return dataPaths.normalizeUsername(user || 'admin');
 }
 
@@ -147,14 +148,90 @@ function deleteByFilename(filename, req) {
     }
 }
 
+/**
+ * 老扁平布局（/uploads/<file>，URL 里没有用户名段）是迁移前的共享目录，
+ * 归主账号所有。
+ *
+ * 为什么不能对所有人开放：trial 是后来加的**免密**账号，任何人点一下就进去了。
+ * 老目录里躺的是主账号历史积累的合同、简历、海报源文件 —— 一旦放行，
+ * 等于把这些东西对所有访客公开，只要猜得到文件名。
+ *
+ * 用延迟 require：auth 目前不依赖 uploads，但这一层不该成为将来的隐性死锁点。
+ */
+function legacyOwnerUsername() {
+    try {
+        var auth = require('./auth');
+        var name = auth && typeof auth.getUsername === 'function' ? auth.getUsername() : 'admin';
+        return dataPaths.normalizeUsername(name);
+    } catch (e) {
+        return dataPaths.normalizeUsername('admin');
+    }
+}
+
+/**
+ * 静态读取的权限判定 —— 返回可读的绝对路径，不可读一律返回 null。
+ *
+ * 这些规则是踩过坑写下来的，不是假设：
+ *   1. URL 带用户段 /uploads/<user>/<file>：owner 必须等于当前登录用户。
+ *      不一致返回 null（外层当「文件不存在」处理）。
+ *      刻意用 404 而不是 403：403 等于告诉探测者「这个文件存在，只是不给你」，
+ *      等于帮他确认文件名猜得对不对。
+ *   2. 老扁平布局 /uploads/<file>：只有主账号能读。
+ *   3. 自己的目录里找不到时，老共享目录的兜底同样只对主账号开放。
+ *      （原来 resolveFromUrl 是无条件兜底的，等于留了个绕过口：
+ *        trial 请求 /uploads/trial/x 而 x 只在老目录里，照样读得到。）
+ */
+function resolveReadableUpload(req) {
+    var rel = String(req.path || '/').split('?')[0];
+    if (rel.charAt(0) !== '/') rel = '/' + rel;
+
+    var parsed = parseUploadsUrl('/uploads' + rel);
+    if (!parsed) return null;   // 多层目录 / 非法文件名：直接当不存在
+
+    var me = usernameFromRequest(req);
+    var isPrimary = me === legacyOwnerUsername();
+
+    if (parsed.username) {
+        if (dataPaths.normalizeUsername(parsed.username) !== me) {
+            console.warn('[uploads] 拒绝跨用户读取: ' + me + ' -> ' +
+                parsed.username + '/' + parsed.filename);
+            return null;
+        }
+        var mine = path.join(userUploadsPath(parsed.username), parsed.filename);
+        if (isExistingFile(mine)) return mine;
+
+        if (!isPrimary) return null;
+        var legacyMine = path.join(dataPaths.UPLOADS_DIR, parsed.filename);
+        return isExistingFile(legacyMine) ? legacyMine : null;
+    }
+
+    // 老扁平 URL /uploads/<file>
+    //
+    // 这里的归属**不能按目录硬编**，得按文件本身判：
+    // 迁移后同一个文件常常是「用户目录一份 + 老共享目录一份」的冗余关系
+    // （真实数据就是这样：文件既在 users/trial/uploads/ 也在 data/uploads/，
+    //  而数据里存的 URL 还是老格式）。曾经把老目录一刀切成「主账号专属」，
+    //  结果 trial 自己的 4 个附件全 404 —— 修越权把用户自己关在了门外。
+    //
+    // 所以：自己目录里有同名文件 = 这就是我的，放行（优先给用户目录那份）；
+    //       没有、又不是主账号 = 拒；主账号再兜底读老目录里的孤本。
+    var inMyDir = path.join(userUploadsPath(me), parsed.filename);
+    if (isExistingFile(inMyDir)) return inMyDir;
+
+    if (!isPrimary) {
+        console.warn('[uploads] 拒绝读取他人/无主的共享文件: ' + me + ' -> ' + parsed.filename);
+        return null;
+    }
+    var legacy = path.join(dataPaths.UPLOADS_DIR, parsed.filename);
+    return isExistingFile(legacy) ? legacy : null;
+}
+
 function staticHandler() {
     return function (req, res, next) {
         if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-        var rel = String(req.path || '/').split('?')[0];
-        if (rel.charAt(0) !== '/') rel = '/' + rel;
-        var filePath = resolveFromUrl('/uploads' + rel);
+        var filePath = resolveReadableUpload(req);
         if (!isExistingFile(filePath)) {
-            return res.status(404).type('text/plain; charset=utf-8').send('文件不存在');
+            return res.status(404).type('text/plain; charset=utf-8').send('文件不存在或无权访问');
         }
         return res.sendFile(path.resolve(filePath));
     };
@@ -167,6 +244,7 @@ module.exports = {
     publicUrl: publicUrl,
     parseUploadsUrl: parseUploadsUrl,
     resolveFromUrl: resolveFromUrl,
+    resolveReadableUpload: resolveReadableUpload,
     resolveExistingFile: resolveExistingFile,
     deleteByUrl: deleteByUrl,
     deleteByFilename: deleteByFilename,

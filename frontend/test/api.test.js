@@ -222,3 +222,95 @@ test('请求拦截器改写 method 后，按新方法决定是否重试', async 
     await assert.rejects(function () { return api.get('/api/orders'); });
     assert.equal(calls, 1, '改写为 POST 后不应重试');
 });
+
+// ============ 非 2xx 的错误文案 ============
+//
+// 原来这里直接 throw new Error('HTTP ' + status + ': ' + statusText)，从不读 body。
+// 后端明明返回 {"error":"客户昵称为必填项"}，用户界面却统一显示
+// 「保存失败：HTTP 400: Bad Request」—— 哪一项填错了完全看不出来。
+
+/** 模拟非 2xx 响应 */
+function errResponse(status, body, contentType) {
+    return {
+        ok: false,
+        status: status,
+        statusText: status === 400 ? 'Bad Request' : (status === 404 ? 'Not Found' : 'Server Error'),
+        headers: { get: function () { return contentType || 'application/json'; } },
+        json: function () { return Promise.resolve(JSON.parse(body)); },
+        text: function () { return Promise.resolve(body); }
+    };
+}
+
+test('非 2xx 时 err.message 用后端的中文文案，而不是 HTTP 状态码', async function () {
+    var api = loadApi(function () {
+        return Promise.resolve(errResponse(400, JSON.stringify({
+            success: false, error: '客户昵称为必填项'
+        })));
+    });
+
+    await assert.rejects(
+        function () { return api.post('/api/orders', {}); },
+        function (err) {
+            assert.equal(err.message, '客户昵称为必填项');
+            assert.equal(err.status, 400);
+            assert.equal(err.code, 'HTTP_400');
+            assert.equal(err.isHttpError, true);
+            return true;
+        }
+    );
+});
+
+test('后端返回 code 字段时原样带出（便于前端按错误类型分支）', async function () {
+    var api = loadApi(function () {
+        return Promise.resolve(errResponse(404, JSON.stringify({
+            success: false, error: '订单不存在', code: 'ORDER_NOT_FOUND'
+        })));
+    });
+
+    await assert.rejects(
+        function () { return api.get('/api/orders/x'); },
+        function (err) {
+            assert.equal(err.message, '订单不存在');
+            assert.equal(err.code, 'ORDER_NOT_FOUND');
+            assert.equal(err.status, 404);
+            return true;
+        }
+    );
+});
+
+test('4xx 不重试（GET 也一样）—— 重试注定失败，白打一次请求', async function () {
+    var calls = 0;
+    var api = loadApi(function () {
+        calls++;
+        return Promise.resolve(errResponse(404, JSON.stringify({ error: '订单不存在' })));
+    });
+
+    await assert.rejects(function () { return api.get('/api/orders/nope'); });
+    assert.equal(calls, 1, '404 属于 4xx，不能重试');
+});
+
+test('5xx 仍按幂等方法重试（服务端临时故障值得再试一次）', async function () {
+    var calls = 0;
+    var api = loadApi(function () {
+        calls++;
+        return Promise.resolve(errResponse(500, JSON.stringify({ error: '数据库连接失败' })));
+    });
+
+    await assert.rejects(function () { return api.get('/api/orders'); });
+    assert.equal(calls, 2, 'GET + 500 应该重试 1 次');
+});
+
+test('服务端返回 HTML 错误页时不把标签糊到用户脸上', async function () {
+    var api = loadApi(function () {
+        return Promise.resolve(errResponse(500, '<!DOCTYPE html><html><body>stack...</body></html>', 'text/html'));
+    });
+
+    await assert.rejects(
+        function () { return api.get('/api/orders'); },
+        function (err) {
+            assert.ok(err.message.indexOf('<') === -1, '不能把 HTML 标签当错误文案：' + err.message);
+            assert.match(err.message, /HTTP 500/);
+            return true;
+        }
+    );
+});

@@ -25,22 +25,40 @@ function assertSafeFileName(fileName) {
     }
 }
 
-function getActiveDataDir() {
-    var user = userContext.get();
-    if (user) {
-        return dataPaths.ensureUserDataDir(user);
+/**
+ * 冻结「这一次操作」的用户。username 为 null 表示根目录。
+ * 调用方应把同一个 scope 传给读、写、备份，避免中途再问全局身份。
+ */
+function captureScope() {
+    return { username: userContext.get() || null };
+}
+
+function resolveScope(scope) {
+    if (scope && typeof scope === 'object' && Object.prototype.hasOwnProperty.call(scope, 'username')) {
+        var name = scope.username ? String(scope.username).trim().toLowerCase() : null;
+        return { username: name || null };
     }
+    return captureScope();
+}
+
+function dataDirOf(scope) {
+    var resolved = resolveScope(scope);
+    if (resolved.username) return dataPaths.ensureUserDataDir(resolved.username);
     return DATA_DIR;
 }
 
-function getDataFilePath(fileName) {
-    assertSafeFileName(fileName);
-    return path.join(getActiveDataDir(), fileName + '.json');
+function getActiveDataDir() {
+    return dataDirOf(captureScope());
 }
 
-function getBackupDir(fileName) {
+function getDataFilePath(fileName, scope) {
     assertSafeFileName(fileName);
-    return path.join(getActiveDataDir(), 'backups', fileName);
+    return path.join(dataDirOf(scope), fileName + '.json');
+}
+
+function getBackupDir(fileName, scope) {
+    assertSafeFileName(fileName);
+    return path.join(dataDirOf(scope), 'backups', fileName);
 }
 
 function uniqueTimestamp() {
@@ -55,12 +73,28 @@ function getItemCount(data) {
     return 0;
 }
 
-function readJsonFile(fileName, fallback) {
-    var filePath = getDataFilePath(fileName);
+function readJsonFile(fileName, fallback, scope) {
+    var filePath = getDataFilePath(fileName, scope);
+    if (!fs.existsSync(filePath)) return fallback;
+
+    var raw;
     try {
-        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        raw = fs.readFileSync(filePath, 'utf-8');
     } catch (e) {
-        return fallback;
+        var err = new Error('数据文件读取失败：' + fileName + '.json（' + e.message + '）');
+        err.cause = e;
+        err.status = 500;
+        throw err;
+    }
+    if (raw.trim() === '') return fallback;
+
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        var parseErr = new Error('数据文件读取失败：' + fileName + '.json（' + e.message + '）');
+        parseErr.cause = e;
+        parseErr.status = 500;
+        throw parseErr;
     }
 }
 
@@ -74,13 +108,14 @@ function readJsonFileByPath(filePath, fallback) {
 
 function writeJsonFile(fileName, data, options) {
     options = options || {};
-    var filePath = getDataFilePath(fileName);
+    var scope = resolveScope(options.scope);
+    var filePath = getDataFilePath(fileName, scope);
     var tmpPath = filePath + '.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8) + '.tmp';
 
     try {
-        ensureDir(getActiveDataDir());
+        ensureDir(dataDirOf(scope));
         if (options.backup !== false) {
-            createBackup(fileName);
+            createBackup(fileName, scope);
         }
         fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
         fs.renameSync(tmpPath, filePath);
@@ -94,8 +129,8 @@ function writeJsonFile(fileName, data, options) {
     }
 }
 
-function pruneBackups(fileName) {
-    var dir = getBackupDir(fileName);
+function pruneBackups(fileName, scope) {
+    var dir = getBackupDir(fileName, scope);
     if (!fs.existsSync(dir)) return;
 
     var files = fs.readdirSync(dir)
@@ -116,8 +151,8 @@ function pruneBackups(fileName) {
     });
 }
 
-function describeJsonFile(fileName) {
-    var filePath = getDataFilePath(fileName);
+function describeJsonFile(fileName, scope) {
+    var filePath = getDataFilePath(fileName, scope);
     if (!fs.existsSync(filePath)) {
         return {
             fileName: fileName,
@@ -137,8 +172,8 @@ function describeJsonFile(fileName) {
     };
 }
 
-function describeBackup(fileName, backupName) {
-    var fullPath = getBackupPath(fileName, backupName);
+function describeBackup(fileName, backupName, scope) {
+    var fullPath = getBackupPath(fileName, backupName, scope);
     var stat = fs.statSync(fullPath);
     var data = readJsonFileByPath(fullPath, null);
     return {
@@ -150,33 +185,35 @@ function describeBackup(fileName, backupName) {
     };
 }
 
-function createBackup(fileName) {
-    var filePath = getDataFilePath(fileName);
+function createBackup(fileName, scope) {
+    scope = resolveScope(scope);
+    var filePath = getDataFilePath(fileName, scope);
     if (!fs.existsSync(filePath)) return null;
 
     var stat = fs.statSync(filePath);
     if (!stat.isFile() || stat.size === 0) return null;
 
-    var dir = getBackupDir(fileName);
+    var dir = getBackupDir(fileName, scope);
     ensureDir(dir);
 
     var backupName = fileName + '-' + uniqueTimestamp() + '.json';
     var backupPath = path.join(dir, backupName);
     fs.copyFileSync(filePath, backupPath);
-    pruneBackups(fileName);
+    pruneBackups(fileName, scope);
 
-    return describeBackup(fileName, backupName);
+    return describeBackup(fileName, backupName, scope);
 }
 
-function listBackups(fileName) {
-    var dir = getBackupDir(fileName);
+function listBackups(fileName, scope) {
+    scope = resolveScope(scope);
+    var dir = getBackupDir(fileName, scope);
     if (!fs.existsSync(dir)) return [];
 
     return fs.readdirSync(dir)
         .filter(function (name) { return name.endsWith('.json'); })
         .map(function (name) {
             try {
-                return describeBackup(fileName, name);
+                return describeBackup(fileName, name, scope);
             } catch (e) {
                 return null;
             }
@@ -187,18 +224,20 @@ function listBackups(fileName) {
         });
 }
 
-function listDataFiles() {
-    ensureDir(DATA_DIR);
-    return fs.readdirSync(DATA_DIR)
+function listDataFiles(scope) {
+    scope = resolveScope(scope);
+    var dir = dataDirOf(scope);
+    ensureDir(dir);
+    return fs.readdirSync(dir)
         .filter(function (name) {
-            var fullPath = path.join(DATA_DIR, name);
+            var fullPath = path.join(dir, name);
             return name.endsWith('.json') && fs.statSync(fullPath).isFile();
         })
         .map(function (name) { return name.replace(/\.json$/, ''); })
         .sort();
 }
 
-function getBackupPath(fileName, backupName) {
+function getBackupPath(fileName, backupName, scope) {
     assertSafeFileName(fileName);
     if (!backupName || path.basename(backupName) !== backupName || !backupName.endsWith('.json')) {
         throw new Error('非法备份文件名: ' + backupName);
@@ -206,17 +245,18 @@ function getBackupPath(fileName, backupName) {
     if (backupName.indexOf(fileName + '-') !== 0) {
         throw new Error('备份文件与数据文件不匹配');
     }
-    return path.join(getBackupDir(fileName), backupName);
+    return path.join(getBackupDir(fileName, scope), backupName);
 }
 
-function restoreBackup(fileName, backupName) {
-    var backupPath = getBackupPath(fileName, backupName);
+function restoreBackup(fileName, backupName, scope) {
+    scope = resolveScope(scope);
+    var backupPath = getBackupPath(fileName, backupName, scope);
     if (!fs.existsSync(backupPath)) {
         throw new Error('备份文件不存在');
     }
 
     var data = JSON.parse(fs.readFileSync(backupPath, 'utf-8'));
-    writeJsonFile(fileName, data);
+    writeJsonFile(fileName, data, { scope: scope });
 
     return {
         fileName: fileName,
@@ -225,11 +265,12 @@ function restoreBackup(fileName, backupName) {
     };
 }
 
-function createAllBackups() {
-    return listDataFiles()
+function createAllBackups(scope) {
+    scope = resolveScope(scope);
+    return listDataFiles(scope)
         .map(function (fileName) {
             try {
-                return createBackup(fileName);
+                return createBackup(fileName, scope);
             } catch (e) {
                 console.error('[DataBackup] 创建备份失败:', fileName, e.message);
                 return null;
@@ -238,10 +279,12 @@ function createAllBackups() {
         .filter(Boolean);
 }
 
-function getBackupSummary() {
-    var files = listDataFiles().map(function (fileName) {
-        var current = describeJsonFile(fileName);
-        var backups = listBackups(fileName);
+function getBackupSummary(scope) {
+    scope = resolveScope(scope);
+    var activeDir = dataDirOf(scope);
+    var files = listDataFiles(scope).map(function (fileName) {
+        var current = describeJsonFile(fileName, scope);
+        var backups = listBackups(fileName, scope);
         return Object.assign({}, current, {
             backupCount: backups.length,
             latestBackupAt: backups[0] ? backups[0].createdAt : null,
@@ -257,8 +300,8 @@ function getBackupSummary() {
     }, null);
 
     return {
-        dataDir: DATA_DIR,
-        backupDir: BACKUP_DIR,
+        dataDir: activeDir,
+        backupDir: path.join(activeDir, 'backups'),
         maxBackupsPerFile: MAX_BACKUPS_PER_FILE,
         totalFiles: files.length,
         totalSize: totalSize,
@@ -272,6 +315,8 @@ module.exports = {
     BACKUP_DIR: BACKUP_DIR,
     MAX_BACKUPS_PER_FILE: MAX_BACKUPS_PER_FILE,
     ensureDir: ensureDir,
+    captureScope: captureScope,
+    resolveScope: resolveScope,
     getDataFilePath: getDataFilePath,
     readJsonFile: readJsonFile,
     writeJsonFile: writeJsonFile,

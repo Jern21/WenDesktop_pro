@@ -14,6 +14,9 @@
                                 <a href="#appearance" class="settings-nav-item" data-section="appearance">
                                     <i class="ph ph-palette sn-icon"></i> 外观设置
                                 </a>
+                                <a href="#menu-options" class="settings-nav-item" data-section="menu-options">
+                                    <i class="ph ph-sidebar-simple sn-icon"></i> 菜单选项
+                                </a>
                                 <a href="#security" class="settings-nav-item" data-section="security">
                                     <i class="ph ph-lock-key sn-icon"></i> 安全设置
                                 </a>
@@ -243,6 +246,40 @@
                             <div class="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2">
                                 <i class="ph ph-info text-blue-500 text-base mt-0.5"></i>
                                 <p class="text-xs text-gray-500">主题设置保存在本地浏览器中，更换设备后需重新设置。梦幻极光 / 微光数字暗适合夜间使用，微光数字在亮色基础上叠加流光动效，适合追求层次感的场景。</p>
+                            </div>
+                        </div>
+
+                        <!-- ====== 菜单选项 ====== -->
+                        <div id="menu-options" class="bg-white rounded-xl border border-gray-100 shadow-soft p-6">
+                            <div class="flex items-center gap-2 mb-5 pb-4 border-b border-gray-50">
+                                <i class="ph-fill ph-sidebar-simple text-brand-500 text-xl"></i>
+                                <h3 class="font-bold text-gray-800 text-base">菜单选项</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">控制左侧侧边栏中各菜单项的显示与隐藏，切换后即时生效并自动保存。</p>
+
+                            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="px-2.5 py-1 rounded-md bg-gray-50 border border-gray-100 text-gray-500">
+                                        共 <strong id="menu-options-total" class="text-gray-700">--</strong> 项
+                                    </span>
+                                    <span class="px-2.5 py-1 rounded-md bg-orange-50 border border-orange-100 text-orange-600">
+                                        已隐藏 <strong id="menu-options-hidden-count">0</strong> 项
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button id="menu-options-reset" type="button" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">全部显示</button>
+                                    <button id="menu-options-hide-all" type="button" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">全部隐藏</button>
+                                </div>
+                            </div>
+
+                            <!-- 列表由 settings.js 的 initMenuOptions() 依据侧栏实际菜单渲染 -->
+                            <div id="menu-options-list" class="space-y-2">
+                                <p class="text-xs text-gray-400 py-6 text-center">正在读取菜单项…</p>
+                            </div>
+
+                            <div class="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2">
+                                <i class="ph ph-info text-blue-500 text-base mt-0.5"></i>
+                                <p class="text-xs text-gray-500">「设置中心」固定显示：否则把所有菜单都关掉后就没法回到本页恢复了。隐藏只是不再显示入口，对应页面本身仍可通过地址访问。设置保存在本地浏览器，更换设备后需重新设置。</p>
                             </div>
                         </div>
 

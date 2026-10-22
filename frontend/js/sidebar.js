@@ -41,25 +41,30 @@ function initSidebar() {
             </div>
 
             <!-- Navigation -->
+            <!--
+                data-menu-key：菜单项唯一标识，供「设置中心 → 菜单选项」的显示/隐藏开关使用
+                  （不能拿 data-page 当 key ——「平台管理」和它的子项「总览看板」都是 platform.html）
+                data-menu-parent：子项归属的主项 key，设置页据此做缩进与联动禁用
+            -->
             <nav class="space-y-1 mt-2" id="sidebar-nav">
-                <a href="${PB}${ROUTES['index.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="index.html">
+                <a href="${PB}${ROUTES['index.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="index.html" data-menu-key="home">
                     <i class="ph ph-house text-lg mr-3 icon-base text-gray-500"></i>首页
                 </a>
-                <a href="${PB}${ROUTES['orders.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="orders.html">
+                <a href="${PB}${ROUTES['orders.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="orders.html" data-menu-key="orders">
                     <i class="ph ph-receipt text-lg mr-3 icon-base text-gray-500"></i>我的订单
                 </a>
-                <a href="${PB}${ROUTES['quote.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="quote.html">
+                <a href="${PB}${ROUTES['quote.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="quote.html" data-menu-key="quote">
                     <i class="ph ph-currency-cny text-lg mr-3 icon-base text-gray-500"></i>报价管理
                 </a>
-                <a href="${PB}${ROUTES['posters.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="posters.html">
+                <a href="${PB}${ROUTES['posters.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="posters.html" data-menu-key="posters">
                     <i class="ph ph-image text-lg mr-3 icon-base text-gray-500"></i>宣传海报
                 </a>
-                <a href="${PB}${ROUTES['canvas.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="canvas.html">
+                <a href="${PB}${ROUTES['canvas.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="canvas.html" data-menu-key="canvas">
                     <i class="ph ph-infinity text-lg mr-3 icon-base text-gray-500"></i>无限画布
                 </a>
                 
-                <!-- Expanded Menu: Platform Management -->
-                <div class="mt-2">
+                <!-- Expanded Menu: Platform Management（整块隐藏，含子菜单） -->
+                <div class="mt-2" data-menu-key="platform">
                     <div class="flex items-center mx-2 rounded-lg hover:bg-gray-100 transition-colors">
                         <a href="${PB}${ROUTES['platform.html']}" class="nav-link flex items-center flex-1 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="platform.html">
                             <i class="ph ph-squares-four text-lg mr-3 icon-base text-gray-500"></i>平台管理
@@ -70,38 +75,38 @@ function initSidebar() {
                     </div>
                     <!-- Sub-menu items -->
                     <div class="space-y-1 mt-1 hidden" id="platform-submenu">
-                        <a href="${PB}${ROUTES['platform.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg bg-brand-50 text-brand-600 font-medium transition-colors cursor-pointer text-sm" data-page="platform.html">总览看板</a>
-                        <a href="${PB}${ROUTES['xianyu.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg text-gray-500 hover:text-gray-900 transition-colors cursor-pointer text-sm" data-page="xianyu.html">闲鱼</a>
-                        <a href="${PB}${ROUTES['xiaohongshu.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg text-gray-500 hover:text-gray-900 transition-colors cursor-pointer text-sm" data-page="xiaohongshu.html">小红书</a>
-                        <a href="${PB}${ROUTES['douyin.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg text-gray-500 hover:text-gray-900 transition-colors cursor-pointer text-sm" data-page="douyin.html">抖音</a>
+                        <a href="${PB}${ROUTES['platform.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg bg-brand-50 text-brand-600 font-medium transition-colors cursor-pointer text-sm" data-page="platform.html" data-menu-key="platform-overview" data-menu-parent="platform">总览看板</a>
+                        <a href="${PB}${ROUTES['xianyu.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg text-gray-500 hover:text-gray-900 transition-colors cursor-pointer text-sm" data-page="xianyu.html" data-menu-key="xianyu" data-menu-parent="platform">闲鱼</a>
+                        <a href="${PB}${ROUTES['xiaohongshu.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg text-gray-500 hover:text-gray-900 transition-colors cursor-pointer text-sm" data-page="xiaohongshu.html" data-menu-key="xiaohongshu" data-menu-parent="platform">小红书</a>
+                        <a href="${PB}${ROUTES['douyin.html']}" class="nav-link flex items-center pl-11 pr-4 py-2 mx-2 rounded-lg text-gray-500 hover:text-gray-900 transition-colors cursor-pointer text-sm" data-page="douyin.html" data-menu-key="douyin" data-menu-parent="platform">抖音</a>
                     </div>
                 </div>
 
-                <a href="${PB}${ROUTES['customer.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium mt-2" data-page="customer.html">
+                <a href="${PB}${ROUTES['customer.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium mt-2" data-page="customer.html" data-menu-key="customer">
                     <i class="ph ph-users text-lg mr-3 icon-base text-gray-500"></i>客户管理
                 </a>
-                <a href="${PB}${ROUTES['stats.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="stats.html">
+                <a href="${PB}${ROUTES['stats.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="stats.html" data-menu-key="stats">
                     <i class="ph ph-chart-bar text-lg mr-3 icon-base text-gray-500"></i>数据统计
                 </a>
-                <a href="${PB}${ROUTES['project.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="project.html">
+                <a href="${PB}${ROUTES['project.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="project.html" data-menu-key="project">
                     <i class="ph ph-kanban text-lg mr-3 icon-base text-gray-500"></i>项目管理
                 </a>
-                <a href="${PB}${ROUTES['accounts.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="accounts.html">
+                <a href="${PB}${ROUTES['accounts.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="accounts.html" data-menu-key="accounts">
                     <i class="ph ph-key text-lg mr-3 icon-base text-gray-500"></i>账号管理
                 </a>
-                <a href="${PB}${ROUTES['bookmarks.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="bookmarks.html">
+                <a href="${PB}${ROUTES['bookmarks.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="bookmarks.html" data-menu-key="bookmarks">
                     <i class="ph ph-bookmark-simple text-lg mr-3 icon-base text-gray-500"></i>网址收藏
                 </a>
-                <a href="${PB}${ROUTES['resume.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="resume.html">
+                <a href="${PB}${ROUTES['resume.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="resume.html" data-menu-key="resume">
                     <i class="ph ph-file-text text-lg mr-3 icon-base text-gray-500"></i>简历管理
                 </a>
-                <a href="${PB}${ROUTES['memo.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="memo.html">
+                <a href="${PB}${ROUTES['memo.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="memo.html" data-menu-key="memo">
                     <i class="ph ph-notepad text-lg mr-3 icon-base text-gray-500"></i>信息备忘录
                 </a>
-                <a href="${PB}${ROUTES['reminder.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="reminder.html">
+                <a href="${PB}${ROUTES['reminder.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="reminder.html" data-menu-key="reminder">
                     <i class="ph ph-bell-ringing text-lg mr-3 icon-base text-gray-500"></i>日期提醒
                 </a>
-                <a href="${PB}${ROUTES['settings.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="settings.html">
+                <a href="${PB}${ROUTES['settings.html']}" class="nav-link flex items-center px-4 py-2.5 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-medium" data-page="settings.html" data-menu-key="settings">
                     <i class="ph ph-gear text-lg mr-3 icon-base text-gray-500"></i>设置中心
                 </a>
             </nav>
@@ -138,6 +143,13 @@ function initSidebar() {
 
     // 将侧边栏插入到 body 最前面
     document.body.insertAdjacentHTML('afterbegin', sidebarHTML);
+
+    // 应用「设置中心 → 菜单选项」里用户关掉的菜单项。
+    // 只在首次插入时执行一次；之后用户在设置页改开关时，
+    // 由 SidebarMenuPrefs.setVisible() 内部直接调用 apply() 实时生效。
+    if (window.SidebarMenuPrefs && typeof window.SidebarMenuPrefs.apply === 'function') {
+        window.SidebarMenuPrefs.apply();
+    }
 
     // 平台管理：点击文字导航并自动展开子菜单
     const platformLink = document.querySelector('.nav-link[data-page="platform.html"]');

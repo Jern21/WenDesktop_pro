@@ -421,15 +421,7 @@ function attachUserContext(req, res, next) {
     var session = getSessionFromRequest(req);
     if (!session) return next();
     req.wtSession = session;
-    userContext.enter(session.username);
-    var cleanup = function () {
-        userContext.leave();
-        res.removeListener('finish', cleanup);
-        res.removeListener('close', cleanup);
-    };
-    res.on('finish', cleanup);
-    res.on('close', cleanup);
-    next();
+    userContext.run(session.username, function () { next(); });
 }
 
 function apiGuard() {
@@ -447,15 +439,7 @@ function apiGuard() {
             });
         }
         req.wtSession = session;
-        userContext.enter(session.username);
-        var cleanup = function () {
-            userContext.leave();
-            res.removeListener('finish', cleanup);
-            res.removeListener('close', cleanup);
-        };
-        res.on('finish', cleanup);
-        res.on('close', cleanup);
-        next();
+        userContext.run(session.username, function () { next(); });
     };
 }
 
@@ -482,6 +466,9 @@ module.exports = {
     clearCookie: clearCookie,
     pageGuard: pageGuard,
     apiGuard: apiGuard,
+    // /uploads 静态托管也要它：没有会话身份就无法判断「这份文件是不是你的」。
+    // pageGuard 只回答「登录了没」，不回答「你是谁」。
+    attachUserContext: attachUserContext,
     COOKIE_NAME: COOKIE_NAME,
     DEFAULT_TTL_MS: DEFAULT_TTL_MS,
     get enabled() { return AUTH_ENABLED; },

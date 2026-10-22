@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const dataBackups = require('./data-backups');
+const JsonFileStore = require('./json-file-store');
 
 /**
  * 生成唯一 ID（时间戳 + 随机串）
@@ -48,6 +49,7 @@ class Storage {
      */
     constructor(fileName) {
         this.fileName = fileName;
+        this._files = new JsonFileStore(fileName, { shape: 'array', ErrorClass: StorageError });
         // ⚠️ 这里**不能**把路径算出来存成属性。
         //
         // 所有 Storage 实例都是「模块加载时」创建的（routes 顶层的
@@ -81,8 +83,9 @@ class Storage {
      * 读路径对「文件不存在」返回空数组，所以不需要提前建。
      */
     _ensureFile() {
-        if (!fs.existsSync(this.filePath)) {
-            this._write([], { backup: false });
+        var scope = dataBackups.captureScope();
+        if (!fs.existsSync(dataBackups.getDataFilePath(this.fileName, scope))) {
+            this._write([], { backup: false, scope: scope });
         }
     }
 
@@ -100,37 +103,15 @@ class Storage {
      * @returns {Array}
      * @throws {StorageError}
      */
-    _read() {
-        if (!fs.existsSync(this.filePath)) return [];
-
-        let raw;
+    _read(scope) {
+        scope = scope || dataBackups.captureScope();
+        var filePath = dataBackups.getDataFilePath(this.fileName, scope);
         try {
-            raw = fs.readFileSync(this.filePath, 'utf-8');
+            return this._files.read(scope);
         } catch (e) {
-            throw new StorageError(this.fileName, this.filePath, e);
+            if (e instanceof StorageError) throw e;
+            throw new StorageError(this.fileName, filePath, e);
         }
-
-        // 空文件：可能是写入过程被打断，按空数据处理（此时确实没有可丢的内容）
-        if (raw.trim() === '') {
-            console.warn('[Storage] 数据文件为空，按空数据处理:', this.filePath);
-            return [];
-        }
-
-        let data;
-        try {
-            data = JSON.parse(raw);
-        } catch (e) {
-            throw new StorageError(this.fileName, this.filePath, e);
-        }
-
-        if (!Array.isArray(data)) {
-            throw new StorageError(
-                this.fileName,
-                this.filePath,
-                new Error('顶层结构不是数组，实际为 ' + (data === null ? 'null' : typeof data))
-            );
-        }
-        return data;
     }
 
     /**
@@ -142,11 +123,11 @@ class Storage {
         if (!Array.isArray(data)) {
             throw new Error('Storage 只能写入数组数据: ' + this.fileName);
         }
-
+        var scope = options.scope || dataBackups.captureScope();
         try {
-            dataBackups.writeJsonFile(this.fileName, data, options);
+            this._files.write(data, scope, options);
         } catch (e) {
-            console.error('[Storage] 写入文件失败:', this.filePath, e.message);
+            console.error('[Storage] 写入文件失败:', dataBackups.getDataFilePath(this.fileName, scope), e.message);
             throw e;
         }
     }
@@ -154,24 +135,24 @@ class Storage {
     /**
      * 写入前备份当前数据文件，并保留最近 MAX_BACKUPS_PER_FILE 份。
      */
-    _backupCurrentFile() {
-        return dataBackups.createBackup(this.fileName);
+    _backupCurrentFile(scope) {
+        return dataBackups.createBackup(this.fileName, scope || dataBackups.captureScope());
     }
 
     /**
      * 手动列出备份，便于后续恢复工具使用。
      */
-    listBackups() {
-        return dataBackups.listBackups(this.fileName);
+    listBackups(scope) {
+        return dataBackups.listBackups(this.fileName, scope || dataBackups.captureScope());
     }
 
     /**
      * 这份备份能不能用：必须是数组且能解析。
      * 只看大小不够 —— 备份也可能是在数据已经坏掉之后拍的。
      */
-    _isUsableBackup(backupName) {
+    _isUsableBackup(backupName, scope) {
         try {
-            const raw = fs.readFileSync(dataBackups.getBackupPath(this.fileName, backupName), 'utf-8');
+            const raw = fs.readFileSync(dataBackups.getBackupPath(this.fileName, backupName, scope), 'utf-8');
             return Array.isArray(JSON.parse(raw));
         } catch (e) {
             return false;
@@ -188,7 +169,8 @@ class Storage {
      * @returns {{restoredFrom: string, count: number, restoredAt: string}}
      */
     recoverFromBackup(backupName) {
-        const list = dataBackups.listBackups(this.fileName);
+        var scope = dataBackups.captureScope();
+        const list = dataBackups.listBackups(this.fileName, scope);
         if (!list.length) {
             throw new Error('没有可用备份：' + this.fileName);
         }
@@ -198,23 +180,23 @@ class Storage {
             if (!list.some(b => b.name === backupName)) {
                 throw new Error('找不到指定备份：' + backupName);
             }
-            if (!this._isUsableBackup(backupName)) {
+            if (!this._isUsableBackup(backupName, scope)) {
                 throw new Error('指定备份无法解析为数组：' + backupName);
             }
             chosen = backupName;
         } else {
             // 最新的一份未必可用（它可能就是坏掉那版拍的），从新到旧往下找
             for (const item of list) {
-                if (this._isUsableBackup(item.name)) { chosen = item.name; break; }
+                if (this._isUsableBackup(item.name, scope)) { chosen = item.name; break; }
             }
             if (!chosen) {
                 throw new Error('所有备份都无法解析为数组：' + this.fileName);
             }
         }
 
-        const result = dataBackups.restoreBackup(this.fileName, chosen);
+        const result = dataBackups.restoreBackup(this.fileName, chosen, scope);
         // 恢复后立刻自检，别把"恢复成功"建立在假设上
-        const count = this._read().length;
+        const count = this._read(scope).length;
         return {
             restoredFrom: chosen,
             count: count,
@@ -228,7 +210,7 @@ class Storage {
      * @returns {Array}
      */
     findAll(filter) {
-        let data = this._read();
+        let data = this._read(dataBackups.captureScope());
         if (filter && typeof filter === 'object') {
             data = data.filter(function (item) {
                 return Object.keys(filter).every(function (key) {
@@ -245,7 +227,7 @@ class Storage {
      * @returns {Object|null}
      */
     findById(id) {
-        return this._read().find(function (item) {
+        return this._read(dataBackups.captureScope()).find(function (item) {
             return item.id === id;
         }) || null;
     }
@@ -256,7 +238,8 @@ class Storage {
      * @returns {Object} 创建后的完整记录
      */
     create(data) {
-        var all = this._read();
+        var scope = dataBackups.captureScope();
+        var all = this._read(scope);
         var now = new Date().toISOString();
         var record = Object.assign({}, data, {
             id: generateId(),
@@ -264,7 +247,7 @@ class Storage {
             updatedAt: now
         });
         all.unshift(record); // 最新的排在前面
-        this._write(all);
+        this._write(all, { scope: scope });
         return record;
     }
 
@@ -274,7 +257,8 @@ class Storage {
      * @returns {Array}
      */
     createMany(items) {
-        var all = this._read();
+        var scope = dataBackups.captureScope();
+        var all = this._read(scope);
         var now = new Date().toISOString();
         var records = items.map(function (item) {
             return Object.assign({}, item, {
@@ -284,7 +268,7 @@ class Storage {
             });
         });
         all = records.concat(all);
-        this._write(all);
+        this._write(all, { scope: scope });
         return records;
     }
 
@@ -295,7 +279,8 @@ class Storage {
      * @returns {Object|null} 更新后的完整记录，不存在返回 null
      */
     update(id, patch) {
-        var all = this._read();
+        var scope = dataBackups.captureScope();
+        var all = this._read(scope);
         var idx = all.findIndex(function (item) {
             return item.id === id;
         });
@@ -312,7 +297,7 @@ class Storage {
             createdAt: original.createdAt,
             updatedAt: new Date().toISOString()
         });
-        this._write(all);
+        this._write(all, { scope: scope });
         return all[idx];
     }
 
@@ -322,13 +307,14 @@ class Storage {
      * @returns {boolean} 是否删除成功
      */
     remove(id) {
-        var all = this._read();
+        var scope = dataBackups.captureScope();
+        var all = this._read(scope);
         var before = all.length;
         var filtered = all.filter(function (item) {
             return item.id !== id;
         });
         if (filtered.length === before) return false;
-        this._write(filtered);
+        this._write(filtered, { scope: scope });
         return true;
     }
 
@@ -338,13 +324,14 @@ class Storage {
      * @returns {number} 删除的数量
      */
     removeMany(ids) {
-        var all = this._read();
+        var scope = dataBackups.captureScope();
+        var all = this._read(scope);
         var idSet = new Set(ids);
         var filtered = all.filter(function (item) {
             return !idSet.has(item.id);
         });
         var removed = all.length - filtered.length;
-        if (removed > 0) this._write(filtered);
+        if (removed > 0) this._write(filtered, { scope: scope });
         return removed;
     }
 
@@ -352,7 +339,8 @@ class Storage {
      * 清空所有数据
      */
     clear() {
-        this._write([]);
+        var scope = dataBackups.captureScope();
+        this._write([], { scope: scope });
     }
 
     /**
@@ -360,7 +348,7 @@ class Storage {
      * @returns {number}
      */
     count() {
-        return this._read().length;
+        return this._read(dataBackups.captureScope()).length;
     }
 }
 

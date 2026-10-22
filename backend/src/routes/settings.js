@@ -21,36 +21,14 @@ var router = express.Router();
 var fs = require('fs');
 var resp = require('../utils/response');
 var dataBackups = require('../utils/data-backups');
-var secretBox = require('../utils/secret-box');
+var settingsRepository = require('../utils/settings-repository');
 
-var DEFAULT_SETTINGS = {
-    profile: {
-        nickname: '',
-        realName: '',
-        phone: '',
-        email: '',
-        role: '',
-        city: '',
-        bio: '',
-        avatar: ''
-    },
-    theme: 'pure-white',
-    notifications: {
-        orderReminders: true,
-        customerMessages: true,
-        platformUpdates: false,
-        weeklyReport: true
-    },
-    backup: {
-        autoBackup: false,
-        lastBackup: null
-    },
-    exportFormat: 'json',
-    cleanupDays: 30,
-    devLedger: {
-        goalAmount: 20000
-    }
-};
+var DEFAULT_SETTINGS = settingsRepository.DEFAULT_SETTINGS;
+var readSettings = settingsRepository.read;
+var saveSettings = settingsRepository.save;
+var maskSecrets = settingsRepository.maskSecrets;
+var stripMaskedSecrets = settingsRepository.stripMaskedSecrets;
+var deepMerge = settingsRepository.deepMerge;
 
 // ========== 读取设置 ==========
 router.get('/', resp.asyncHandler(function (req, res) {
@@ -60,9 +38,10 @@ router.get('/', resp.asyncHandler(function (req, res) {
 // ========== 更新设置 ==========
 router.put('/', resp.asyncHandler(function (req, res) {
     try {
-        var current = readSettings();
+        var scope = dataBackups.captureScope();
+        var current = readSettings(scope);
         var updated = deepMerge(current, stripMaskedSecrets(req.body || {}));
-        saveSettings(updated);
+        saveSettings(updated, { scope: scope });
         return resp.success(res, maskSecrets(updated));
     } catch (e) {
         return resp.error(res, '保存设置失败: ' + e.message, 500);
@@ -71,23 +50,25 @@ router.put('/', resp.asyncHandler(function (req, res) {
 
 // ========== 重置为默认 ==========
 router.post('/reset', resp.asyncHandler(function (req, res) {
-    saveSettings(DEFAULT_SETTINGS);
+    var scope = dataBackups.captureScope();
+    saveSettings(DEFAULT_SETTINGS, { scope: scope });
     return resp.success(res, maskSecrets(DEFAULT_SETTINGS));
 }));
 
 // ========== 本地备份历史 ==========
 router.get('/backups', resp.asyncHandler(function (req, res) {
-    return resp.success(res, dataBackups.getBackupSummary());
+    return resp.success(res, dataBackups.getBackupSummary(dataBackups.captureScope()));
 }));
 
 // ========== 创建本地备份快照 ==========
 router.post('/backups', resp.asyncHandler(function (req, res) {
-    var settings = readSettings();
+    var scope = dataBackups.captureScope();
+    var settings = readSettings(scope);
     settings.backup = settings.backup || {};
     settings.backup.lastBackup = new Date().toISOString();
-    saveSettings(settings, { backup: false });
+    saveSettings(settings, { backup: false, scope: scope });
 
-    var created = dataBackups.createAllBackups();
+    var created = dataBackups.createAllBackups(scope);
     return resp.success(res, {
         created: created,
         count: created.length,
@@ -98,7 +79,7 @@ router.post('/backups', resp.asyncHandler(function (req, res) {
 // ========== 下载单个备份文件 ==========
 router.get('/backups/:fileName/:backupName', resp.asyncHandler(function (req, res) {
     try {
-        var backupPath = dataBackups.getBackupPath(req.params.fileName, req.params.backupName);
+        var backupPath = dataBackups.getBackupPath(req.params.fileName, req.params.backupName, dataBackups.captureScope());
         if (!fs.existsSync(backupPath)) {
             return resp.notFound(res, '备份文件不存在');
         }
@@ -111,7 +92,7 @@ router.get('/backups/:fileName/:backupName', resp.asyncHandler(function (req, re
 // ========== 恢复单个数据文件 ==========
 router.post('/backups/:fileName/:backupName/restore', resp.asyncHandler(function (req, res) {
     try {
-        var restored = dataBackups.restoreBackup(req.params.fileName, req.params.backupName);
+        var restored = dataBackups.restoreBackup(req.params.fileName, req.params.backupName, dataBackups.captureScope());
         return resp.success(res, {
             restored: restored,
             summary: dataBackups.getBackupSummary()
@@ -124,14 +105,11 @@ router.post('/backups/:fileName/:backupName/restore', resp.asyncHandler(function
 // ========== 导出全部数据备份 ==========
 router.post('/backup', resp.asyncHandler(function (req, res) {
     var backup = {};
-    var files = dataBackups.listDataFiles();
+    var scope = dataBackups.captureScope();
+    var files = dataBackups.listDataFiles(scope);
 
     files.forEach(function (fileName) {
-        try {
-            backup[fileName] = dataBackups.readJsonFile(fileName, []);
-        } catch (e) {
-            backup[fileName] = [];
-        }
+        backup[fileName] = dataBackups.readJsonFile(fileName, [], scope);
     });
 
     backup._meta = {
@@ -141,10 +119,10 @@ router.post('/backup', resp.asyncHandler(function (req, res) {
 
     // 更新备份时间
     try {
-        var settings = readSettings();
+        var settings = readSettings(scope);
         settings.backup = settings.backup || {};
         settings.backup.lastBackup = new Date().toISOString();
-        saveSettings(settings, { backup: false });
+        saveSettings(settings, { backup: false, scope: scope });
     } catch (e) {}
 
     return resp.success(res, backup);
@@ -158,10 +136,11 @@ router.post('/restore', resp.asyncHandler(function (req, res) {
     }
 
     var restored = [];
+    var scope = dataBackups.captureScope();
     Object.keys(backup).forEach(function (key) {
         if (key === '_meta') return;
         try {
-            dataBackups.writeJsonFile(key, backup[key]);
+            dataBackups.writeJsonFile(key, backup[key], { scope: scope });
             restored.push(key);
         } catch (e) {
             console.error('[Restore] 恢复失败:', key, e.message);
@@ -170,71 +149,5 @@ router.post('/restore', resp.asyncHandler(function (req, res) {
 
     return resp.success(res, { restored: restored, count: restored.length });
 }));
-
-// ========== 深度合并工具 ==========
-function readSettings() {
-    var merged = deepMerge(DEFAULT_SETTINGS, dataBackups.readJsonFile('settings', DEFAULT_SETTINGS) || {});
-    // apiKey 在磁盘上是密文，内存里统一还原成明文；
-    // 返回给前端时再脱敏（见下面的 maskSecrets），避免明文出网。
-    if (merged.imageGen && typeof merged.imageGen.apiKey === 'string') {
-        merged.imageGen.apiKey = secretBox.decryptField(merged.imageGen.apiKey);
-    }
-    return merged;
-}
-
-function saveSettings(settings, options) {
-    var toWrite = settings;
-    if (settings && settings.imageGen && typeof settings.imageGen.apiKey === 'string') {
-        toWrite = Object.assign({}, settings, {
-            imageGen: Object.assign({}, settings.imageGen, {
-                apiKey: secretBox.encrypt(settings.imageGen.apiKey)
-            })
-        });
-    }
-    dataBackups.writeJsonFile('settings', toWrite, options);
-    return settings;
-}
-
-/**
- * 出网前脱敏：接口只暴露「有没有配」「首尾各四位」，不返回明文。
- * 与 image-gen 的 apiKeyMasked 保持一致风格。
- */
-function maskSecrets(settings) {
-    var copy = JSON.parse(JSON.stringify(settings || {}));
-    if (copy.imageGen) {
-        var key = String(copy.imageGen.apiKey || '');
-        copy.imageGen.apiKeyConfigured = !!key;
-        copy.imageGen.apiKey = key
-            ? (key.slice(0, 4) + '****' + key.slice(-4))
-            : '';
-    }
-    return copy;
-}
-
-/**
- * 前端拿到的 apiKey 是脱敏的，如果它把整份设置原样 PUT 回来，
- * 不能拿 'sk-a****1234' 把真实密钥覆盖掉 —— 带 **** 的字段直接丢弃。
- */
-function stripMaskedSecrets(body) {
-    if (!body || !body.imageGen) return body;
-    var incoming = body.imageGen.apiKey;
-    if (typeof incoming !== 'string' || incoming.indexOf('****') === -1) return body;
-
-    var imageGen = Object.assign({}, body.imageGen);
-    delete imageGen.apiKey;
-    return Object.assign({}, body, { imageGen: imageGen });
-}
-
-function deepMerge(target, source) {
-    var result = Object.assign({}, target);
-    Object.keys(source).forEach(function (key) {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-            result[key] = deepMerge(target[key] || {}, source[key]);
-        } else {
-            result[key] = source[key];
-        }
-    });
-    return result;
-}
 
 module.exports = router;

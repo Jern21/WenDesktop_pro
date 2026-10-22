@@ -4,6 +4,7 @@ import { navigate } from '../../router.js';
 var THEME_KEY = 'wt_theme';
 
 export function mountSettingsPanel(container) {
+    var disposed = false;
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
 
     container.innerHTML =
@@ -35,6 +36,11 @@ export function mountSettingsPanel(container) {
 
     container.querySelector('#panel-logout').addEventListener('click', async function () {
         await logout();
+        if (disposed) return;
         navigate('/login', { replace: true });
     });
+
+    return {
+        destroy: function () { disposed = true; }
+    };
 }

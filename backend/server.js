@@ -165,7 +165,13 @@ app.get('/CHANGELOG.json', function (req, res) {
 app.use(express.static(frontendDir));
 
 // 托管上传的文件：用户目录 + 旧的扁平 uploads 目录，路径由 utils/uploads 解析
-app.use('/uploads', require('./src/utils/uploads').staticHandler());
+//
+// ⚠️ attachUserContext 不能省。
+//    staticHandler 要靠 req.wtSession 判断「这份文件归不归当前登录的人」；
+//    只挂 pageGuard 的话，它只能回答「登录了没」，回答不了「你是谁」——
+//    结果就是任何登录用户都能拼出别人的 /uploads/<别人>/<文件> 直接下载。
+//    实测过：免密的 trial 账号能读到主账号的客户合同。
+app.use('/uploads', auth.attachUserContext, require('./src/utils/uploads').staticHandler());
 
 // SPA 路由回退：所有非 /api 的 GET 请求都返回对应文件，找不到就回退到 app.html
 //

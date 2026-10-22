@@ -134,7 +134,7 @@
 
         // ========== 项目数据（从后端 API 加载） ==========
         var projectCache = [];
-        var projectMap = {};
+        var projectById = {};
 
         // 看板列配置
         var KANBAN_COLUMNS = [
@@ -294,12 +294,12 @@
             return fetch('/api/projects').then(function (r) { return r.json(); }).then(function (res) {
                 if (!res.success) { console.error('[Project] 加载失败:', res.error); return; }
                 projectCache = res.data || [];
-                projectMap = {};
+                projectById = {};
                 projectCache.forEach(function (p) {
                     // 兼容 description / desc 字段
                     if (!p.desc) p.desc = p.description || '';
                     if (!p.nginxConfigs) p.nginxConfigs = [];
-                    projectMap[p.name] = p;
+                    if (p.id) projectById[p.id] = p;
                 });
                 renderAll();
             }).catch(function (err) {
@@ -470,7 +470,7 @@
 
             var avatarClass = isClosed ? 'grayscale' : '';
 
-            return '<div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow group' + opacityClass + '">' +
+            return '<div class="bg-white rounded-lg border border-gray-100 p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow group' + opacityClass + '" data-project-id="' + escapeHtml(p.id || '') + '">' +
                 '<div class="flex items-start justify-between mb-2">' + badgeHtml +
                 '<button class="text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><i class="ph ph-dots-three-vertical"></i></button>' +
                 '</div>' +
@@ -516,7 +516,7 @@
 
             var scopeLabel = scope === 'personal' ? '个人' : escapeHtml(p.customer || '—');
 
-            return '<tr class="border-b border-gray-50 hover:bg-gray-50/80 transition-colors cursor-pointer">' +
+            return '<tr class="border-b border-gray-50 hover:bg-gray-50/80 transition-colors cursor-pointer" data-project-id="' + escapeHtml(p.id || '') + '">' +
                 '<td class="py-3 px-4"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full ' + dotClass + ' flex-shrink-0"></span>' +
                 '<span class="font-medium text-gray-800 truncate">' + escapeHtml(p.name) + '</span></div>' +
                 (p.code ? '<p class="text-xs text-gray-400 mt-0.5 truncate">' + escapeHtml(p.code) + '</p>' : '') +
@@ -592,19 +592,15 @@
         }
 
         // ========== 获取项目名称 ==========
-        function getProjectNameFromCard(card) {
-            var h4 = card.querySelector('h4');
-            if (h4) return h4.textContent.trim();
-            return '';
+        function getProjectIdFromCard(card) {
+            return (card && card.getAttribute('data-project-id')) || '';
         }
-        function getProjectNameFromRow(row) {
-            var span = row.querySelector('td span.font-medium');
-            if (span) return span.textContent.trim();
-            return '';
+        function getProjectIdFromRow(row) {
+            return (row && row.getAttribute('data-project-id')) || '';
         }
-        function getProjectData(name) {
-            if (name && projectMap[name]) {
-                var d = projectMap[name];
+        function getProjectData(projectId) {
+            if (projectId && projectById[projectId]) {
+                var d = projectById[projectId];
                 if (!d.nginxConfigs) d.nginxConfigs = [];
                 if (!d.desc) d.desc = d.description || '';
                 return d;
@@ -790,7 +786,7 @@ break;
 
             // 1. 乐观更新本地数据
             data.status = newStatus;
-            if (projectMap[projectName]) projectMap[projectName].status = newStatus;
+            if (projectById[projectName]) projectById[projectName].status = newStatus;
 
             // 2. 重新渲染看板和列表
             renderAll();
@@ -802,7 +798,7 @@ break;
                         console.error('[Project] 移动状态失败:', res.error);
                         showToast('移动状态失败，正在恢复...', 'ph ph-warning', '#fbbf24');
                         data.status = oldStatus;
-                        if (projectMap[projectName]) projectMap[projectName].status = oldStatus;
+                        if (projectById[projectName]) projectById[projectName].status = oldStatus;
                         renderAll();
                     }
                 }).catch(function (err) {
@@ -1271,10 +1267,8 @@ break;
                         // 重新从 API 加载数据并渲染
                         loadProjects().then(function () {
                             // 如果详情面板打开，刷新内容
-                            if (currentDetailProject !== null) {
-                                var newName = (name !== projectName) ? name : projectName;
-                                currentDetailProject = newName;
-                                showProjectDetail(newName);
+                            if (currentDetailProject) {
+                                showProjectDetail(currentDetailProject);
                             }
                         });
                     }).catch(function (err) {
@@ -1659,7 +1653,7 @@ break;
                         if (e.target.closest('button')) return;
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        var name = getProjectNameFromCard(card);
+                        var name = getProjectIdFromCard(card);
                         if (!name) return;
                         showContextMenu(e.clientX, e.clientY, name);
                     }, true);
@@ -1679,7 +1673,7 @@ break;
                         if (e.target.closest('button')) return;
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        var name = getProjectNameFromRow(row);
+                        var name = getProjectIdFromRow(row);
                         if (!name) return;
                         showContextMenu(e.clientX, e.clientY, name);
                     }, true);

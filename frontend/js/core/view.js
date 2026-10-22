@@ -16,6 +16,7 @@
  *       template: 'views/orders.html',
  *       async mount(root, ctx) {
  *           var timer = setInterval(poll, 5000);
+ *           ctx.listen(window, 'resize', onResize);
  *           ctx.onCleanup(function () { clearInterval(timer); });
  *       }
  *   });
@@ -24,6 +25,12 @@
     'use strict';
 
     var App = global.App = global.App || {};
+    var nativeWindowAdd = typeof global.addEventListener === 'function'
+        ? global.addEventListener.bind(global)
+        : function () {};
+    var nativeDocumentAdd = (typeof document !== 'undefined' && typeof document.addEventListener === 'function')
+        ? document.addEventListener.bind(document)
+        : function () {};
 
     var registry = {};        // name -> definition
     var cleanupStack = [];    // 当前 view 登记的清理函数（逆序执行）
@@ -80,6 +87,24 @@
             /** 站内跳转 */
             navigate: function (to, options) {
                 return App.router.navigate(to, options);
+            },
+
+            /**
+             * 注册监听，并在离开页面时卸掉。
+             * 用创建上下文时拿到的原始 addEventListener，
+             * 避免视图里临时替换 window.addEventListener 之后，异步回调注册的监听进不了清理列表。
+             */
+            listen: function (target, type, handler, options) {
+                if (!target || typeof target.addEventListener !== 'function') return function () {};
+                var add = target.addEventListener;
+                if (target === global) add = nativeWindowAdd;
+                else if (typeof document !== 'undefined' && target === document) add = nativeDocumentAdd;
+                add.call(target, type, handler, options);
+                var remove = function () {
+                    target.removeEventListener(type, handler, options);
+                };
+                ctx.onCleanup(remove);
+                return remove;
             }
         };
 

@@ -104,6 +104,7 @@
 
                         // Initialize ECharts for Trend Chart（接入后端数据）
                         var trendChartInstance = null;
+                        var trendResizeBound = false;
                         var trendDays = 7;
 
                         function initTrendChart() {
@@ -213,9 +214,9 @@
                                     console.error('加载图表数据失败:', err);
                                 });
 
-                            if (!window.__trendChartResizeBound) {
-                                window.__trendChartResizeBound = true;
-                                window.addEventListener('resize', function() {
+                            if (!trendResizeBound) {
+                                trendResizeBound = true;
+                                ctx.listen(window, 'resize', function () {
                                     if (trendChartInstance) trendChartInstance.resize();
                                 });
                             }

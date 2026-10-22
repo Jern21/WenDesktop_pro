@@ -2,6 +2,7 @@
     'use strict';
 
     // ========== 平台 SVG 图标路径映射 ==========
+    var bellPositionBound = false;
     var PLATFORM_ICONS = {
         xianyu: { file: '闲鱼.svg', name: '闲鱼' },
         xiaohongshu: { file: '小红书.svg', name: '小红书' },
@@ -481,8 +482,8 @@
 
         // 定位浮窗 + 绑定 resize/scroll 更新
         positionBellDropdown();
-        if (!window.__bellPosBound) {
-            window.__bellPosBound = true;
+        if (!bellPositionBound) {
+            bellPositionBound = true;
             window.addEventListener('resize', positionBellDropdown);
             window.addEventListener('scroll', positionBellDropdown, true);
         }
