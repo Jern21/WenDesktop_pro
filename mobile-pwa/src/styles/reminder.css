@@ -121,6 +121,16 @@
     opacity: 0.6;
 }
 
+/* 提醒项进左滑行：间距挪到行上，动作条高度跟卡片对齐 */
+.rem-group .swipe-row,
+.rem-day-list .swipe-row {
+    margin: 0 0 8px;
+    border-radius: 14px;
+}
+.swipe-row .rem-item {
+    margin-bottom: 0;
+}
+
 .rem-item > span:last-child {
     flex: 1;
     min-width: 0;

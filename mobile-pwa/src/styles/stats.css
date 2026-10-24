@@ -47,6 +47,15 @@
     background: var(--shell-surface);
 }
 
+/* 账号块进左滑行：间距挪到行上，动作条高度跟卡片对齐 */
+.st-body .swipe-row {
+    margin: 0 0 12px;
+    border-radius: 14px;
+}
+.st-body .swipe-row .st-block {
+    margin-bottom: 0;
+}
+
 .st-block h2 {
     margin: 0 0 10px;
     font-size: 0.875rem;

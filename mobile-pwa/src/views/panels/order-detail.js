@@ -1,8 +1,9 @@
 /**
  * 订单详情
  *
- * 手机上只改两件事：订单状态、付款状态。部分付款必须填 1–99 的比例。
- * 新建、改字段、传附件留给桌面端。
+ * 手机上能改：订单状态、付款状态（部分付款必须填 1–99 的比例）、
+ * 以及底部「编辑」——字段表单在 components/order-form.js，列表左滑用的是同一份。
+ * 新建、传附件留给桌面端。
  */
 import '../../styles/orders.css';
 import { orders } from '../../api/resources.js';
@@ -20,9 +21,10 @@ import {
     ORDER_STATUS_LABELS
 } from '../../lib/format.js';
 import { resolveAssetUrl, isImagePath, wireImageFallback } from '../../lib/urls.js';
-import { toast } from '../../lib/toast.js';
+import { toast, confirmSheet } from '../../lib/toast.js';
 import { goBack, navigate } from '../../router.js';
-import { rememberOrderPatch } from '../order-session.js';
+import { rememberOrderPatch, rememberOrderRemoval } from '../order-session.js';
+import { openOrderForm } from '../../components/order-form.js';
 
 var PAY_OPTIONS = ['未付款', '部分付款', '已结清'];
 
@@ -188,7 +190,9 @@ export function mountOrderDetailPanel(container, route) {
         bar.removeAttribute('hidden');
         bar.innerHTML =
             '<button type="button" data-act="status">订单状态</button>' +
-            '<button type="button" data-act="payment">付款状态</button>';
+            '<button type="button" data-act="payment">付款状态</button>' +
+            '<button type="button" data-act="edit">编辑</button>' +
+            '<button type="button" data-act="del" class="is-danger">删除</button>';
         if (saving) setBusy(true);
     }
 
@@ -385,6 +389,34 @@ export function mountOrderDetailPanel(container, route) {
                         return afterSave(res, note);
                     });
                 }
+            });
+        }
+        if (act === 'edit') {
+            // 与列表左滑共用 components/order-form.js —— 字段和校验只有一份
+            openOrderForm(current, {
+                onSave: function (patch) {
+                    return orders.update(id, patch).then(function (res) {
+                        return afterSave(res, '订单已更新');
+                    });
+                }
+            });
+        }
+        if (act === 'del') {
+            confirmSheet({
+                title: '删除订单？',
+                message: '「' + (current.projectName || '这笔订单') + '」删除后不可恢复。',
+                confirmText: '删除',
+                danger: true
+            }).then(function (ok) {
+                if (!ok || !alive) return;
+                orders.remove(id).then(function () {
+                    if (!alive) return;
+                    rememberOrderRemoval(id);
+                    toast.success('已删除');
+                    goBack('/orders');
+                }).catch(function (err) {
+                    toast.error((err && err.message) || '删除失败');
+                });
             });
         }
     });

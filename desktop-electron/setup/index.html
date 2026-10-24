@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>连接工作台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>连接你的工作台</h1>
+    <p>填写桌面网页版地址，登录后即可使用服务器上的业务数据。</p>
+    <form>
+      <label for="server-url">桌面网页地址</label>
+      <input id="server-url" type="url" placeholder="https://work.example.com/app.html" required autofocus>
+      <p class="hint">线上地址使用 HTTPS，可在“工作台”菜单中修改。</p>
+      <p id="error" role="alert"></p>
+      <button type="submit">连接工作台</button>
+    </form>
+  </main>
+  <script src="page.js"></script>
+</body>
+</html>

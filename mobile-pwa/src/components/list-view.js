@@ -459,10 +459,47 @@ export function createListView(opts) {
     if (seeded) applySeed(o.seed);
     if (o.autoLoad !== false && !seeded) reload();
 
+    /* ---------- 行级增删改 ----------
+     * 列表页上的编辑/删除（比如左滑）只想动一行，
+     * 不该为一条记录把整页（含滚动位置）打回骨架屏重拉。 */
+    function keyOfItem(item) {
+        return o.keyOf ? o.keyOf(item) : (item && item.id);
+    }
+
+    function updateItem(patch) {
+        var key = keyOfItem(patch);
+        if (key === undefined || key === null) return false;
+        for (var i = 0; i < state.items.length; i++) {
+            if (keyOfItem(state.items[i]) === key) {
+                state.items[i] = Object.assign({}, state.items[i], patch);
+                renderList();
+                if (o.onLoaded) o.onLoaded(state.items);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function removeItemById(key) {
+        for (var i = 0; i < state.items.length; i++) {
+            if (keyOfItem(state.items[i]) === key) {
+                state.items.splice(i, 1);
+                state.total = Math.max(0, state.total - 1);
+                if (!state.items.length) renderEmpty();
+                else renderList();
+                if (o.onLoaded) o.onLoaded(state.items);
+                return true;
+            }
+        }
+        return false;
+    }
+
     return {
         reload: reload,
         refresh: refresh,
         loadMore: loadMore,
+        updateItem: updateItem,
+        removeItemById: removeItemById,
         getItems: function () { return state.items.slice(); },
         getSnapshot: function () {
             return {

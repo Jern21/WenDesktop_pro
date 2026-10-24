@@ -1,0 +1,13 @@
+{
+  "appId": "com.wen.workbench",
+  "appName": "文工作台",
+  "webDir": "dist-android",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

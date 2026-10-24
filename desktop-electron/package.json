@@ -1,0 +1,35 @@
+{
+  "name": "wen-workbench-desktop",
+  "version": "1.0.0",
+  "description": "文的项目工作台 · 联网桌面版",
+  "author": "Wen Workbench",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/policy.test.js",
+    "test:smoke": "electron test/smoke.js",
+    "pack": "electron-builder --win --x64 --dir --publish never",
+    "dist": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.wen.workbench.desktop",
+    "productName": "文的项目工作台",
+    "asar": true,
+    "files": ["main.js", "policy.js", "setup/**"],
+    "directories": { "output": "dist" },
+    "win": { "target": ["nsis"], "signAndEditExecutable": false },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "WenWorkbench-Setup-${version}-${arch}.${ext}"
+    }
+  }
+}

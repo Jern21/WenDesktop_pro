@@ -74,6 +74,11 @@
     font-size: 0.75rem;
 }
 
+/* 左滑容器跟着卡片圆角走，动作条露出时不顶出直角 */
+.ord-list .swipe-row {
+    border-radius: 14px;
+}
+
 .ord-card {
     padding: 12px 12px 10px;
     border: 1px solid var(--shell-border);
@@ -319,6 +324,10 @@
 .ord-actions button {
     flex: 1;
     height: 42px;
+}
+
+.ord-actions button.is-danger {
+    background: var(--ui-danger);
 }
 
 .ord-actions button:disabled {

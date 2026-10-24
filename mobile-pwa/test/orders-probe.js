@@ -233,6 +233,45 @@ async function run() {
         backCard.textContent.indexOf('开发/设计中') !== -1 && backCard.textContent.indexOf('40%') !== -1,
         backCard.textContent.replace(/\s+/g, ' ').slice(0, 80));
 
+    /* ---------- 左滑编辑 / 删除 ---------- */
+    var row = backCard.closest('.swipe-row');
+    record('卡片包了左滑容器', !!row, '');
+    var editBtn = row && row.querySelector('[data-swipe="edit"]');
+    var delBtn = row && row.querySelector('[data-swipe="del"]');
+    record('滑开区有编辑和删除按钮', !!(editBtn && delBtn), '');
+
+    // 编辑：改项目名 → 保存 → 列表卡片就地更新
+    editBtn.click();
+    await waitFor(function () {
+        return document.querySelector('.of-panel input[data-key="projectName"]');
+    }, 4000, '编辑表单弹层');
+    record('编辑按钮打开共享表单', true, '');
+    var nameInput = document.querySelector('.of-panel input[data-key="projectName"]');
+    nameInput.value = stamp + '-改';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('.of-panel [data-act="save"]').click();
+    await waitFor(function () {
+        var c = cardByText(stamp);
+        return c && c.textContent.indexOf(stamp + '-改') !== -1;
+    }, 8000, '卡片就地更新');
+    record('编辑保存后卡片就地更新', true, '');
+    // close() 有 200ms 退场动画才摘节点，等它走完
+    await waitFor(function () { return !document.querySelector('.of-panel'); }, 3000, '表单关闭');
+    record('表单弹层已关', true, '');
+
+    // 删除：点删除钮 → 危险确认层 → 确认 → 卡片消失
+    var row2 = cardByText(stamp).closest('.swipe-row');
+    row2.querySelector('[data-swipe="del"]').click();
+    await waitFor(function () {
+        var s = document.querySelector('.sheet-backdrop .sheet-title');
+        return s && s.textContent.indexOf('删除') !== -1;
+    }, 4000, '删除确认层');
+    record('删除按钮弹危险确认', true, '');
+    document.querySelector('.sheet-backdrop [data-act="confirm"]').click();
+    await waitFor(function () { return !cardByText(stamp); }, 8000, '卡片消失');
+    record('确认删除后卡片消失', true, '');
+    createdId = '';   // 已经在 UI 里删掉，cleanup 不用再来一次
+
     return results;
 }
 

@@ -1,5 +1,5 @@
 /**
- * 发帖记录。列表是分页对象，筛选交给后端。只读。
+ * 发帖记录。列表是分页对象，筛选交给后端。左滑可编辑/删除（swipe-crud 共享接线）。
  */
 import '../../styles/browse.css';
 import { platformPosts } from '../../api/resources.js';
@@ -8,6 +8,7 @@ import { escapeHtml, formatDate, platformLabel, postStatusLabel } from '../../li
 import { assetSrc, wireImageFallback } from '../../lib/urls.js';
 import { navigate } from '../../router.js';
 import { postListSession } from '../browse-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var PLATFORMS = [
     { value: '', label: '全部' },
@@ -23,6 +24,17 @@ var STATUSES = [
     { value: 'pending', label: '待发布' },
     { value: 'draft', label: '草稿' },
     { value: 'offline', label: '已下线' }
+];
+
+/** 编辑表单字段（swipe-crud → form-sheet 共用引擎） */
+var POST_FIELDS = [
+    { key: 'title', label: '标题', full: true },
+    { key: 'platform', label: '平台', type: 'select',
+      options: PLATFORMS.filter(function (p) { return p.value; }) },
+    { key: 'status', label: '状态', type: 'select',
+      options: STATUSES.filter(function (s) { return s.value; }) },
+    { key: 'publishTime', label: '发布时间', type: 'date' },
+    { key: 'videoUrl', label: '视频链接' }
 ];
 
 export function renderPostCard(post) {
@@ -97,7 +109,7 @@ export function mountPlatformPostsPanel(container) {
             if (filters.status) params.status = filters.status;
             return platformPosts.list(params, { signal: ctx.signal });
         },
-        renderItem: function (item) { return renderPostCard(item); },
+        renderItem: function (item) { return swipeRowHtml(renderPostCard(item)); },
         onItemClick: function (item) {
             if (!item || !item.id) return;
             postListSession.scrollTop = scroller.scrollTop;
@@ -111,6 +123,22 @@ export function mountPlatformPostsPanel(container) {
                 requestAnimationFrame(function () { scroller.scrollTop = y; });
             }
         }
+    });
+
+    var alive = true;
+    var swipe = attachSwipeCrud(listHost, {
+        itemOf: function (row) {
+            var idx = parseInt(row.parentNode.getAttribute('data-index'), 10);
+            return isNaN(idx) ? null : lv.getItems()[idx];
+        },
+        title: '编辑发帖',
+        labelOf: function (p) { return p.title || '这条发帖'; },
+        fields: POST_FIELDS,
+        update: function (id, patch) { return platformPosts.update(id, patch); },
+        remove: function (id) { return platformPosts.remove(id); },
+        updated: function (saved) { lv.updateItem(saved); },
+        removed: function (id) { lv.removeItemById(id); },
+        alive: function () { return alive; }
     });
 
     function reloadFromFilters() {
@@ -146,6 +174,8 @@ export function mountPlatformPostsPanel(container) {
 
     return {
         destroy: function () {
+            alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             container.removeEventListener('click', onClick);
             if (lv) {

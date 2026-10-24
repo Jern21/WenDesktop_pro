@@ -1,6 +1,6 @@
 /**
  * 链接收藏。点开前记下一次点击，只打开 http/https。
- * 不在这里新建或修改。
+ * 左滑可编辑/删除（swipe-crud 共享接线）；不在这里新建。
  */
 import '../../styles/browse.css';
 import { bookmarks } from '../../api/resources.js';
@@ -9,6 +9,7 @@ import { escapeHtml } from '../../lib/format.js';
 import { safeHttpUrl } from '../../lib/urls.js';
 import { toast } from '../../lib/toast.js';
 import { bookmarkListSession } from '../browse-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var CATEGORY_FALLBACK = [
     { id: 'docs', name: '技术文档' },
@@ -70,12 +71,12 @@ export function mountBookmarksPanel(container) {
 
     function renderItem(item) {
         var href = safeHttpUrl(item.url);
-        return '<article class="br-card" data-id="' + escapeHtml(item.id) + '" data-href="' + escapeHtml(href) + '">' +
+        return swipeRowHtml('<article class="br-card" data-id="' + escapeHtml(item.id) + '" data-href="' + escapeHtml(href) + '">' +
             '<strong>' + escapeHtml(item.title || '未命名链接') + '</strong>' +
             '<p class="br-meta">' + escapeHtml(names[item.category] || item.category || '其他') +
             ' · ' + (item.clickCount || 0) + ' 次</p>' +
             '<p class="br-meta">' + escapeHtml(item.url || '') + '</p>' +
-            '</article>';
+            '</article>');
     }
 
     var lv = createListView({
@@ -110,6 +111,27 @@ export function mountBookmarksPanel(container) {
         }
     });
 
+    var alive = true;
+    var swipe = attachSwipeCrud(listHost, {
+        itemOf: function (row) {
+            var idx = parseInt(row.parentNode.getAttribute('data-index'), 10);
+            return isNaN(idx) ? null : lv.getItems()[idx];
+        },
+        title: '编辑收藏',
+        labelOf: function (b) { return b.title || '这条收藏'; },
+        fields: [
+            { key: 'title', label: '标题', full: true },
+            { key: 'url', label: '链接', full: true, placeholder: 'https://' },
+            { key: 'category', label: '分类', placeholder: 'docs/tools/…' },
+            { key: 'description', label: '描述', placeholder: '选填' }
+        ],
+        update: function (id, patch) { return bookmarks.update(id, patch); },
+        remove: function (id) { return bookmarks.remove(id); },
+        updated: function (saved) { lv.updateItem(saved); },
+        removed: function (id) { lv.removeItemById(id); },
+        alive: function () { return alive; }
+    });
+
     function reloadFromFilters() {
         bookmarkListSession.snapshot = null;
         bookmarkListSession.scrollTop = 0;
@@ -137,6 +159,8 @@ export function mountBookmarksPanel(container) {
 
     return {
         destroy: function () {
+            alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             chips.removeEventListener('click', onChipsClick);
             if (lv) {

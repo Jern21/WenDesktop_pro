@@ -18,10 +18,12 @@ import {
     ORDER_STATUS_LABELS
 } from '../../lib/format.js';
 import { navigate } from '../../router.js';
+import { ORDER_FIELDS } from '../../components/order-form.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 import {
     orderListSession,
     takeOrderPatch,
-    applyPatchToItems
+    applyPatchOrRemoval
 } from '../order-session.js';
 
 var STATUS_CHIPS = [{ value: '', label: '全部状态' }].concat(
@@ -63,6 +65,11 @@ export function renderOrderCard(order) {
         '</div></article>';
 }
 
+/** 卡片外面包一层左滑容器：滑出「编辑/删除」按钮（swipe-crud.js 统一手势+表单） */
+function renderSwipeRow(order) {
+    return swipeRowHtml(renderOrderCard(order));
+}
+
 function chipRow(className, chips, current, attr) {
     return '<div class="ord-chips ' + className + '">' + chips.map(function (chip) {
         var on = chip.value === current ? ' is-active' : '';
@@ -77,7 +84,7 @@ export function mountOrdersPanel(container) {
     var snapshot = orderListSession.snapshot;
     if (snapshot && snapshot.ready && patch) {
         snapshot = Object.assign({}, snapshot, {
-            items: applyPatchToItems(snapshot.items, patch)
+            items: applyPatchOrRemoval(snapshot.items, patch)
         });
         orderListSession.snapshot = snapshot;
     }
@@ -163,7 +170,7 @@ export function mountOrdersPanel(container) {
             if (filters.overdue) params.overdue = '1';
             return orders.list(params, { signal: ctx.signal });
         },
-        renderItem: function (item) { return renderOrderCard(item); },
+        renderItem: function (item) { return renderSwipeRow(item); },
         onItemClick: function (item) {
             if (!item || !item.id) return;
             orderListSession.scrollTop = scroller.scrollTop;
@@ -177,6 +184,33 @@ export function mountOrdersPanel(container) {
                 requestAnimationFrame(function () { scroller.scrollTop = y; });
             }
         }
+    });
+
+    /* ---------- 左滑编辑 / 删除（swipe-crud 共享接线） ---------- */
+    var alive = true;
+
+    var swipe = attachSwipeCrud(listHost, {
+        itemOf: function (row) {
+            // row 的父亲是 list-view 的 .lv-item（带 data-index）
+            var idx = parseInt(row.parentNode.getAttribute('data-index'), 10);
+            return isNaN(idx) ? null : lv.getItems()[idx];
+        },
+        title: '编辑订单',
+        labelOf: function (o) { return o.projectName || '这笔订单'; },
+        fields: ORDER_FIELDS,
+        update: function (id, patch) { return orders.update(id, patch); },
+        remove: function (id) { return orders.remove(id); },
+        updated: function (saved) { lv.updateItem(saved); },
+        removed: function (id) {
+            lv.removeItemById(id);
+            if (orderListSession.snapshot && orderListSession.snapshot.items) {
+                orderListSession.snapshot.items = orderListSession.snapshot.items.filter(function (it) {
+                    return it.id !== id;
+                });
+                orderListSession.snapshot.total = Math.max(0, (orderListSession.snapshot.total || 0) - 1);
+            }
+        },
+        alive: function () { return alive; }
     });
 
     paintCount();
@@ -209,6 +243,8 @@ export function mountOrdersPanel(container) {
 
     return {
         destroy: function () {
+            alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             container.removeEventListener('click', onContainerClick);
             if (lv) {

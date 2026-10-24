@@ -80,6 +80,20 @@ export var orders = {
             patch.paymentRatio = paymentRatio;
         }
         return api.put('/api/orders/' + encodeURIComponent(id), patch);
+    },
+
+    /**
+     * 更新订单字段（后端白名单 merge；id/orderNo/createdAt 会被忽略）
+     * @param {string} id
+     * @param {Object} patch 见后端 EDITABLE_FIELDS
+     */
+    update: function (id, patch, options) {
+        return api.put('/api/orders/' + encodeURIComponent(id), patch, options);
+    },
+
+    /** 删除订单 */
+    remove: function (id, options) {
+        return api.del('/api/orders/' + encodeURIComponent(id), options);
     }
 };
 
@@ -100,6 +114,15 @@ export var customers = {
     /** 加一条跟进记录（移动端在客户页做得最自然的一件事） */
     addFollow: function (id, body) {
         return api.post('/api/customers/' + encodeURIComponent(id) + '/follows', body);
+    },
+
+    /** 更新客户字段（后端 CUSTOMER_EDITABLE 白名单 merge） */
+    update: function (id, patch, options) {
+        return api.put('/api/customers/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/customers/' + encodeURIComponent(id), options);
     }
 };
 
@@ -132,6 +155,14 @@ export var reminders = {
     /** 勾选/取消 —— 服务端翻转，不用传目标值 */
     toggle: function (id) {
         return api.put('/api/reminders/' + encodeURIComponent(id) + '/toggle', {});
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/reminders/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/reminders/' + encodeURIComponent(id), options);
     }
 };
 
@@ -174,6 +205,14 @@ export var projects = {
 
     stats: function (options) {
         return api.get('/api/projects/stats', options);
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/projects/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/projects/' + encodeURIComponent(id), options);
     }
 };
 
@@ -188,6 +227,14 @@ export var quotes = {
 
     detail: function (id, options) {
         return api.get('/api/quotes/' + encodeURIComponent(id), options);
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/quotes/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/quotes/' + encodeURIComponent(id), options);
     }
 };
 
@@ -202,6 +249,14 @@ export var posters = {
 
     labels: function (params, options) {
         return api.get('/api/posters/labels' + toQuery(params), options);
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/posters/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/posters/' + encodeURIComponent(id), options);
     }
 };
 
@@ -216,6 +271,14 @@ export var platformPosts = {
 
     detail: function (id, options) {
         return api.get('/api/platform-posts/' + encodeURIComponent(id), options);
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/platform-posts/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/platform-posts/' + encodeURIComponent(id), options);
     }
 };
 
@@ -235,6 +298,14 @@ export var bookmarks = {
     /** 记录一次点击（用于排序/统计），失败不影响跳转 */
     click: function (id) {
         return api.post('/api/bookmarks/' + encodeURIComponent(id) + '/click', {});
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/bookmarks/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/bookmarks/' + encodeURIComponent(id), options);
     }
 };
 
@@ -416,6 +487,14 @@ export var accounts = {
 
     platforms: function (options) {
         return api.get('/api/accounts/platforms', options);
+    },
+
+    update: function (id, patch, options) {
+        return api.put('/api/accounts/' + encodeURIComponent(id), patch, options);
+    },
+
+    remove: function (id, options) {
+        return api.del('/api/accounts/' + encodeURIComponent(id), options);
     }
 };
 

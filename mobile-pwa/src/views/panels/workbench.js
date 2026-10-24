@@ -5,6 +5,7 @@ import { ledger, stats, settings, llm, uploads } from '../../api/resources.js';
 import { navigate } from '../../router.js';
 import { NAV_ICONS, WB_ICONS } from '../../icons.js';
 import { orderListSession } from '../order-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var HIDE_KEY = 'wb_hide_amounts';
 
@@ -61,15 +62,17 @@ function renderTransactions(list, hidden) {
     return list.map(function (tx) {
         var sign = tx.type === 'income' ? '+' : '-';
         var cls = tx.type === 'income' ? 'income' : 'expense';
-        return (
-            '<div class="wb-tx">' +
+        // 流水只删不编辑（后端 ledger 无 PUT）—— acts:['del']
+        return swipeRowHtml(
+            '<div class="wb-tx" data-id="' + escapeHtml(tx.id) + '">' +
             '<div class="wb-tx-icon">' + escapeHtml(txIcon(tx)) + '</div>' +
             '<div class="wb-tx-body">' +
             '<div class="wb-tx-title">' + escapeHtml(tx.title) + '</div>' +
             '<div class="wb-tx-meta">' + escapeHtml(formatDate(tx.date, 'month-day') + ' · ' + (tx.category || '')) + '</div>' +
             '</div>' +
             '<div class="wb-tx-amount ' + cls + '">' + sign + formatMoney(tx.amount, hidden) + '</div>' +
-            '</div>'
+            '</div>',
+            { acts: ['del'] }
         );
     }).join('');
 }
@@ -461,6 +464,25 @@ function bindWorkbench(container, state) {
     if (grokCard) {
         grokCard.addEventListener('click', function () {
             navigate('/grok');
+        });
+    }
+
+    // 流水行左滑删除（swipe-crud 共享接线；每次 loadWorkbench 重渲后重新挂，旧节点随 DOM 回收）
+    var txList = container.querySelector('#wb-tx-list');
+    if (txList) {
+        attachSwipeCrud(txList, {
+            itemOf: function (row) {
+                var tx = row.querySelector('[data-id]');
+                var id = tx && tx.getAttribute('data-id');
+                var recent = (state.lastData && state.lastData.recent) || [];
+                var found = null;
+                recent.forEach(function (item) { if (item && item.id === id) found = item; });
+                return found;
+            },
+            labelOf: function (tx) { return tx.title || '这条记录'; },
+            remove: function (id) { return ledger.remove(id); },
+            removed: function () { loadWorkbench(container, state); },
+            alive: function () { return !state.disposed; }
         });
     }
 

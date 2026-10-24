@@ -1,10 +1,13 @@
 /**
  * 账号密码。接口返回的是明文，这里立刻打码，原始密码不进 DOM，也不回写。
+ * 左滑可编辑/删除；编辑表单里密码框留空 = 不修改（keepEmpty），
+ * 绝不会把掩码值写回去覆盖真实密码。
  */
 import '../../styles/browse.css';
 import '../../styles/stats.css';
 import { accounts } from '../../api/resources.js';
 import { escapeHtml, maskSecret } from '../../lib/format.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var filters = { keyword: '', platform: '' };
 
@@ -26,6 +29,7 @@ export function mountAccountsPanel(container) {
     var names = {};
     var platformList = [];
     var keywordTimer = null;
+    var rawById = {};   // id → 原始记录（编辑表单取值用；password 不预填进 DOM）
 
     container.innerHTML =
         '<div class="st-page br-page">' +
@@ -63,19 +67,22 @@ export function mountAccountsPanel(container) {
         load();
     });
 
-    function render(items) {
-        if (!items.length) {
+    function render(pairs) {
+        if (!pairs.length) {
             body.innerHTML = '<div class="st-state"><p>没有符合条件的账号</p></div>';
             return;
         }
-        body.innerHTML = items.map(function (item) {
-            return '<article class="st-block">' +
+        rawById = {};
+        body.innerHTML = pairs.map(function (pair) {
+            var item = pair.safe;
+            if (pair.raw && pair.raw.id) rawById[pair.raw.id] = pair.raw;
+            return swipeRowHtml('<article class="st-block" data-id="' + escapeHtml(pair.raw.id) + '">' +
                 '<h2>' + escapeHtml(item.name) + '</h2>' +
                 '<p class="st-row-meta">' + escapeHtml(item.platform) + '</p>' +
                 (item.email ? '<p class="st-row-meta">' + escapeHtml(item.email) + '</p>' : '') +
                 (item.secret ? '<p class="st-row-meta">密码 ' + escapeHtml(item.secret) + '</p>' : '<p class="st-row-meta">未记录密码</p>') +
                 (item.remark ? '<p class="st-row-meta">' + escapeHtml(item.remark) + '</p>' : '') +
-                '</article>';
+                '</article>');
         }).join('');
     }
 
@@ -89,10 +96,10 @@ export function mountAccountsPanel(container) {
         accounts.list(params).then(function (res) {
             if (!alive || token !== gen) return;
             var list = res && res.data;
-            var safe = (Array.isArray(list) ? list : []).map(function (item) {
-                return toSafe(item || {}, names);
+            var pairs = (Array.isArray(list) ? list : []).map(function (item) {
+                return { raw: item || {}, safe: toSafe(item || {}, names) };
             });
-            render(safe);
+            render(pairs);
         }).catch(function (err) {
             if (!alive || token !== gen) return;
             body.innerHTML = '<div class="st-state"><p></p><button type="button" data-act="retry">重试</button></div>';
@@ -112,6 +119,35 @@ export function mountAccountsPanel(container) {
         if (retry && body.contains(retry)) load();
     }
 
+    var swipe = attachSwipeCrud(body, {
+        itemOf: function (row) {
+            var card = row.querySelector('[data-id]');
+            var raw = card && rawById[card.getAttribute('data-id')];
+            if (!raw) return null;
+            // 密码不预填进 DOM（原始密码不进 DOM 是这页的硬规矩）
+            var safe = Object.assign({}, raw);
+            delete safe.password;
+            return safe;
+        },
+        title: '编辑账号',
+        labelOf: function (a) { return a.accountName || '这个账号'; },
+        fields: function () {
+            return [
+                { key: 'accountName', label: '账号名称', full: true },
+                { key: 'platform', label: '平台', type: 'select',
+                  options: platformList.map(function (p) { return { value: p.id, label: p.name }; }) },
+                { key: 'email', label: '邮箱' },
+                { key: 'password', label: '密码', type: 'password', keepEmpty: true, placeholder: '留空不修改' },
+                { key: 'remark', label: '备注', full: true }
+            ];
+        },
+        update: function (id, patch) { return accounts.update(id, patch); },
+        remove: function (id) { return accounts.remove(id); },
+        updated: function () { load(); },
+        removed: function () { load(); },
+        alive: function () { return alive; }
+    });
+
     search.addEventListener('input', function () {
         filters.keyword = search.value.trim();
         clearTimeout(keywordTimer);
@@ -123,6 +159,7 @@ export function mountAccountsPanel(container) {
         destroy: function () {
             alive = false;
             gen += 1;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             container.removeEventListener('click', onClick);
             container.innerHTML = '';

@@ -110,6 +110,20 @@
     text-align: left;
 }
 
+/* 卡片进了左滑行：外边距困在行里会把动作条撑得比卡片高；
+   间距交给 lv-list 的 gap / 行自身的 margin */
+.swipe-row .br-card {
+    margin-bottom: 0;
+}
+.br-list .swipe-row,
+.br-group .swipe-row,
+.br-grid .swipe-row {
+    border-radius: 14px;   /* 跟卡片圆角，动作条不顶出直角 */
+}
+.br-group .swipe-row {
+    margin-bottom: 8px;
+}
+
 .br-card strong {
     display: block;
     color: var(--shell-text);

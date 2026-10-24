@@ -7,10 +7,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 3460 --strictPort"
+    "preview": "vite preview --port 3460 --strictPort",
+    "build:android": "node ../tools/mobile-android.mjs build",
+    "android:sync": "node ../tools/mobile-android.mjs sync",
+    "android:open": "node ../tools/mobile-android.mjs open",
+    "android:apk": "node ../tools/mobile-android.mjs apk",
+    "test:android": "node ../tools/test-mobile-android.mjs"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "vite": "^6.0.3",
     "vite-plugin-pwa": "^0.21.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3"
   }
 }

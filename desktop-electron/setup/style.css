@@ -1,0 +1,11 @@
+body { margin: 0; background: #f8fafc; color: #172033; font: 14px/1.6 "Microsoft YaHei", sans-serif; }
+main { padding: 30px 36px; }
+h1 { font-size: 25px; margin: 0 0 8px; }
+p { color: #526177; margin: 0 0 20px; }
+label { display: block; margin-bottom: 7px; font-weight: 600; }
+input { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #bac5d3; border-radius: 7px; font: inherit; }
+input:focus { outline: 2px solid #2563eb; outline-offset: 2px; }
+.hint { font-size: 12px; margin: 8px 0 0; }
+#error { color: #b42318; min-height: 22px; margin: 8px 0; }
+button { border: 0; border-radius: 7px; background: #2563eb; color: white; padding: 11px 22px; font: inherit; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }

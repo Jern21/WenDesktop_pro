@@ -1,14 +1,28 @@
 /**
  * 项目进度。数据用看板接口的五列，手机上改成上下分组，不横滑看板。
- * 只读：不改状态、不改进度。
+ * 左滑卡片可编辑常用字段 / 删除（swipe-crud 共享接线）。
  */
 import '../../styles/browse.css';
 import { projects } from '../../api/resources.js';
 import { escapeHtml, formatMoney, describeDeadline } from '../../lib/format.js';
 import { navigate } from '../../router.js';
 import { projectListSession } from '../browse-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var COLUMNS = ['待确认需求', '开发/设计中', '待验收', '已完成', '已关闭'];
+
+/** 编辑表单字段：服务器/nginx/云盘这类基础设施字段留给桌面端 */
+var PROJECT_FIELDS = [
+    { key: 'name', label: '项目名称', full: true },
+    { key: 'customer', label: '客户' },
+    { key: 'type', label: '类型' },
+    { key: 'status', label: '状态', type: 'select', options: COLUMNS },
+    { key: 'priority', label: '优先级' },
+    { key: 'progress', label: '进度（%）', type: 'number', inputmode: 'numeric', min: '0', max: '100', numeric: true },
+    { key: 'amount', label: '金额（¥）', type: 'number', inputmode: 'decimal', min: '0', numeric: true },
+    { key: 'deadline', label: '截止日期', type: 'date' },
+    { key: 'gitUrl', label: '仓库地址', full: true }
+];
 
 var SCOPE_CHIPS = [
     { value: '', label: '全部' },
@@ -34,7 +48,7 @@ export function renderProjectCard(project) {
     var due = describeDeadline(project.deadline);
     var pct = progressWidth(project.progress);
     var meta = [project.customer, project.type].filter(Boolean).join(' · ');
-    return '<button type="button" class="br-card" data-id="' + escapeHtml(project.id) + '">' +
+    return swipeRowHtml('<button type="button" class="br-card" data-id="' + escapeHtml(project.id) + '">' +
         '<strong>' + escapeHtml(project.name || '未命名项目') + '</strong>' +
         '<div class="br-card-line">' +
         (moneyText(project.amount) ? '<span class="br-amount">' + escapeHtml(moneyText(project.amount)) + '</span>' : '<span class="br-amount"></span>') +
@@ -43,7 +57,7 @@ export function renderProjectCard(project) {
         (meta ? '<p class="br-meta">' + escapeHtml(meta) + '</p>' : '') +
         (due.text ? '<p class="br-meta">' + escapeHtml(due.text) + '</p>' : '') +
         (pct ? '<div class="br-bar" aria-label="进度"><span style="width:' + pct + '%"></span></div><p class="br-meta">' + pct + '%</p>' : '') +
-        '</button>';
+        '</button>');
 }
 
 export function mountProjectsPanel(container) {
@@ -160,6 +174,32 @@ export function mountProjectsPanel(container) {
         }
     }
 
+    function findProject(id) {
+        var found = null;
+        COLUMNS.forEach(function (key) {
+            var col = board && board[key];
+            ((col && col.items) || []).forEach(function (item) {
+                if (item && item.id === id) found = item;
+            });
+        });
+        return found;
+    }
+
+    var swipe = attachSwipeCrud(body, {
+        itemOf: function (row) {
+            var card = row.querySelector('[data-id]');
+            return card ? findProject(card.getAttribute('data-id')) : null;
+        },
+        title: '编辑项目',
+        labelOf: function (p) { return p.name || '这个项目'; },
+        fields: PROJECT_FIELDS,
+        update: function (id, patch) { return projects.update(id, patch); },
+        remove: function (id) { return projects.remove(id); },
+        updated: function () { load(); },   // 状态可能跨列，直接整刷看板
+        removed: function () { load(); },
+        alive: function () { return alive; }
+    });
+
     search.addEventListener('input', function () {
         filters.keyword = search.value.trim();
         clearTimeout(keywordTimer);
@@ -172,6 +212,7 @@ export function mountProjectsPanel(container) {
     return {
         destroy: function () {
             alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             container.removeEventListener('click', onClick);
             projectListSession.scrollTop = scroller.scrollTop;

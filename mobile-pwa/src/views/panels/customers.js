@@ -8,6 +8,7 @@ import { createListView } from '../../components/list-view.js';
 import { escapeHtml } from '../../lib/format.js';
 import { navigate } from '../../router.js';
 import { customerListSession } from '../customer-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var FOLLOW_CHIPS = [
     { value: '', label: '全部' },
@@ -15,6 +16,19 @@ var FOLLOW_CHIPS = [
     { value: '跟进中', label: '跟进中' },
     { value: '已成交', label: '已成交' },
     { value: '已流失', label: '已流失' }
+];
+
+var CUSTOMER_SOURCES = ['闲鱼', '小红书', '抖音', '微信', '淘宝', '朋友推荐', '其他'];
+
+/** 编辑表单字段（swipe-crud → form-sheet 共用引擎） */
+var CUSTOMER_FIELDS = [
+    { key: 'name', label: '姓名', full: true, placeholder: '客户称呼' },
+    { key: 'phone', label: '电话', type: 'tel' },
+    { key: 'type', label: '类型', placeholder: '例如：个人/企业' },
+    { key: 'level', label: '等级', placeholder: '例如：高价值' },
+    { key: 'source', label: '来源', type: 'select', options: CUSTOMER_SOURCES },
+    { key: 'followStatus', label: '跟进状态', type: 'select',
+      options: ['待跟进', '跟进中', '已成交', '已流失'] }
 ];
 
 export function renderCustomerCard(customer) {
@@ -95,7 +109,7 @@ export function mountCustomersPanel(container) {
                 });
             });
         },
-        renderItem: function (item) { return renderCustomerCard(item); },
+        renderItem: function (item) { return swipeRowHtml(renderCustomerCard(item)); },
         onItemClick: function (item) {
             if (!item || !item.id) return;
             customerListSession.scrollTop = scroller.scrollTop;
@@ -109,6 +123,22 @@ export function mountCustomersPanel(container) {
                 requestAnimationFrame(function () { scroller.scrollTop = y; });
             }
         }
+    });
+
+    var alive = true;
+    var swipe = attachSwipeCrud(listHost, {
+        itemOf: function (row) {
+            var idx = parseInt(row.parentNode.getAttribute('data-index'), 10);
+            return isNaN(idx) ? null : lv.getItems()[idx];
+        },
+        title: '编辑客户',
+        labelOf: function (c) { return c.name || '这位客户'; },
+        fields: CUSTOMER_FIELDS,
+        update: function (id, patch) { return customers.update(id, patch); },
+        remove: function (id) { return customers.remove(id); },
+        updated: function (saved) { lv.updateItem(saved); },
+        removed: function (id) { lv.removeItemById(id); },
+        alive: function () { return alive; }
     });
 
     paintCount();
@@ -144,6 +174,8 @@ export function mountCustomersPanel(container) {
 
     return {
         destroy: function () {
+            alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             chips.removeEventListener('click', onChipsClick);
             if (lv) {

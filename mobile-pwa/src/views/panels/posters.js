@@ -1,12 +1,13 @@
 /**
  * 素材库。图片地址走 resolveAssetUrl，靠登录 Cookie 取图，不把 token 写进地址。
- * 只读。外部原文链接只放行 http/https。
+ * 左滑可编辑/删除（swipe-crud 共享接线）。外部原文链接只放行 http/https。
  */
 import '../../styles/browse.css';
 import { posters } from '../../api/resources.js';
 import { escapeHtml, platformLabel } from '../../lib/format.js';
 import { assetSrc, safeHttpUrl, wireImageFallback } from '../../lib/urls.js';
 import { posterListSession } from '../browse-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var PLATFORMS = [
     { value: '', label: '全部平台' },
@@ -89,13 +90,13 @@ export function mountPostersPanel(container) {
         grid.innerHTML = items.map(function (item) {
             var src = assetSrc(item.image);
             var color = safeColor(item.labelColor);
-            return '<button type="button" class="br-shot" data-id="' + escapeHtml(item.id) + '">' +
+            return swipeRowHtml('<button type="button" class="br-shot" data-id="' + escapeHtml(item.id) + '">' +
                 (src ? '<img data-asset alt="" src="' + escapeHtml(src) + '" />' : '<span class="br-shot-empty"></span>') +
                 '<strong>' + escapeHtml(item.title || '未命名素材') + '</strong>' +
                 '<p class="br-meta">' + escapeHtml(platformLabel(item.platform)) +
                 (item.labelText ? ' · ' + escapeHtml(item.labelText) : '') + '</p>' +
                 (color ? '<span class="br-badge" data-color="' + escapeHtml(color) + '" hidden></span>' : '') +
-                '</button>';
+                '</button>');
         }).join('');
         var byId = {};
         items.forEach(function (item) { byId[item.id] = item; });
@@ -199,6 +200,30 @@ export function mountPostersPanel(container) {
         });
     }
 
+    var swipe = attachSwipeCrud(grid, {
+        itemOf: function (row) {
+            var shot = row.querySelector('[data-id]');
+            return shot && grid.__items ? grid.__items[shot.getAttribute('data-id')] : null;
+        },
+        title: '编辑素材',
+        labelOf: function (p) { return p.title || '这条素材'; },
+        fields: [
+            { key: 'title', label: '标题', full: true },
+            { key: 'platform', label: '平台', type: 'select',
+              options: PLATFORMS.filter(function (p) { return p.value; }) },
+            { key: 'labelText', label: '标签' },
+            { key: 'onlineDate', label: '上线日期', type: 'date' },
+            { key: 'offlineDate', label: '下线日期', type: 'date' },
+            { key: 'sourceUrl', label: '原文链接', full: true, placeholder: 'https://' },
+            { key: 'remark', label: '备注', full: true }
+        ],
+        update: function (id, patch) { return posters.update(id, patch); },
+        remove: function (id) { return posters.remove(id); },
+        updated: function () { load(); },
+        removed: function () { load(); },
+        alive: function () { return alive; }
+    });
+
     search.addEventListener('input', function () {
         filters.keyword = search.value.trim();
         clearTimeout(keywordTimer);
@@ -212,6 +237,7 @@ export function mountPostersPanel(container) {
     return {
         destroy: function () {
             alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             closeLightbox();
             container.removeEventListener('click', onClick);

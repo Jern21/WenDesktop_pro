@@ -611,6 +611,13 @@ html[data-theme="dark"] .wb-milestone {
     padding-bottom: 4px;
 }
 
+/* 流水行裹在左滑容器里：每行都是唯一的 .wb-tx（伪 :last-child 会全命中），
+   末行分隔线的判断要上移到 .swipe-row 这一层 */
+#wb-tx-list .swipe-row:last-child .wb-tx {
+    border-bottom: none;
+    padding-bottom: 4px;
+}
+
 html[data-theme="dark"] .wb-tx {
     border-bottom-color: rgba(255, 255, 255, 0.06);
 }

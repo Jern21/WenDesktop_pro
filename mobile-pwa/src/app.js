@@ -1,6 +1,6 @@
 import './styles/app.css';
 import './styles/components.css';
-import { registerSW } from 'virtual:pwa-register';
+import { startPlatform } from '@mobile-platform';
 import { clearApiCache, fetchAuthStatus } from './api/auth.js';
 import { onUnauthorized } from './api/client.js';
 import { toast } from './lib/toast.js';
@@ -8,7 +8,7 @@ import { getPath, navigate, startRouter, subscribe } from './router.js';
 import { mountLogin } from './views/login.js';
 import { mountMobileShell, updateMobileShell, destroyMobileShell } from './mobile-shell.js';
 
-registerSW({ immediate: true });
+startPlatform();
 
 var authState = null;
 var shellActive = false;

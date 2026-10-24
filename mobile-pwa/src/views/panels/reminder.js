@@ -1,12 +1,14 @@
 /**
  * 待办：按时间分组的提醒列表，加一个月历。
  * 勾选即完成，3 秒内可以在 toast 上撤销。不在这里新建提醒。
+ * 左滑可编辑/删除（swipe-crud 共享接线）。
  */
 import '../../styles/reminder.css';
 import { reminders } from '../../api/resources.js';
 import { escapeHtml, formatDate, reminderBucket } from '../../lib/format.js';
 import { toast } from '../../lib/toast.js';
 import { takeReminderBucket } from '../reminder-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var GROUPS = [
     { id: 'overdue', label: '已逾期' },
@@ -112,12 +114,12 @@ export function mountReminderPanel(container) {
         if (item.date) meta.push(formatDate(item.date, 'month-day') || item.date);
         if (item.time) meta.push(item.time);
         if (item.category) meta.push(item.category);
-        return '<button type="button" class="rem-item' + (item.done ? ' is-done' : '') +
+        return swipeRowHtml('<button type="button" class="rem-item' + (item.done ? ' is-done' : '') +
             (busy[item.id] ? ' is-busy' : '') + '" data-id="' + escapeHtml(item.id) + '" role="checkbox" aria-checked="' +
             (item.done ? 'true' : 'false') + '">' +
             '<span class="rem-check" aria-hidden="true"></span>' +
             '<span><span class="rem-title">' + escapeHtml(item.title || '未命名提醒') + '</span>' +
-            '<span class="rem-meta">' + escapeHtml(meta.join(' · ')) + '</span></span></button>';
+            '<span class="rem-meta">' + escapeHtml(meta.join(' · ')) + '</span></span></button>');
     }
 
     function renderCalendar() {
@@ -273,8 +275,28 @@ export function mountReminderPanel(container) {
             paint();
             return;
         }
-        var itemBtn = e.target.closest && e.target.closest('[data-id]');
+        var itemBtn = e.target.closest && e.target.closest('.rem-item[data-id]');
         if (itemBtn) toggle(itemBtn.getAttribute('data-id'));
+    });
+
+    var swipe = attachSwipeCrud(root, {
+        itemOf: function (row) {
+            var btn = row.querySelector('[data-id]');
+            return btn ? findItem(btn.getAttribute('data-id')) : null;
+        },
+        title: '编辑提醒',
+        labelOf: function (r) { return r.title || '这条提醒'; },
+        fields: [
+            { key: 'title', label: '提醒内容', full: true, required: true },
+            { key: 'date', label: '日期', type: 'date', required: true },
+            { key: 'time', label: '时间', type: 'time' },
+            { key: 'category', label: '分类', placeholder: '其他' }
+        ],
+        update: function (id, patch) { return reminders.update(id, patch); },
+        remove: function (id) { return reminders.remove(id); },
+        updated: function () { reload(); },   // 改日期可能换分组，整刷最稳
+        removed: function () { reload(); },
+        alive: function () { return alive; }
     });
 
     reload();
@@ -283,6 +305,7 @@ export function mountReminderPanel(container) {
         destroy: function () {
             alive = false;
             generation += 1;
+            swipe.destroy();
             container.innerHTML = '';
         }
     };

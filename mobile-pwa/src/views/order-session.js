@@ -35,6 +35,20 @@ export function takeOrderPatch() {
     return patch;
 }
 
+/** 详情页里删了订单 → 列表回来时这张卡不该再出现 */
+export function rememberOrderRemoval(id) {
+    if (!id) return;
+    orderListSession.patch = { id: id, __removed: true };
+}
+
+export function applyPatchOrRemoval(items, patch) {
+    if (!patch || !items) return items || [];
+    if (patch.__removed) {
+        return items.filter(function (item) { return !item || item.id !== patch.id; });
+    }
+    return applyPatchToItems(items, patch);
+}
+
 export function applyPatchToItems(items, patch) {
     if (!patch || !items) return items || [];
     return items.map(function (item) {

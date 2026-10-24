@@ -1,5 +1,5 @@
 /**
- * 报价单列表。只读，改明细留在桌面端。
+ * 报价单列表。左滑可编辑头信息/删除（swipe-crud 共享接线）；明细行(items)仍留桌面端。
  */
 import '../../styles/browse.css';
 import { quotes } from '../../api/resources.js';
@@ -7,6 +7,7 @@ import { createListView } from '../../components/list-view.js';
 import { escapeHtml, formatMoney, formatDate } from '../../lib/format.js';
 import { navigate } from '../../router.js';
 import { quoteListSession } from '../browse-session.js';
+import { swipeRowHtml, attachSwipeCrud } from '../../components/swipe-crud.js';
 
 var STATUS_LABEL = {
     draft: '草稿',
@@ -21,6 +22,17 @@ var STATUS_CHIPS = [{ value: '', label: '全部' }].concat(
         return { value: value, label: STATUS_LABEL[value] };
     })
 );
+
+/** 编辑表单字段：明细行(items)太复杂，留给桌面端；手机上改头信息+状态 */
+var QUOTE_FIELDS = [
+    { key: 'projectName', label: '项目名称', full: true },
+    { key: 'customerName', label: '客户名称' },
+    { key: 'quoteDate', label: '报价日期', type: 'date' },
+    { key: 'cycle', label: '工期/周期' },
+    { key: 'discount', label: '优惠（¥）', type: 'number', inputmode: 'decimal', min: '0', numeric: true },
+    { key: 'paymentMethod', label: '付款方式' },
+    { key: 'status', label: '状态', type: 'select', options: STATUS_CHIPS.filter(function (c) { return c.value; }) }
+];
 
 export function quoteStatusLabel(status) {
     return STATUS_LABEL[status] || status || '未标状态';
@@ -92,7 +104,7 @@ export function mountQuotesPanel(container) {
                 });
             });
         },
-        renderItem: function (item) { return renderQuoteCard(item); },
+        renderItem: function (item) { return swipeRowHtml(renderQuoteCard(item)); },
         onItemClick: function (item) {
             if (!item || !item.id) return;
             quoteListSession.scrollTop = scroller.scrollTop;
@@ -106,6 +118,26 @@ export function mountQuotesPanel(container) {
                 requestAnimationFrame(function () { scroller.scrollTop = y; });
             }
         }
+    });
+
+    var alive = true;
+    var swipe = attachSwipeCrud(listHost, {
+        itemOf: function (row) {
+            var idx = parseInt(row.parentNode.getAttribute('data-index'), 10);
+            return isNaN(idx) ? null : lv.getItems()[idx];
+        },
+        title: '编辑报价单',
+        labelOf: function (q) { return q.projectName || '这份报价单'; },
+        fields: QUOTE_FIELDS,
+        // quotes 的 PUT 不是 merge：未传字段会被 ||'' 清空、totalAmount 用 body.items 重算。
+        // 必须回写完整对象（合并原记录），否则部分更新会毁掉明细和总额。
+        update: function (id, patch, item) {
+            return quotes.update(id, Object.assign({}, item, patch));
+        },
+        remove: function (id) { return quotes.remove(id); },
+        updated: function (saved) { lv.updateItem(saved); },
+        removed: function (id) { lv.removeItemById(id); },
+        alive: function () { return alive; }
     });
 
     function reloadFromFilters() {
@@ -135,6 +167,8 @@ export function mountQuotesPanel(container) {
 
     return {
         destroy: function () {
+            alive = false;
+            swipe.destroy();
             clearTimeout(keywordTimer);
             chips.removeEventListener('click', onChipsClick);
             if (lv) {
