@@ -2,6 +2,8 @@
 
 :root,
 html[data-theme="light"] {
+    /* 中栏上限：mobile-shell / sheet 面板 / fixed 底栏 共用这一个数，改宽只改这里 */
+    --shell-max: 480px;
     --shell-bg: #f5f5f7;
     --shell-surface: #ffffff;
     --shell-text: #1d1d1f;
@@ -40,9 +42,22 @@ html[data-theme="dark"] {
     flex-direction: column;
     height: 100dvh;
     max-height: 100dvh;
+    /* 宽屏（桌面/平板浏览器、电脑上的 PWA 窗口）收成一列手机宽的中栏，
+       不再拉伸全屏 —— 上限统一走 --shell-max */
+    max-width: var(--shell-max);
+    margin-inline: auto;
     background: var(--shell-bg);
     color: var(--shell-text);
     -webkit-font-smoothing: antialiased;
+}
+
+/* 只有真宽屏才画分界线/投影，手机全宽下不浪费这条边
+   （字面量不用 var()：老 Safari 的 media query 不解析变量） */
+@media (min-width: 481px) {
+    .mobile-shell {
+        box-shadow: 0 0 0 1px var(--shell-border),
+                    0 0 48px rgba(0, 0, 0, 0.07);
+    }
 }
 
 .mobile-topbar {

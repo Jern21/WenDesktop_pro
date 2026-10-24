@@ -237,8 +237,9 @@
 
 .cust-actions:not([hidden]) {
     position: fixed;
-    left: 0;
-    right: 3.25rem;
+    /* 同 wb-fab-wrap：宽屏下收进中栏，手机上退化为 left:0 / right:3.25rem */
+    left: max(0px, calc(50% - var(--shell-max) / 2));
+    right: max(3.25rem, calc(50% - var(--shell-max) / 2 + 3.25rem));
     bottom: 0;
     z-index: 20;
     display: flex;

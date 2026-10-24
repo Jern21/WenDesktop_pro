@@ -87,7 +87,7 @@ html[data-theme="dark"] .grok-docbar-text {
 
 .grok-sheet {
     width: 100%;
-    max-width: 480px;
+    max-width: var(--shell-max, 480px);
     background: #fff;
     border-radius: 16px 16px 0 0;
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));

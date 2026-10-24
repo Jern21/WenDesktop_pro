@@ -675,8 +675,10 @@ html[data-theme="dark"] .wb-tx-amount.expense {
 
 .wb-fab-wrap {
     position: fixed;
-    left: 0;
-    right: 3.25rem;
+    /* 壳限宽后 rail 不在视口右缘了：左右都收进中栏（rail 宽 3.25rem 在右）。
+       max() 退化到手机上就是原来的 left:0 / right:3.25rem */
+    left: max(0px, calc(50% - var(--shell-max) / 2));
+    right: max(3.25rem, calc(50% - var(--shell-max) / 2 + 3.25rem));
     bottom: 0;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
     padding-left: calc(16px + env(safe-area-inset-left, 0px));
@@ -726,7 +728,7 @@ html[data-theme="dark"] .wb-tx-amount.expense {
 
 .wb-sheet {
     width: 100%;
-    max-width: 480px;
+    max-width: var(--shell-max, 480px);
     background: #fff;
     border-radius: 16px 16px 0 0;
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
