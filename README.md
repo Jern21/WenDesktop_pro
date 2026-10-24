@@ -1,58 +1,64 @@
-# <img src="frontend/assets/gif/logo.gif" alt="" width="56" height="56" align="absmiddle"> 文的项目工作台
+<div align="center">
+
+<img src="frontend/assets/gif/logo.gif" alt="文的项目工作台" width="80" height="80">
+
+# 文的项目工作台
+
+**轻量架构 · Agent 驱动 · 自由扩展 · 多端协同**
+
+把客户、订单、项目与灵感，放进一个属于自己的工作台。
 
 [![Version](https://img.shields.io/badge/version-2.1.0-2563eb?style=flat-square)](CHANGELOG.json)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
-[![Express](https://img.shields.io/badge/Express-4.x-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com)
-[![Frontend](https://img.shields.io/badge/frontend-native%20SPA-f59e0b?style=flat-square)](ARCHITECTURE.md)
-[![Storage](https://img.shields.io/badge/storage-JSON%20files-6b7280?style=flat-square)](#功能)
-[![Auth](https://img.shields.io/badge/auth-HMAC%20cookie-8b5cf6?style=flat-square)](#启动)
-[![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#许可)
+[![Architecture](https://img.shields.io/badge/架构-轻量可扩展-10b981?style=flat-square)](ARCHITECTURE.md)
+[![Agent](https://img.shields.io/badge/Agent-自选模型%20%7C%20GrokBot-8b5cf6?style=flat-square)](GROK_BOT_CONNECTION.md)
+[![Platforms](https://img.shields.io/badge/多端-Web%20%7C%20Windows%20%7C%20iOS%20PWA%20%7C%20Android-0ea5e9?style=flat-square)](#多端使用)
 
-本机接单工作台。桌面端管客户、订单、报价、项目、发帖和素材；手机端查进度、改状态。两边共用同一套后端，数据按账号分开存放。
+[快速开始](#快速开始) · [多端使用](#多端使用) · [部署指南](docs/deployment.md) · [开发架构](ARCHITECTURE.md)
 
-<p>
-  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="340">
-  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="340">
+</div>
+
+<p align="center">
+  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="320">
+  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="320">
 </p>
 
+## 五个核心亮点
 
+| | 亮点 | 能带来什么 |
+| :---: | :--- | :--- |
+| 🧩 | **架构重构，轻松二开** | 前后端分层、业务模块拆分；桌面网页零构建，Express + JSON 文件存储无需额外数据库。配套脚手架与架构检查，扩展有章可循。 |
+| <a href="GROK_BOT_CONNECTION.md"><img src="docs/assets/grok.svg" alt="GrokBot" width="28" height="28"></a> | **内置 Agent，自选驱动** | 自行配置 OpenAI 兼容接口与模型，驱动内置助手；也可接入 **GrokBot**，通过授权接口读写业务数据、串联工作流程。 |
+| 🎨 | **自定义组件，灵活组合** | 复用列表、表单、弹层等通用组件，结合页面自注册机制，按自己的业务定制页面与交互，扩展更多玩法。 |
+| 📱 | **一套服务，多端使用** | 覆盖 **网页、Windows 桌面应用、iOS PWA、Android**，共用后端与账号数据，在不同设备继续处理工作。 |
+| 🚀 | **快速启动，部署有据** | 本机脚本启动；服务器提供 **宝塔 + Nginx**、公网域名及内网穿透方案，附可直接交给 AI 的部署指令。 |
 
-## 功能
+日常业务也已备齐：**客户 / 订单 / 报价 / 项目看板 / 发帖 / 素材 / 无限画布 / 备忘提醒 / 数据统计**，并提供外观设置、备份恢复、导出与回收站。
 
-- **桌面端**：首页看板、订单、报价、宣传海报、无限画布、闲鱼 / 小红书 / 抖音发帖、客户、数据统计、项目看板、账号、网址收藏、简历、备忘、日期提醒、设置
-- **设置**：外观、侧栏菜单开关、访问密码、备份与恢复、导出、回收站
-- **移动端**：工作台（开发小账）、订单、待办、客户、项目、报价、素材、发帖、链接收藏、设置
+## 快速开始
 
-更新记录在 [`CHANGELOG.json`](CHANGELOG.json)，应用顶栏可以对比本地和 GitHub 上的版本。分层规则见 [`ARCHITECTURE.md`](ARCHITECTURE.md)。
-
-当前版本 **2.1.0**，代码核对的开发进度见 [`working.md`](working.md)。版本比对读取本机 `/CHANGELOG.json` 与该文件中 `changelogRawUrl` 指向的 GitHub `main` 分支；更新本地文件不会自动更新 GitHub，需将本次完整代码及更新日志发布到对应分支，再更新服务器部署。
-
-## 启动
-
-需要 [Node.js](https://nodejs.org) 18+。Windows 双击 `start.bat`，打开 <http://localhost:3456>。停止用 `stop.bat`。
-
-首次启动会在控制台打印用户名（默认 `admin`）和密码，也可用 `APP_USERNAME` / `APP_PASSWORD` 指定。试用账号默认 `trial`。
+准备 Node.js 18+。Windows 双击 **`start.bat`**，停止使用 `stop.bat`；也可在终端启动：
 
 ```bash
-cd backend && npm install && npm start
+cd backend
+npm install
+npm start
 ```
 
-移动端另开一个终端，或双击 `start-mobile.bat`（需后端已启动）：
+打开 [http://localhost:3456](http://localhost:3456)。首次启动的账号密码见控制台，也可通过 `APP_USERNAME` / `APP_PASSWORD` 指定。
 
-```bash
-cd mobile-pwa && npm install && npm run dev
-```
+## 多端使用
 
-地址是 <http://localhost:3460>，接口代理到 3456。
+| 入口 | 使用方式 |
+| :--- | :--- |
+| **网页** | 后端直接托管桌面网页；手机端运行 `start-mobile.bat`，访问 [http://localhost:3460](http://localhost:3460)（需后端已启动）。 |
+| **Windows 桌面应用** | Electron 联网版，首次启动填写桌面网站地址。[构建与使用 →](desktop-electron/README.md) |
+| **iOS PWA** | 部署手机站点后，在 Safari 中添加到主屏幕。[移动端说明 →](mobile-pwa/README.md) |
+| **Android** | Capacitor 独立应用构建，连接同一后端。[构建与安装 →](mobile-pwa/ANDROID.md) |
 
-提交前跑 `node tools/check-all.js`。
+## 部署与扩展
 
-## 服务器部署
+**服务器部署只需一个后端**：桌面网页无需构建，手机网页构建为 `dist/`，由 Nginx 提供访问入口。按[部署指南](docs/deployment.md)选择公网域名或内网穿透，完成 HTTPS、常驻进程与数据备份配置。
 
-完整的桌面端 + 移动端部署指南见 [`docs/deployment.md`](docs/deployment.md)。文档包含宝塔 + Nginx、内网穿透和公网域名两种接入方案、构建与进程配置、数据迁移、验收及回滚步骤，末尾提供可直接交给 AI 的部署指令。
+[架构与二次开发](ARCHITECTURE.md) · [AI 协作准则](AGENTS.md) · [GrokBot 接入](GROK_BOT_CONNECTION.md) · [更新日志](CHANGELOG.json)
 
-桌面端和后端无需打包；移动端需要构建 `dist/`。两端共用一个后端、同一套账号和业务数据，登录状态按访问域名分别保存。
-
-## 许可
-
-MIT License
+开发完成后运行 `node tools/check-all.js`。本项目采用 **MIT License**。
