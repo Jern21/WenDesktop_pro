@@ -117,6 +117,9 @@ app.use('/api/stats', require('./src/routes/stats'));
 app.use('/api/ledger', require('./src/routes/ledger'));
 app.use('/api/image-gen', require('./src/routes/image-gen'));
 app.use('/api/llm', require('./src/routes/llm'));
+app.use('/api/grok-doc', require('./src/routes/grok-doc'));
+app.use('/api/grok-keys', require('./src/routes/grok-keys'));
+app.use('/api/grok-messages', require('./src/routes/grok-messages'));
 app.use('/api/accounts', require('./src/routes/accounts'));
 app.use('/api/bookmarks', require('./src/routes/bookmarks'));
 app.use('/api/bug-reports', require('./src/routes/bug-reports'));
@@ -128,7 +131,7 @@ app.get('/api/health', function (req, res) {
         data: {
             status: 'ok',
             service: 'wen-workbench-backend',
-            version: '1.0.0',
+            version: require('./package.json').version,
             uptime: process.uptime(),
             timestamp: new Date().toISOString()
         }

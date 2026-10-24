@@ -430,15 +430,15 @@ test('每个子页面的 parent 都是已登记路径', function () {
     });
 });
 
-test('导航栏是 12 项、都有图标、路径符合预期', function () {
-    assert.equal(MOBILE_NAV.length, 12);
+test('导航栏是 13 项、都有图标、路径符合预期', function () {
+    assert.equal(MOBILE_NAV.length, 13);
     MOBILE_NAV.forEach(function (item) {
         assert.ok(item.icon, item.path + ' 缺 icon');
         assert.ok(item.label, item.path + ' 缺 label');
         assert.ok(item.group, item.path + ' 缺 group（rail 分隔线靠它分组）');
     });
     assert.deepEqual(MOBILE_NAV.map(function (i) { return i.path; }),
-        ['/', '/orders', '/reminder', '/customers',
+        ['/', '/grok', '/orders', '/reminder', '/customers',
             '/stats', '/posters', '/projects', '/quotes', '/platform-posts',
             '/bookmarks', '/accounts', '/settings']);
 });
@@ -459,7 +459,8 @@ test('导航分组是连续的（不能 A/B/A 交错）', function () {
 
 test('子页面只剩详情页（能凭空点进去的都该是一级页）', function () {
     assert.deepEqual(SUBPAGE_ROUTES.map(function (s) { return s.path; }),
-        ['/orders/:id', '/customers/:id', '/projects/:id', '/quotes/:id', '/platform-posts/:id']);
+        ['/orders/:id', '/customers/:id', '/projects/:id', '/quotes/:id', '/platform-posts/:id',
+            '/grok/keys']);
 });
 
 test('导航路径与子页面路径不重叠', function () {

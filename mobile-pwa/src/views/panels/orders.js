@@ -87,8 +87,13 @@ export function mountOrdersPanel(container) {
         '  <div class="ord-tools">' +
         '    <input class="ord-search" type="search" enterkeyhint="search" placeholder="搜客户、项目、单号" aria-label="搜索订单" />' +
         chipRow('ord-chips-status', STATUS_CHIPS, filters.status, 'status') +
-        chipRow('ord-chips-pay', PAY_CHIPS, filters.paymentStatus, 'pay') +
-        '    <div class="ord-chips">' +
+        // 付款 chips + 已逾期 合一行 —— 工具栏高度省一行；data-overdue 仍单独识别
+        '    <div class="ord-chips ord-chips-pay">' +
+        PAY_CHIPS.map(function (chip) {
+            var on = chip.value === filters.paymentStatus ? ' is-active' : '';
+            return '<button type="button" class="ord-chip' + on + '" data-pay="' +
+                escapeHtml(chip.value) + '">' + escapeHtml(chip.label) + '</button>';
+        }).join('') +
         '      <button type="button" class="ord-chip' + (filters.overdue ? ' is-active' : '') +
         '" data-overdue="1">已逾期</button>' +
         '    </div>' +

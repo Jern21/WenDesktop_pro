@@ -58,43 +58,43 @@
                 </div>
 
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-4 gap-5 mb-6">
+                <div id="orders-summary" class="grid grid-cols-4 gap-5 mb-6">
                     <!-- Card 1 -->
-                    <div class="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-white p-5 relative overflow-hidden shadow-sm">
-                        <p class="text-brand-600 font-medium text-sm">全部订单</p>
-                        <h3 id="stat-total" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
-                        <p class="text-xs text-gray-400" id="stat-total-sub">加载中...</p>
-                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-blue-100 bg-white flex items-center justify-center text-blue-500 shadow-sm">
+                    <div class="orders-summary-card orders-summary-card--blue border p-5 relative overflow-hidden shadow-sm">
+                        <p class="orders-summary-label font-medium text-sm">全部订单</p>
+                        <h3 id="stat-total" class="orders-summary-value text-3xl font-bold mt-2 mb-1">0</h3>
+                        <p class="orders-summary-caption text-xs" id="stat-total-sub">加载中...</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full orders-summary-icon border flex items-center justify-center shadow-sm">
                             <i class="ph ph-bag text-2xl"></i>
                         </div>
                     </div>
                     
                     <!-- Card 2 -->
-                    <div class="rounded-xl border border-green-100 bg-gradient-to-br from-green-50/50 to-white p-5 relative overflow-hidden shadow-sm">
-                        <p class="text-green-600 font-medium text-sm">进行中</p>
-                        <h3 id="stat-processing" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
-                        <p class="text-xs text-gray-400" id="stat-processing-sub">占比 0%</p>
-                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-green-100 bg-white flex items-center justify-center text-green-500 shadow-sm">
+                    <div class="orders-summary-card orders-summary-card--green border p-5 relative overflow-hidden shadow-sm">
+                        <p class="orders-summary-label font-medium text-sm">进行中</p>
+                        <h3 id="stat-processing" class="orders-summary-value text-3xl font-bold mt-2 mb-1">0</h3>
+                        <p class="orders-summary-caption text-xs" id="stat-processing-sub">占比 0%</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full orders-summary-icon border flex items-center justify-center shadow-sm">
                             <i class="ph ph-arrows-clockwise text-2xl"></i>
                         </div>
                     </div>
 
                     <!-- Card 3 -->
-                    <div class="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50/50 to-white p-5 relative overflow-hidden shadow-sm">
-                        <p class="text-orange-500 font-medium text-sm">待验收</p>
-                        <h3 id="stat-acceptance" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
-                        <p class="text-xs text-gray-400" id="stat-acceptance-sub">占比 0%</p>
-                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-orange-100 bg-white flex items-center justify-center text-orange-400 shadow-sm">
+                    <div class="orders-summary-card orders-summary-card--orange border p-5 relative overflow-hidden shadow-sm">
+                        <p class="orders-summary-label font-medium text-sm">待验收</p>
+                        <h3 id="stat-acceptance" class="orders-summary-value text-3xl font-bold mt-2 mb-1">0</h3>
+                        <p class="orders-summary-caption text-xs" id="stat-acceptance-sub">占比 0%</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full orders-summary-icon border flex items-center justify-center shadow-sm">
                             <i class="ph ph-hourglass-high text-2xl"></i>
                         </div>
                     </div>
 
                     <!-- Card 4 -->
-                    <div class="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50/50 to-white p-5 relative overflow-hidden shadow-sm">
-                        <p class="text-purple-600 font-medium text-sm">已完成</p>
-                        <h3 id="stat-completed" class="text-3xl font-bold text-gray-800 mt-2 mb-1">0</h3>
-                        <p class="text-xs text-gray-400" id="stat-completed-sub">占比 0%</p>
-                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-purple-100 bg-white flex items-center justify-center text-purple-500 shadow-sm">
+                    <div class="orders-summary-card orders-summary-card--purple border p-5 relative overflow-hidden shadow-sm">
+                        <p class="orders-summary-label font-medium text-sm">已完成</p>
+                        <h3 id="stat-completed" class="orders-summary-value text-3xl font-bold mt-2 mb-1">0</h3>
+                        <p class="orders-summary-caption text-xs" id="stat-completed-sub">占比 0%</p>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full orders-summary-icon border flex items-center justify-center shadow-sm">
                             <i class="ph ph-check-circle text-2xl"></i>
                         </div>
                     </div>

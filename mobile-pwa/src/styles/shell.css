@@ -125,6 +125,26 @@ html[data-theme="dark"] {
     color: var(--shell-text);
 }
 
+.mobile-topbar-greet {
+    flex-shrink: 0;
+    text-align: right;
+    line-height: 1.15;
+}
+
+.mobile-topbar-greet-hi {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--shell-text);
+    letter-spacing: -0.01em;
+}
+
+.mobile-topbar-greet-sub {
+    margin: 1px 0 0;
+    font-size: 0.625rem;
+    color: var(--shell-text-secondary);
+}
+
 .mobile-topbar-user-wrap {
     position: relative;
     flex-shrink: 0;

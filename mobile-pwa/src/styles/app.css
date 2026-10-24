@@ -14,6 +14,11 @@
     box-sizing: border-box;
 }
 
+html {
+    /* Android/桌面端的外层橡皮筋也一并禁掉 */
+    overscroll-behavior: none;
+}
+
 html, body {
     margin: 0;
     min-height: 100%;
@@ -21,6 +26,23 @@ html, body {
     background: var(--bg);
     color: var(--text);
     -webkit-tap-highlight-color: transparent;
+    /* 禁双击缩放 —— 纯手势层面的解法，iOS/Android 都吃；
+       比 user-scalable=no 可靠（Safari 里那个会被无视） */
+    touch-action: manipulation;
+}
+
+body {
+    /**
+     * iOS 的文档级橡皮筋：就算 .mobile-content 锁了 overflow，
+     * body 这一层还能被拽弹。本应用所有滚动都在 .mobile-content
+     * 内部完成，document 从不滚 —— 直接把 body 钉死在视口上。
+     * position:fixed 是 iOS 上唯一确定生效的杀招（overflow:hidden
+     * 在部分版本仍能被拽出回弹）。
+     */
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    overflow: hidden;
 }
 
 #app {
@@ -28,6 +50,15 @@ html, body {
     padding: calc(12px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
     max-width: 480px;
     margin: 0 auto;
+}
+
+/**
+ * 满屏页（骨架高度锁死在可视区，如 GrokBot 对话页）宿主标记：
+ * 外层滚动容器对这种页面本来就没有可滚内容，锁掉防止误触外层橡皮筋。
+ * 由页面自己 mount 时加、destroy 时摘。
+ */
+.mobile-content.is-fixed-page {
+    overflow: hidden;
 }
 
 .home-screen {

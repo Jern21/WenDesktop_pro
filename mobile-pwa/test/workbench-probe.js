@@ -44,8 +44,27 @@ async function run() {
     await waitFor(function () { return host.querySelector('.wb-root'); }, 12000, '工作台根节点');
     record('工作台渲染出根节点', true, '');
 
-    var title = host.querySelector('.wb-hero-title');
-    record('标题有内容', !!(title && title.textContent.trim()), title ? title.textContent : '(空)');
+    var share = host.querySelector('#wb-share');
+    record('分享按钮存在', !!share, share ? '已渲染' : '(无)');
+
+    var iconSvgs = host.querySelectorAll('.wb-stat-ic svg, .wb-hero-coin svg');
+    record('统计/收入图标均为 SVG', iconSvgs.length >= 5, '共 ' + iconSvgs.length + ' 枚');
+
+    var goalCard = host.querySelector('#wb-goal');
+    record('目标卡存在', !!goalCard, '');
+
+    var grokCard = host.querySelector('#wb-grok');
+    record('GrokBot 能力卡存在',
+        !!(grokCard && grokCard.querySelector('.wb-grok-go')), '');
+
+    var stats = host.querySelectorAll('.wb-stat');
+    record('经营总览渲染 4 项统计', stats.length === 4, stats.length + ' 格');
+    var statTexts = [];
+    stats.forEach(function (el) { statTexts.push(el.textContent); });
+    record('含累计客户与累计成交',
+        statTexts.some(function (t) { return t.indexOf('累计客户') !== -1; }) &&
+        statTexts.some(function (t) { return t.indexOf('累计成交') !== -1; }),
+        '');
 
     /* ---- 2. 金额格式（验证 formatMoney 迁移正确） ---- */
     var amountEl = host.querySelector('#wb-total-income');
@@ -80,16 +99,34 @@ async function run() {
     }
 
     /* ---- 5. 目标进度 ---- */
-    var bar = host.querySelector('.wb-progress-bar');
+    var bar = host.querySelector('.wb-goal-fill');
     var width = bar ? bar.style.width : '';
     record('目标进度条有宽度值', /%$/.test(width), 'width=' + width);
 
-    /* ---- 6. 交互：切换「全部」范围后重新渲染 ---- */
-    var segAll = host.querySelector('#wb-range-seg button[data-range="all"]');
-    if (segAll) {
+    /* ---- 5b. 目标卡点开编辑弹层（不提交，避免污染数据） ---- */
+    if (goalCard) {
+        goalCard.click();
+        await sleep(120);
+        var gsheet = document.querySelector('.wb-sheet');
+        record('目标卡点开设置弹层', !!gsheet && !!gsheet.querySelector('#wb-g-name'),
+            gsheet ? '已打开' : '未出现');
+        var gcancel = document.querySelector('#wb-g-cancel');
+        if (gcancel) gcancel.click();
+        await sleep(80);
+        record('取消后目标弹层关闭', !document.querySelector('.wb-sheet'), '');
+    }
+
+    /* ---- 6. 交互：默认「全部」，切「今年」再切回 ---- */
+    record('收入趋势默认全部', !!host.querySelector('.wb-root[data-range="all"]'), '');
+    var segYear = host.querySelector('#wb-range-seg button[data-range="year"]');
+    if (segYear) {
+        segYear.click();
+        await waitFor(function () { return host.querySelector('.wb-root[data-range="year"]'); }, 8000, '今年范围');
+        record('切到今年范围后重新渲染', true, 'data-range=year');
+        var segAll = host.querySelector('#wb-range-seg button[data-range="all"]');
         segAll.click();
         await waitFor(function () { return host.querySelector('.wb-root[data-range="all"]'); }, 8000, '全部范围');
-        record('切换时间范围后重新渲染', true, 'data-range=all');
+        record('切回全部范围后重新渲染', true, 'data-range=all');
     } else {
         record('切换时间范围（未找到分段控件）', false, '');
     }

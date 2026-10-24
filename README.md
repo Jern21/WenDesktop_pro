@@ -1,6 +1,6 @@
 # <img src="frontend/assets/gif/logo.gif" alt="" width="56" height="56" align="absmiddle"> 文的项目工作台
 
-[![Version](https://img.shields.io/badge/version-2.0.2-2563eb?style=flat-square)](CHANGELOG.json)
+[![Version](https://img.shields.io/badge/version-2.1.0-2563eb?style=flat-square)](CHANGELOG.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com)
 [![Frontend](https://img.shields.io/badge/frontend-native%20SPA-f59e0b?style=flat-square)](ARCHITECTURE.md)
@@ -11,9 +11,10 @@
 本机接单工作台。桌面端管客户、订单、报价、项目、发帖和素材；手机端查进度、改状态。两边共用同一套后端，数据按账号分开存放。
 
 <p>
-  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="310">
-  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="310">
+  <img src="docs/screenshots/desktop-home.png" alt="桌面端首页" height="340">
+  <img src="docs/screenshots/mobile-workbench.png" alt="移动端工作台" height="340">
 </p>
+
 
 
 ## 功能
@@ -23,6 +24,8 @@
 - **移动端**：工作台（开发小账）、订单、待办、客户、项目、报价、素材、发帖、链接收藏、设置
 
 更新记录在 [`CHANGELOG.json`](CHANGELOG.json)，应用顶栏可以对比本地和 GitHub 上的版本。分层规则见 [`ARCHITECTURE.md`](ARCHITECTURE.md)。
+
+当前版本 **2.1.0**，代码核对的开发进度见 [`working.md`](working.md)。版本比对读取本机 `/CHANGELOG.json` 与该文件中 `changelogRawUrl` 指向的 GitHub `main` 分支；更新本地文件不会自动更新 GitHub，需将本次完整代码及更新日志发布到对应分支，再更新服务器部署。
 
 ## 启动
 
@@ -43,6 +46,12 @@ cd mobile-pwa && npm install && npm run dev
 地址是 <http://localhost:3460>，接口代理到 3456。
 
 提交前跑 `node tools/check-all.js`。
+
+## 服务器部署
+
+完整的桌面端 + 移动端部署指南见 [`docs/deployment.md`](docs/deployment.md)。文档包含宝塔 + Nginx、内网穿透和公网域名两种接入方案、构建与进程配置、数据迁移、验收及回滚步骤，末尾提供可直接交给 AI 的部署指令。
+
+桌面端和后端无需打包；移动端需要构建 `dist/`。两端共用一个后端、同一套账号和业务数据，登录状态按访问域名分别保存。
 
 ## 许可
 

@@ -18,21 +18,6 @@
     }
 
     /**
-     * 按侧边栏的 data-page 键找已迁移的视图
-     */
-    function findViewByNav(navKey) {
-        var views = App.views.all();
-        var names = Object.keys(views);
-        for (var i = 0; i < names.length; i++) {
-            var def = views[names[i]];
-            if (def && def.nav === navKey && def.path) {
-                return { name: names[i], definition: def };
-            }
-        }
-        return null;
-    }
-
-    /**
      * 取第一个带路由的视图，作为无匹配路径时的落地页
      */
     function firstRoutableView() {
@@ -56,13 +41,10 @@
      * 旧页面文件已经全部删除，那张表只会把人送到 404，所以整张去掉了。
      */
     global.spaNavigate = function (pageName) {
-        if (!pageName) return;
-        var found = findViewByNav(pageName);
-        if (found) {
-            App.router.navigate(found.definition.path);
-            return;
-        }
-        console.warn('[app] spaNavigate 找不到对应视图:', pageName);
+        if (!pageName || !App.pages) return;
+        App.pages.go(pageName).then(function (result) {
+            if (!result.ok) console.warn('[app] spaNavigate 找不到对应视图:', pageName);
+        });
     };
 
     // ========== 导航桥接 ==========
@@ -77,11 +59,11 @@
         // 尊重用户的新标签页 / 修饰键意图
         if (link.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey) return;
 
-        var found = findViewByNav(page);
+        var found = App.pages && App.pages.resolve(page);
         if (found) {
             // 已注册视图 → SPA 内切，不整页刷新
             e.preventDefault();
-            App.router.navigate(found.definition.path).catch(function (err) {
+            App.pages.go(page).catch(function (err) {
                 console.error('[app] SPA 导航失败，回退整页跳转:', err);
                 global.location.href = link.getAttribute('href');
             });
@@ -117,7 +99,11 @@
         bootstrap();
     }
 
-    // 暴露给调试用
-    App.findViewByNav = findViewByNav;
+    // 旧调试入口：内部转到 App.pages，避免再维持第二份查找
+    App.findViewByNav = function (navKey) {
+        var found = App.pages && App.pages.resolve(navKey);
+        if (!found || found.nav !== navKey) return null;
+        return { name: found.name, definition: found.definition };
+    };
 
 })(typeof window !== 'undefined' ? window : this);

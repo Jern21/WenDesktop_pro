@@ -181,7 +181,8 @@
     // ========== 大模型接入 ==========
     //
     // 小柴的「大脑」是设置中心里配的那套 OpenAI 兼容接口（/api/llm/chat）。
-    // 没配也能聊，只是它会先说一句「你还没接大模型」。
+    // 「还没接大模型」只在两件事同时成立时才说：这句话不在本地指令里，并且大模型没配上。
+    // 能认的指令直接执行，不走大模型：切页（「首页」），以及「统计订单数据」。
     //
     // 一个刻意的设计：**没接大模型时也必须先"想"1~2 秒**。
     // 秒回会让人觉得它根本没在处理（而且一眼看出是本地写死的文案）；
@@ -259,11 +260,84 @@
         });
     }
 
+    /**
+     * 本地指令优先。认得出就在这里做完，认不出才交给大模型。
+     * 大模型没配上时，askLlm 才会回「还没接入」。
+     */
+    function runLocalCommand(msg, ctx) {
+        if (isOrderStatsCommand(msg)) return runOrderStats(ctx);
+
+        var pages = global.App && global.App.pages;
+        if (!pages || typeof pages.resolve !== 'function' || typeof pages.go !== 'function') return null;
+        if (!pages.resolve(msg)) return null;
+        return pages.go(msg).then(function (result) {
+            if (!result || !result.ok) return '汪…这个页面我没找到。';
+            if (result.already) return '已经在「' + result.title + '」啦。';
+            return '好，去「' + result.title + '」。';
+        });
+    }
+
+    function isOrderStatsCommand(msg) {
+        return String(msg || '').replace(/\s+/g, '') === '统计订单数据';
+    }
+
+    function formatStatMoney(value) {
+        var dom = global.App && global.App.dom;
+        if (dom && typeof dom.formatMoney === 'function') return dom.formatMoney(value);
+        var num = Number(value);
+        if (!isFinite(num)) num = 0;
+        return '¥' + num.toLocaleString('zh-CN');
+    }
+
+    function summarizeOrderStats(data) {
+        data = data || {};
+        return [
+            '订单 ' + (Number(data.orderCount) || 0) + ' 单',
+            '成交 ' + formatStatMoney(data.revenue),
+            '客单价 ' + formatStatMoney(data.avgOrderValue),
+            '成交客户 ' + (Number(data.customerCount) || 0) + ' 人',
+            '复购率 ' + (Number(data.repeatRate) || 0) + '%',
+            '好评率 ' + (Number(data.goodRate) || 0) + '%'
+        ].join('\n');
+    }
+
+    /**
+     * 「统计订单数据」回两条：切页结果先说，概览数字读完再说。
+     * 数字来自 /api/stats/monthly-overview，和统计页同一套口径。
+     */
+    function runOrderStats(ctx) {
+        var pages = global.App && global.App.pages;
+        var gone = (pages && typeof pages.go === 'function')
+            ? pages.go('数据统计')
+            : Promise.resolve({ ok: false });
+
+        return gone.then(function (result) {
+            if (!result || !result.ok) return '汪…数据统计这页我没打开。';
+            var switched = result.already
+                ? '已经在「' + result.title + '」。'
+                : '已经切换到「' + result.title + '」。';
+            if (ctx && typeof ctx.say === 'function') ctx.say(switched, '读取数据…');
+
+            if (!global.api || typeof global.api.get !== 'function') {
+                return '这笔账的接口还没准备好。';
+            }
+            return global.api.get('/api/stats/monthly-overview', { range: 'all' }).then(function (res) {
+                if (!res || !res.success || !res.data) return '这笔账没算出来。';
+                var label = res.data.label || '全量汇总';
+                return label + '：\n' + summarizeOrderStats(res.data);
+            });
+        }).catch(function () {
+            return '汪…订单数据这次没算出来，稍后再试。';
+        });
+    }
+
     function defaultAgentReply(ctx) {
         var msg = (ctx && ctx.userMessage) ? String(ctx.userMessage).trim() : '';
         if (!msg) {
             return sleep(600).then(function () { return '先输入一句话再发送汪～'; });
         }
+        var local = runLocalCommand(msg, ctx);
+        if (local) return local;
         return askLlm(msg, ctx);
     }
 
@@ -292,7 +366,21 @@
         sending = true;
         var ctx = Object.assign({}, lastCtx, {
             userMessage: text,
-            history: history.slice(0, -1)
+            history: history.slice(0, -1),
+            say: function (line, status) {
+                var spoken = String(line || '');
+                if (!spoken) return;
+                appendMessage('bot', spoken);
+                pushHistory('assistant', spoken);
+                if (status) typing.textContent = status;
+                if (els.log) {
+                    els.log.appendChild(typing);
+                    els.log.scrollTop = els.log.scrollHeight;
+                }
+                global.dispatchEvent(new CustomEvent('shiba:reply', {
+                    detail: { userMessage: text, reply: spoken, ctx: ctx }
+                }));
+            }
         });
 
         var provider = agentProvider || defaultAgentReply;

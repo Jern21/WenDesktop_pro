@@ -1,6 +1,6 @@
 {
   "name": "wen-workbench-backend",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "文的项目工作台 - Node.js 后端服务",
   "main": "server.js",
   "scripts": {

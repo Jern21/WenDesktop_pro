@@ -134,17 +134,21 @@ function buildTrend(allOrders, meta) {
     });
 }
 
-function readGoalAmount() {
+function readGoal() {
     try {
-        var settings = settingsRepository.read();
-        var goal = parseFloat(settings.devLedger && settings.devLedger.goalAmount);
-        return goal > 0 ? goal : DEFAULT_GOAL;
+        var dl = settingsRepository.read().devLedger || {};
+        var amount = parseFloat(dl.goalAmount);
+        return {
+            amount: amount > 0 ? amount : DEFAULT_GOAL,
+            name: String(dl.goalName || ''),
+            image: String(dl.goalImage || '')
+        };
     } catch (e) {
-        return DEFAULT_GOAL;
+        return { amount: DEFAULT_GOAL, name: '', image: '' };
     }
 }
 
-function buildMilestones(totalIncome) {
+function buildMilestones(totalIncome, progress) {
     return [
         {
             id: 'first',
@@ -157,6 +161,12 @@ function buildMilestones(totalIncome) {
             title: '突破一万元',
             subtitle: '每一份努力都有回响',
             achieved: totalIncome >= 10000
+        },
+        {
+            id: 'goal',
+            title: '离目标更近了',
+            subtitle: '梦想正在靠近',
+            achieved: progress >= 50
         }
     ];
 }
@@ -169,9 +179,9 @@ router.get('/workbench', resp.asyncHandler(function (req, res) {
 
     var totalIncome = sumByType(transactions, 'income');
     var totalExpense = sumByType(transactions, 'expense');
-    var goalAmount = readGoalAmount();
-    var progress = goalAmount > 0 ? Math.min(100, Math.round(totalIncome / goalAmount * 100)) : 0;
-    var remaining = Math.max(0, goalAmount - totalIncome);
+    var goal = readGoal();
+    var progress = goal.amount > 0 ? Math.min(100, Math.round(totalIncome / goal.amount * 100)) : 0;
+    var remaining = Math.max(0, goal.amount - totalIncome);
 
     transactions.sort(function (a, b) {
         return String(b.date).localeCompare(String(a.date));
@@ -192,7 +202,9 @@ router.get('/workbench', resp.asyncHandler(function (req, res) {
             netIncome: Math.round((totalIncome - totalExpense) * 100) / 100
         },
         goal: {
-            amount: goalAmount,
+            amount: goal.amount,
+            name: goal.name,
+            image: goal.image,
             progress: progress,
             remaining: Math.round(remaining * 100) / 100,
             hint: progress >= 100

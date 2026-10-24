@@ -1,8 +1,22 @@
 {
-  "latestVersion": "2.0.2",
+  "latestVersion": "2.1.0",
   "repository": "https://github.com/Jern21/myProject_pro",
   "changelogRawUrl": "https://raw.githubusercontent.com/Jern21/myProject_pro/main/CHANGELOG.json",
   "entries": [
+    {
+      "version": "2.1.0",
+      "date": "2026-10-24",
+      "title": "移动业务接入与智能助理",
+      "tag": "功能",
+      "highlights": [
+        "移动端主要业务页已接入：订单、待办、客户、项目、报价、素材、发帖、收藏、统计、账号与设置，共用桌面端后端与账号数据",
+        "移动工作台增加累计开发收入、支出、净收入、收入趋势和记一笔，并支持从工作台跳转业务筛选",
+        "新增 GrokBot 页面、接入指南、GrokCtrl-Key 管理与按账号保存的对话消息接口；实际外部助理需另外配置接入",
+        "桌宠支持页面跳转和订单统计快捷指令，调整聊天输入样式与桌面订单筛选展示",
+        "补充宝塔、内网穿透及公网域名部署指南，包含数据与密钥迁移、验收和回滚流程",
+        "统一桌面展示、移动端包、后端包、健康接口与备份元数据的项目版本，保留历史更新记录"
+      ]
+    },
     {
       "version": "2.0.2",
       "date": "2026-10-22",

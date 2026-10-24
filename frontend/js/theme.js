@@ -98,12 +98,12 @@
         /* 输入框 */
         '[data-theme="aurora"] input,',
         '[data-theme="aurora"] select,',
-        '[data-theme="aurora"] textarea { background-color: var(--aurora-surface-2) !important; border-color: var(--aurora-border) !important; color: var(--aurora-text) !important; }',
+        '[data-theme="aurora"] textarea:not(.shiba-chat-input) { background-color: var(--aurora-surface-2) !important; border-color: var(--aurora-border) !important; color: var(--aurora-text) !important; }',
         '[data-theme="aurora"] input::placeholder,',
-        '[data-theme="aurora"] textarea::placeholder { color: var(--aurora-text-muted) !important; }',
+        '[data-theme="aurora"] textarea:not(.shiba-chat-input)::placeholder { color: var(--aurora-text-muted) !important; }',
         '[data-theme="aurora"] input:focus,',
         '[data-theme="aurora"] select:focus,',
-        '[data-theme="aurora"] textarea:focus { border-color: var(--aurora-brand) !important; box-shadow: 0 0 0 3px rgba(167,139,250,0.15) !important; }',
+        '[data-theme="aurora"] textarea:not(.shiba-chat-input):focus { border-color: var(--aurora-brand) !important; box-shadow: 0 0 0 3px rgba(167,139,250,0.15) !important; }',
         /* 品牌色 */
         '[data-theme="aurora"] .text-brand-600 { color: var(--aurora-brand) !important; }',
         '[data-theme="aurora"] .text-brand-500 { color: var(--aurora-brand) !important; }',
@@ -202,12 +202,12 @@
         /* 输入框 */
         '[data-theme="glow-digital"] input,',
         '[data-theme="glow-digital"] select,',
-        '[data-theme="glow-digital"] textarea { background-color: var(--gd-surface-solid) !important; border-color: var(--gd-border-strong) !important; color: var(--gd-text) !important; }',
+        '[data-theme="glow-digital"] textarea:not(.shiba-chat-input) { background-color: var(--gd-surface-solid) !important; border-color: var(--gd-border-strong) !important; color: var(--gd-text) !important; }',
         '[data-theme="glow-digital"] input::placeholder,',
-        '[data-theme="glow-digital"] textarea::placeholder { color: var(--gd-text-muted) !important; }',
+        '[data-theme="glow-digital"] textarea:not(.shiba-chat-input)::placeholder { color: var(--gd-text-muted) !important; }',
         '[data-theme="glow-digital"] input:focus,',
         '[data-theme="glow-digital"] select:focus,',
-        '[data-theme="glow-digital"] textarea:focus { border-color: var(--gd-brand) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important; }',
+        '[data-theme="glow-digital"] textarea:not(.shiba-chat-input):focus { border-color: var(--gd-brand) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important; }',
         /* 品牌色 —— 蓝紫渐变感 */
         '[data-theme="glow-digital"] .text-brand-600 { color: var(--gd-brand) !important; }',
         '[data-theme="glow-digital"] .text-brand-500 { color: var(--gd-brand) !important; }',
@@ -316,12 +316,12 @@
         /* 输入框 */
         '[data-theme="glow-digital-dark"] input,',
         '[data-theme="glow-digital-dark"] select,',
-        '[data-theme="glow-digital-dark"] textarea { background-color: var(--gdd-surface-solid) !important; border-color: var(--gdd-border-strong) !important; color: var(--gdd-text) !important; }',
+        '[data-theme="glow-digital-dark"] textarea:not(.shiba-chat-input) { background-color: var(--gdd-surface-solid) !important; border-color: var(--gdd-border-strong) !important; color: var(--gdd-text) !important; }',
         '[data-theme="glow-digital-dark"] input::placeholder,',
-        '[data-theme="glow-digital-dark"] textarea::placeholder { color: var(--gdd-text-muted) !important; }',
+        '[data-theme="glow-digital-dark"] textarea:not(.shiba-chat-input)::placeholder { color: var(--gdd-text-muted) !important; }',
         '[data-theme="glow-digital-dark"] input:focus,',
         '[data-theme="glow-digital-dark"] select:focus,',
-        '[data-theme="glow-digital-dark"] textarea:focus { border-color: var(--gdd-brand) !important; box-shadow: 0 0 0 3px rgba(129,140,248,0.15) !important; }',
+        '[data-theme="glow-digital-dark"] textarea:not(.shiba-chat-input):focus { border-color: var(--gdd-brand) !important; box-shadow: 0 0 0 3px rgba(129,140,248,0.15) !important; }',
         /* 品牌色 —— 靛蓝 + 蓝紫 */
         '[data-theme="glow-digital-dark"] .text-brand-600 { color: var(--gdd-brand) !important; }',
         '[data-theme="glow-digital-dark"] .text-brand-500 { color: var(--gdd-brand) !important; }',

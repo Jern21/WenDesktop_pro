@@ -1,0 +1,535 @@
+/* GrokBot 连接器 —— 对话页（顶部悬浮接入文档条） */
+
+.grok-root {
+    display: flex;
+    flex-direction: column;
+    /* 占满可视区但不许超出 —— 消息流在 .grok-msgs 内部滚动，
+       文本永远不会跑到输入条下面 */
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ---- 悬浮接入条（副功能：下载接入文档） ---- */
+
+.grok-docbar {
+    position: sticky;
+    top: 4px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 6px 12px 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid #e5e9f0;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+html[data-theme="dark"] .grok-docbar {
+    background: rgba(28, 28, 30, 0.88);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.grok-docbar-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #101828;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.grok-docbar-mark svg {
+    width: 12px;
+    height: 12px;
+}
+
+.grok-docbar-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.75rem;
+    color: #4a5468;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+html[data-theme="dark"] .grok-docbar-text {
+    color: #c4c9d1;
+}
+
+.grok-docbar-arrow {
+    flex-shrink: 0;
+    color: #8a94a6;
+    font-weight: 600;
+}
+
+/* ---- 接入指南弹层 ---- */
+
+.grok-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 40;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.grok-sheet {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+html[data-theme="dark"] .grok-sheet {
+    background: #1c1c1e;
+}
+
+.grok-guide-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.grok-hero-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: #101828;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.grok-hero-mark svg {
+    width: 24px;
+    height: 24px;
+}
+
+.grok-guide-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1d1d1f;
+}
+
+html[data-theme="dark"] .grok-guide-title {
+    color: #f5f5f7;
+}
+
+.grok-guide-sub {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: #6e6e73;
+}
+
+.grok-dl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(180deg, #3d8af7 0%, #1e6ef5 100%);
+    cursor: pointer;
+}
+
+.grok-dl svg {
+    width: 16px;
+    height: 16px;
+}
+
+.grok-dl:active {
+    transform: scale(0.98);
+}
+
+.grok-steps {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.grok-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: #4a5468;
+}
+
+html[data-theme="dark"] .grok-steps li {
+    color: #c4c9d1;
+}
+
+.grok-step-no {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #eef4ff;
+    color: #1e6ef5;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-style: normal;
+    margin-top: 1px;
+}
+
+html[data-theme="dark"] .grok-step-no {
+    background: #223a63;
+    color: #7fb0ff;
+}
+
+.grok-keys-link {
+    width: 100%;
+    margin-top: 12px;
+    border: 1px solid #c5d9fc;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background: #f6f9ff;
+    color: #1e6ef5;
+    cursor: pointer;
+    text-align: center;
+}
+
+html[data-theme="dark"] .grok-keys-link {
+    background: rgba(30, 110, 245, 0.12);
+    border-color: rgba(30, 110, 245, 0.35);
+    color: #7fb0ff;
+}
+
+.grok-tip {
+    margin: 12px 0 0;
+    padding: 9px 10px;
+    border-radius: 10px;
+    background: #fff8ec;
+    color: #b45309;
+    font-size: 0.75rem;
+    line-height: 1.55;
+}
+
+html[data-theme="dark"] .grok-tip {
+    background: rgba(251, 191, 36, 0.12);
+    color: #fbbf24;
+}
+
+.grok-sheet-close {
+    width: 100%;
+    margin-top: 12px;
+    border: none;
+    border-radius: 12px;
+    padding: 11px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: #f2f4f8;
+    color: #1d1d1f;
+    cursor: pointer;
+}
+
+html[data-theme="dark"] .grok-sheet-close {
+    background: #2c2c2e;
+    color: #f5f5f7;
+}
+
+/* ---- 消息流 ---- */
+
+.grok-msgs {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    /* 滚到头/尾时别把滚动链接给外层 —— iOS 橡皮筋会把整页弹走 */
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 2px 0 10px;
+}
+
+.grok-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.grok-row.is-user {
+    justify-content: flex-end;
+}
+
+.grok-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #101828;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.grok-avatar svg {
+    width: 13px;
+    height: 13px;
+}
+
+.grok-bubble {
+    max-width: 82%;
+    padding: 9px 12px;
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+    background: #fff;
+    color: #1d1d1f;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="dark"] .grok-bubble {
+    background: #2c2c2e;
+    color: #f5f5f7;
+    box-shadow: none;
+}
+
+.grok-row.is-user .grok-bubble {
+    border-radius: 14px;
+    border-bottom-right-radius: 4px;
+    background: linear-gradient(180deg, #3d8af7 0%, #1e6ef5 100%);
+    color: #fff;
+}
+
+.grok-bubble.is-err {
+    background: #fff3f3;
+    color: #c62828;
+    border: 1px solid #ffd7d7;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .grok-bubble.is-err {
+    background: rgba(198, 40, 40, 0.14);
+    color: #f28b82;
+    border-color: rgba(198, 40, 40, 0.35);
+}
+
+/* 思考中 —— 三点呼吸 */
+
+.grok-typing .grok-bubble {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 14px;
+}
+
+.grok-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #b6bdc9;
+    animation: grok-blink 1.1s ease-in-out infinite;
+}
+
+.grok-dot:nth-child(2) {
+    animation-delay: 0.18s;
+}
+
+.grok-dot:nth-child(3) {
+    animation-delay: 0.36s;
+}
+
+@keyframes grok-blink {
+    0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* 建议词条 */
+
+.grok-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 30px;
+}
+
+.grok-chip {
+    border: 1px solid #dde3ec;
+    border-radius: 999px;
+    background: #fff;
+    color: #4a5468;
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.grok-chip:active {
+    background: #eef4ff;
+    border-color: #c5d9fc;
+    color: #1e6ef5;
+}
+
+html[data-theme="dark"] .grok-chip {
+    background: #2c2c2e;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #c4c9d1;
+}
+
+/* 底部输入条 —— 实心白底胶囊，钉在消息区下方的固定槽位
+   （不再 sticky：.grok-root 高度恒定，它就是文档流里的最后一块） */
+.grok-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e5e9f0;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+}
+
+html[data-theme="dark"] .grok-bar {
+    background: #2c2c2e;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.grok-menu-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.grok-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #f0f2f6;
+    color: #4a5468;
+    cursor: pointer;
+}
+
+html[data-theme="dark"] .grok-menu-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #c4c9d1;
+}
+
+.grok-menu-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.grok-menu-pop {
+    position: absolute;
+    left: 0;
+    bottom: 44px;
+    min-width: 130px;
+    padding: 4px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e5e9f0;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+    z-index: 12;
+}
+
+html[data-theme="dark"] .grok-menu-pop {
+    background: #2c2c2e;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.grok-menu-item {
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 9px 10px;
+    border-radius: 7px;
+    font-size: 0.8125rem;
+    text-align: left;
+    color: #c62828;
+    cursor: pointer;
+}
+
+.grok-menu-item:active {
+    background: #f6f8fc;
+}
+
+html[data-theme="dark"] .grok-menu-item:active {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.grok-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: #1d1d1f;
+    font-size: 0.9375rem;
+    padding: 8px 10px;
+    outline: none;
+}
+
+html[data-theme="dark"] .grok-input {
+    color: #f5f5f7;
+}
+
+.grok-send {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #3d8af7 0%, #1e6ef5 100%);
+    color: #fff;
+    cursor: pointer;
+}
+
+.grok-send svg {
+    width: 18px;
+    height: 18px;
+}
+
+.grok-send:disabled {
+    opacity: 0.5;
+}
+
+.grok-send:active:not(:disabled) {
+    transform: scale(0.94);
+}

@@ -10,16 +10,20 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    margin: -12px -10px 8px;
-    padding: 12px 10px 8px;
+    /* 负边距抵掉 .mobile-content 的 padding；向上渗出的阴影兜底 ——
+       iOS 惯性滚动时 sticky 落位会瞬时偏低，元素和 scrollport 顶之间
+       露出一条透明缝，滚动的文字会从缝里透出来，阴影始终盖住它 */
+    margin: -12px -10px 8px calc(-12px - env(safe-area-inset-left, 0px));
+    padding: 10px 10px 6px calc(12px + env(safe-area-inset-left, 0px));
     background: var(--shell-bg);
+    box-shadow: 0 -14px 0 var(--shell-bg);
 }
 
 .ord-search {
     width: 100%;
     box-sizing: border-box;
-    height: 36px;
-    margin: 0 0 8px;
+    height: 32px;
+    margin: 0 0 6px;
     padding: 0 12px;
     border: 1px solid var(--shell-border);
     border-radius: 10px;
@@ -38,7 +42,7 @@
     display: flex;
     gap: 6px;
     overflow-x: auto;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
     scrollbar-width: none;
 }
 
@@ -48,8 +52,8 @@
 
 .ord-chip {
     flex: 0 0 auto;
-    height: 28px;
-    padding: 0 10px;
+    height: 26px;
+    padding: 0 9px;
     border: 1px solid var(--shell-border);
     border-radius: 999px;
     background: var(--shell-surface);

@@ -67,6 +67,13 @@ export var SUBPAGE_ROUTES = [
         panel: 'platform-post-detail',
         label: '发帖详情',
         parent: '/platform-posts'
+    },
+
+    {
+        path: '/grok/keys',
+        panel: 'grok-keys',
+        label: 'Key 管理',
+        parent: '/grok'
     }
 ];
 

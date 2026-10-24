@@ -1,6 +1,6 @@
 # Grok Bot 通信说明（wen-workbench）
 
-> 把本文件整份喂给 Grok Bot，它就能按 HTTPS + Bearer Token 连接本系统，发起接口控制，并在重要结果时通过微信通知你。  
+> 把本文件整份喂给 Grok Bot，它就能按 HTTPS + GrokCtrl-Key 连接本系统，发起接口控制，并在重要结果时通过微信通知你。  
 > 面向：**第一次对接的新用户**，从 0 到能读写业务数据。
 
 ---
@@ -18,11 +18,11 @@
 ## 1. 一句话怎么连
 
 1. 拿到公网地址 `$BASE_URL`（形如 `https://your-domain.com`，不要末尾斜杠）
-2. `POST /api/auth/login` 换取 `data.token`
-3. 之后所有业务请求带：`Authorization: Bearer <token>`
-4. 先打 `GET /api/health` 确认服务活着，再登录、再读写
+2. 拿到用户在移动端「GrokBot 连接器」里签发的 **GrokCtrl-Key**（形如 `gck_...`）
+3. 所有业务请求带：`Authorization: Bearer <gck_...>`
+4. 先打 `GET /api/health` 确认服务活着，再用 key 读一笔业务
 
-Grok Bot / 脚本**只用 JSON 里的 token + Bearer**，不要依赖浏览器 Cookie。
+Grok Bot / 脚本**只用 GrokCtrl-Key + Bearer**，不要依赖浏览器 Cookie，也**不需要**用户密码。
 
 ---
 
@@ -31,8 +31,7 @@ Grok Bot / 脚本**只用 JSON 里的 token + Bearer**，不要依赖浏览器 C
 | 项 | 说明 |
 |----|------|
 | `$BASE_URL` | 已部署、公网可达的 HTTPS 地址 |
-| `$WEN_USER` / `$WEN_PASS` | 正式账号（环境变量 `APP_USERNAME` / `APP_PASSWORD`，或首次启动写入的 `backend/data/auth.json`） |
-| `$WEN_TOKEN` | 登录成功后 `data.token` 的值 |
+| `$GROK_KEY` | GrokCtrl-Key，形如 `gck_<48 hex>`，由用户在「GrokBot 连接器 → 接入指南」里生成，完整明文只显示一次 |
 
 后端默认端口 `3456`；公网只应暴露反向代理后的 `443`。
 
@@ -40,55 +39,40 @@ Grok Bot / 脚本**只用 JSON 里的 token + Bearer**，不要依赖浏览器 C
 
 ---
 
-## 3. 登录与鉴权（必读）
+## 3. 鉴权：GrokCtrl-Key（必读）
 
-### 3.1 登录拿 token
+### 3.1 用 GrokCtrl-Key 直连
+
+用户在工作台里生成 Key 后，所有请求这样带：
 
 ```http
-POST $BASE_URL/api/auth/login
-Content-Type: application/json
-
-{"username":"$WEN_USER","password":"$WEN_PASS","remember":true}
-```
-
-成功示例：
-
-```json
-{
-  "success": true,
-  "data": {
-    "token": "<HMAC 签名的无状态 token>",
-    "username": "admin",
-    "expiresIn": 2592000000,
-    "trial": false
-  }
-}
+Authorization: Bearer $GROK_KEY
 ```
 
 要点：
 
-- `username` 必填；正式账号还要 `password`
-- `remember: true` → TTL 约 30 天；不传则约 12 小时
-- 兼容：只传 `password`、不传 `username` 时，服务端按管理员用户名处理
-- 登录失败约 5 次后，该 IP 锁定约 5 分钟（`429` / `code: LOCKED`）
-- 响应可能同时 `Set-Cookie: wt_auth=...`；**对接时忽略 Cookie，只用 `data.token`**
+- `gck_` 前缀即声明身份方式：服务端按 key 校验，命中后按**签发人账号**执行操作
+- Key **不会过期**（除非用户吊销或重新生成）；泄露由用户吊销，不需要改密码
+- 服务端只存哈希；拿不到完整明文属于正常，让用户重新生成一枚即可
+- 返回 `401` 时：先确认 key 拼写完整、前缀 `gck_` 没丢，再让用户去吊销重建
 
-### 3.2 业务请求怎么带 token
+### 3.2 Key 的生命周期（用户侧，不要代替用户调用）
 
-```http
-Authorization: Bearer $WEN_TOKEN
-```
-
-服务端从 Cookie `wt_auth` **或** `Authorization: Bearer ...` 取 token（见 `backend/src/utils/auth.js`）。改密码后旧 token 全部失效。
+| 动作 | 入口 |
+|------|------|
+| 生成 / 查看列表 / 吊销 | 移动端「GrokBot 连接器 → 接入指南」弹层 |
+| 接口级管理（可选） | `GET/POST/DELETE /api/grok-keys`（需登录态，返回明文仅生成当次） |
 
 ### 3.3 认证相关接口
 
 | 方法 | 路径 | 要登录？ | 说明 |
 |------|------|----------|------|
 | GET | `/api/auth/status` | 否 | 是否启用认证、是否已登录、试用是否可用 |
-| POST | `/api/auth/login` | 否 | 登录，返回 `token` |
+| POST | `/api/auth/login` | 否 | 登录，返回 `token`（UI 会话用；Grok 对接请用 Key） |
 | POST | `/api/auth/logout` | 建议 | 清 Cookie |
 | POST | `/api/auth/password` | 是 | body：`oldPassword`、`newPassword`（至少 6 位） |
+| GET/POST/DELETE | `/api/grok-keys` | 是 | GrokCtrl-Key 列表/签发/吊销（用户操作，勿代劳） |
+| GET | `/api/grok-doc` | 是 | 本文件全文（移动端下载用） |
 
 **没有** `/api/auth/me`，不要调用。  
 **没有** `/api/grok`（尚未实现），不要调用。
@@ -108,9 +92,9 @@ Content-Type: application/json
 
 ### 3.5 哪些接口要登录
 
-- `/api/auth/*`：挂在守卫之前，登录本身不需要 token
-- `GET /api/health`：**公开**，不需要 token
-- 其余 `/api/*`：**必须**带有效 token，否则 `401` + `{ "success": false, "error": "...", "code": "UNAUTHORIZED" }`
+- `/api/auth/*`：挂在守卫之前，登录本身不需要凭证
+- `GET /api/health`：**公开**，不需要凭证
+- 其余 `/api/*`：**必须**带有效凭证（GrokCtrl-Key 或登录 token），否则 `401` + `{ "success": false, "error": "...", "code": "UNAUTHORIZED" }`
 
 ---
 
@@ -119,32 +103,25 @@ Content-Type: application/json
 任一步失败就先查域名 / 证书 / 账号，再谈业务。
 
 ```bash
-# 1) 健康检查（不需要 token）
+# 1) 健康检查（不需要凭证）
 curl -sS "$BASE_URL/api/health"
 
-# 2) 登录拿 token
-curl -sS -X POST "$BASE_URL/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"$WEN_USER\",\"password\":\"$WEN_PASS\",\"remember\":true}"
-
-# 把返回的 data.token 赋给 WEN_TOKEN
-
-# 3) 带 token 读一笔业务
+# 2) 带 key 读一笔业务
 curl -sS "$BASE_URL/api/orders" \
-  -H "Authorization: Bearer $WEN_TOKEN"
+  -H "Authorization: Bearer $GROK_KEY"
 
-# 4) 无 token 应返回 401
+# 3) 无凭证应返回 401
 curl -sS -o /dev/null -w "%{http_code}\n" "$BASE_URL/api/orders"
 ```
 
-验收：`health.success === true` → 登录 `success === true` 且有 `data.token` → 带 token 业务 `success === true` → 无 token 为 `401`。
+验收：`health.success === true` → 带 key 业务 `success === true` → 无 key 为 `401`。
 
 ---
 
 ## 5. 请求约定
 
 - **Base**：`$BASE_URL/api/...`
-- **Header**：写操作加 `Content-Type: application/json`；业务请求加 `Authorization: Bearer $WEN_TOKEN`
+- **Header**：写操作加 `Content-Type: application/json`；业务请求加 `Authorization: Bearer $GROK_KEY`
 - **成功**：多为 `{ "success": true, "data": ... }`；创建类常见 HTTP `201`
 - **失败**：`{ "success": false, "error": "..." }`，可能带 `code`（如 `UNAUTHORIZED`、`LOCKED`、`BAD_CREDENTIALS`）
 - **超时**：客户端建议 15–30s；上传可更长
@@ -177,6 +154,33 @@ curl -sS -o /dev/null -w "%{http_code}\n" "$BASE_URL/api/orders"
 | `/api/accounts` | 账号/平台 |
 | `/api/bookmarks` | 书签收藏 |
 | `/api/bug-reports` | 缺陷反馈 |
+| `/api/grok-keys` | GrokCtrl-Key 签发/列表/吊销（用户操作，勿代劳） |
+| `/api/grok-doc` | 本文件全文（移动端下载用） |
+| `/api/grok-messages` | Grok 与移动端「GrokBot 连接器」对话窗口之间的消息通道 |
+
+### 6.1 消息通道（/api/grok-messages）
+
+你在移动端有一个对话窗口，这条接口就是你**以 Grok 名义**往里发消息、以及读取用户说了什么的通道：
+
+```bash
+# 发消息进对话窗口（role 默认 bot）
+curl -sS -X POST "$BASE_URL/api/grok-messages" \
+  -H "Authorization: Bearer $GROK_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"text\":\"你好，Grok 已接入。\",\"username\":\"$WEN_USERNAME\"}"
+
+# 读用户发来的消息（同一消息流，user=用户在窗口里发的）
+curl -sS "$BASE_URL/api/grok-messages" \
+  -H "Authorization: Bearer $GROK_KEY"
+```
+
+要点：
+
+- 单条数组、时间序，每用户一份，容量封顶 300 条（超了裁最老的）
+- body `username` 可选：带了就做交叉校验，和 key 归属不一致 → `403`；建议带上防串号
+- `text` 必填、≤4000 字；`role` 只能是 `bot` / `user`（Grok 侧永远用 `bot`）
+- 页面每 ~4s 轮询一次，你 POST 的消息几秒内出现在用户屏幕上
+- 想拿到用户的新消息：轮询 GET，自己记住已读的最后一条 `id` / `at`
 
 探测清单可参考仓库 `tools/probe-api-surface.mjs`；以当前代码为准。  
 **不要调用**：`/api/auth/me`（不存在）、`/api/grok/*`（未实现）。
@@ -185,35 +189,27 @@ curl -sS -o /dev/null -w "%{http_code}\n" "$BASE_URL/api/orders"
 
 ## 7. 三个可复制的 curl 剧本
 
-先替换 `$BASE_URL`、`$WEN_USER`、`$WEN_PASS`。
+先替换 `$BASE_URL`、`$GROK_KEY`。
 
-### A. 登录并导出 token
+### A. 设置凭证
 
 ```bash
 export BASE_URL="https://your-domain.com"
-export WEN_USER="admin"
-export WEN_PASS="your-password"
-
-export WEN_TOKEN="$(curl -sS -X POST "$BASE_URL/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"$WEN_USER\",\"password\":\"$WEN_PASS\",\"remember\":true}" \
-  | python -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")"
-
-echo "token length: ${#WEN_TOKEN}"
+export GROK_KEY="gck_xxxxxxxx"   # 用户在接入指南弹层生成的完整 Key
 ```
 
 ### B. 读取订单列表
 
 ```bash
 curl -sS "$BASE_URL/api/orders" \
-  -H "Authorization: Bearer $WEN_TOKEN"
+  -H "Authorization: Bearer $GROK_KEY"
 ```
 
 ### C. 新建一条备忘录（写操作）
 
 ```bash
 curl -sS -X POST "$BASE_URL/api/memos" \
-  -H "Authorization: Bearer $WEN_TOKEN" \
+  -H "Authorization: Bearer $GROK_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"title\":\"Grok Bot 连通测试\",\"content\":\"来自远程 API 的第一条备忘\",\"category\":\"测试\",\"tags\":[\"grok-bot\"]}"
 ```
@@ -225,12 +221,12 @@ curl -sS -X POST "$BASE_URL/api/memos" \
 
 ## 8. 安全（开源也适用）
 
-- 本文件可以开源：只写协议与路径，**不要**写入真实密码、token、私钥
-- 仓库里用占位符 `$BASE_URL` / `$WEN_TOKEN`；真实密钥只放部署环境或私密配置
+- 本文件可以开源：只写协议与路径，**不要**写入真实 Key、密码、私钥
+- 仓库里用占位符 `$BASE_URL` / `$GROK_KEY`；真实密钥只放部署环境或私密配置
 - 公网保持 `AUTH_ENABLED` 开启；不要设 `AUTH_TRUST_LOCALHOST=1`（那是本机调试）
 - 生产建议 `TRIAL_LOGIN=0`
-- Token 能读写对应用户数据；泄露后应改密码使旧 token 失效
-- 微信通知里**不要**发送密码、完整 token、私钥
+- GrokCtrl-Key 能读写签发人的全部数据；泄露后**吊销该 key** 即可，不用改密码
+- 微信通知里**不要**发送密码、完整 Key、私钥
 
 ---
 
@@ -242,7 +238,7 @@ curl -sS -X POST "$BASE_URL/api/memos" \
 - [ ] 已设 `APP_USERNAME` / `APP_PASSWORD`（或确认 `auth.json`）
 - [ ] `AUTH_ENABLED` 未关闭；未开启本机免登录
 - [ ] （生产）`TRIAL_LOGIN=0`
-- [ ] 跑通第 4 节：健康 → 登录 → 有 token 读 → 无 token 401
+- [ ] 跑通第 4 节：健康 → 有 key 读 → 无 key 401
 - [ ] 防火墙只开 80/443；数据目录已备份
 - [ ] 按 §11 把本文件喂给 Grok Bot，完成接入
 - [ ] 按 §12 试一条只读 + 一条经确认的写操作
@@ -258,11 +254,11 @@ curl -sS -X POST "$BASE_URL/api/memos" \
 请按仓库根目录 GROK_BOT_CONNECTION.md 对接 wen-workbench（尤其 §11 接入、§12 控制、§13 微信通知）。
 
 约定：
-1. 地址：$BASE_URL（HTTPS）。先 GET /api/health，再 POST /api/auth/login 取 Bearer token；之后业务请求都带 Authorization: Bearer $WEN_TOKEN。
+1. 地址：$BASE_URL（HTTPS）。先 GET /api/health；之后业务请求都带 Authorization: Bearer $GROK_KEY。
 2. 只使用文档列出的现有 /api/*。不要调用 /api/grok（未实现），不要调用 /api/auth/me（不存在）。
-3. 成功看 JSON 的 success；401 表示未登录或 token 失效，重新 login。
-4. 写操作前先向我确认目标与字段；我说「直接做 / 不用确认」时可跳过确认。不要猜测密码。需要 $BASE_URL 和账号时向我索取，不要把 token 写进公开回复或微信。
-5. 比较重要的结果（连通成功/失败、写操作成败、需要我立刻处理的事）按 §13 走微信通知；不要把密码或完整 token 发到微信。
+3. 成功看 JSON 的 success；401 表示 key 失效或被吊销，提醒用户去吊销重建。
+4. 写操作前先向我确认目标与字段；我说「直接做 / 不用确认」时可跳过确认。不要索要或猜测密码——对接只需要 $BASE_URL 和 Key，不要把 Key 写进公开回复或微信。
+5. 比较重要的结果（连通成功/失败、写操作成败、需要我立刻处理的事）按 §13 走微信通知；不要把密码或完整 Key 发到微信。
 
 现在：确认 $BASE_URL 可达，完成最小连通检查，用一句话向我汇报结果，然后等我下一条业务指令。
 ```
@@ -277,18 +273,18 @@ wen-workbench **不负责**安装 Grok Bot。接入发生在「你的 Grok Bot �
 
 1. 已能用的 **Grok Bot**（Cursor / Grok Bot 应用里的一个助手对话即可）
 2. 本仓库已按 §9 **公网 HTTPS 部署**好，你知道真实的 `$BASE_URL`
-3. 一份本文件（仓库根目录 `GROK_BOT_CONNECTION.md`）
-4. 正式账号 `$WEN_USER` / `$WEN_PASS`（或你已签发、仍有效的 `$WEN_TOKEN`）
+3. 一份本文件（仓库根目录 `GROK_BOT_CONNECTION.md`，移动端可一键下载）
+4. 一枚 **GrokCtrl-Key**（移动端「GrokBot 连接器 → 接入指南」里生成）
 
 ### 11.2 接入步骤（给用户）
 
 1. 打开要用来遥控 workbench 的那个 Grok Bot 对话  
 2. 把**本文件全文**贴进对话（或告诉它仓库路径让它自己读）  
-3. 再发一句，填上真实地址，例如：  
-   `按 GROK_BOT_CONNECTION.md 对接。BASE_URL=https://你的域名`  
-4. 当它向你要账号时，**私聊发给它**用户名和密码（或只发已有 token）；不要把密码写进会公开的地方  
-5. 让它执行 §4 最小连通检查，并向你回报：health 是否成功、是否拿到 token、只读接口是否通  
-6. 连通成功后，用自然语言下指令即可（见 §12），例如：「查一下最近订单」「新建一条备忘：……」
+3. 再发一句，填上真实地址和 Key，例如：  
+   `按 GROK_BOT_CONNECTION.md 对接。BASE_URL=https://你的域名，GROK_KEY=gck_...`  
+   用 **GrokCtrl-Key**，不要给账号密码；Key 随时可以吊销
+4. 让它执行 §4 最小连通检查，并向你回报：health 是否成功、带 key 的只读接口是否通  
+5. 连通成功后，用自然语言下指令即可（见 §12），例如：「查一下最近订单」「新建一条备忘：……」
 
 ### 11.3 接入验收
 
@@ -303,9 +299,9 @@ wen-workbench **不负责**安装 Grok Bot。接入发生在「你的 Grok Bot �
 | 现象 | 先查 |
 |------|------|
 | health 都失败 | 域名、证书、反代是否转到 `3456` |
-| 登录 401 / BAD_CREDENTIALS | 账号密码、是否误用试用规则 |
-| 登录 429 LOCKED | 失败次数过多，等约 5 分钟 |
-| 业务 401 UNAUTHORIZED | token 过期或改过密码 → 重新 login |
+| 业务 401 UNAUTHORIZED | Key 拼写/前缀 `gck_` 是否完整；Key 是否被吊销 → 重新生成 |
+| Grok 去要账号密码 | 不需要——对接只要 BASE_URL + Key；纠正它别索要密码 |
+| 发消息进对话窗口 | `POST /api/grok-messages`（body 带 `text`，可选 `username` 交叉校验） |
 | Grok 去调 `/api/grok` 或 `/api/auth/me` | 本文件禁止；纠正它只用 §6 列表 |
 
 ---
@@ -324,19 +320,18 @@ Grok **不内嵌**在 wen-workbench 进程里。控制方式是：你（或定�
 
 ### 12.2 单次控制标准流程（给 Grok 执行）
 
-1. 若还没有有效 `$WEN_TOKEN`：`GET /api/health` → `POST /api/auth/login` → 保存 `data.token`  
+1. 先 `GET /api/health` 确认服务活着（凭证用 `$GROK_KEY`，无需登录）  
 2. 根据用户意图，在 §6 地图里选**已有**路径与方法；字段不够就问用户，不猜  
 3. **读操作**（GET）：可以直接执行，然后用白话汇报  
 4. **写操作**（POST / PUT / PATCH / DELETE）：先向用户确认目标与关键字段；用户明确说「直接做 / 不用确认 / 按这个执行」后再发请求  
-5. 看响应 `success`；失败时把 `error` / `code` / HTTP 状态说清楚；`401` 则重新 login 再重试一次  
+5. 看响应 `success`；失败时把 `error` / `code` / HTTP 状态说清楚；`401` 提示用户 key 可能失效/被吊销  
 6. 需要用户立刻知道的结果 → 走 §13  
 
 ### 12.3 控制边界（必须遵守）
 
 - 只调 §6 列出的前缀；**禁止**编造路由（含 `/api/grok`、`/api/auth/me`）  
-- 不在聊天或微信里回显完整 token / 密码  
+- 不在聊天或微信里回显完整 Key / 密码  
 - 不批量删除、不改密码、不关认证，除非用户在本轮明确要求  
-- 遇到 `LOCKED`：停止重试登录，告知用户等待  
 - 一次用户指令 = 一次明确业务意图；不要擅自扩大成「顺便清数据」  
 
 ### 12.4 给用户的口令示例
@@ -375,13 +370,13 @@ Grok **不内嵌**在 wen-workbench 进程里。控制方式是：你（或定�
 |----------|----------|
 | 首次连通成功 / 失败 | 普通只读查询的细枝末节 |
 | 写操作成功或失败（建备忘、改提醒、改数据等） | 你正盯着同一对话、已即时看到结果 |
-| 需要你马上处理的事（登录锁定、服务 health 挂了、token 连续失效） | 调试过程中的每一步 curl 日志 |
-| 你明确说「微信告诉我」的结果 | 含密码、完整 token 的任何内容 |
+| 需要你马上处理的事（登录锁定、服务 health 挂了、Key 连续失效） | 调试过程中的每一步 curl 日志 |
+| 你明确说「微信告诉我」的结果 | 含密码、完整 Key 的任何内容 |
 
 ### 13.3 通知正文怎么写
 
 - 短、可扫读：结论先行（成功/失败 + 一句话原因）  
-- 可带：时间、`$BASE_URL` 主机名、操作对象（如备忘标题），**不要**带密码或完整 token  
+- 可带：时间、`$BASE_URL` 主机名、操作对象（如备忘标题），**不要**带密码或完整 Key  
 - 示例：  
   - `【workbench】连通成功：health ok，已登录，只读订单接口正常。`  
   - `【workbench】新建备忘失败：401，已尝试重新登录仍失败，请检查账号或服务。`  
@@ -399,7 +394,7 @@ Grok **不内嵌**在 wen-workbench 进程里。控制方式是：你（或定�
 
 - [ ] 明确了「谁发微信」（专属助手或本助手）  
 - [ ] 演练过：连通或一次写操作后，手机微信能收到短讯  
-- [ ] 抽查：通知里无密码、无完整 token  
+- [ ] 抽查：通知里无密码、无完整 Key  
 
 ---
 

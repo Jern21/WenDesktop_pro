@@ -16,7 +16,7 @@
  *
  * 顺序 = 导航栏从上到下的顺序。
  *
- * 容量：纵向 rail 用 40px 按钮 + 4px 间距 + 分隔线，12 项共约 546px，
+ * 容量：纵向 rail 用 40px 按钮 + 4px 间距 + 分隔线，13 项共约 590px，
  * 在 667px 视口（iPhone SE2/7/8）及以上完整放得下；更矮的屏幕（568px）靠 rail 滚动兜底。
  * **再加就真的放不下了** —— 到那时要么继续压按钮高度（低于 40px 触摸目标就不好按了），
  * 要么重新引入一层收纳。别默默加到 15 项，底部会滚出屏幕外。
@@ -29,6 +29,14 @@ export var MOBILE_NAV = [
         subtitle: '开发小账',
         panel: 'workbench',
         icon: 'grid',
+        group: '业务'
+    },
+    {
+        path: '/grok',
+        label: 'GrokBot',
+        subtitle: '远程助理',
+        panel: 'grok',
+        icon: 'grok',
         group: '业务'
     },
     {

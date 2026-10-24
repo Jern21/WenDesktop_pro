@@ -148,6 +148,7 @@ export function destroyMobileShell() {
     shellState.labelEl = null;
     shellState.subtitleEl = null;
     shellState.backBtn = null;
+    shellState.greetEl = null;
     shellState.topbarInner = null;
     shellState.userWrap = null;
     shellState.userBtn = null;
@@ -187,10 +188,31 @@ function renderPanel(route) {
     shellState.panel = entry.mount(container, route) || null;
 }
 
+/** 工作台顶栏右侧问候语（按时段，头像左边那两行字） */
+function greetingText(d) {
+    var h = d.getHours();
+    if (h >= 5 && h < 11) return '🌅早上好';
+    if (h >= 11 && h < 14) return '☀️中午好';
+    if (h >= 14 && h < 18) return '☀️下午好';
+    if (h >= 18 && h < 23) return '🌙晚上好';
+    return '🌙夜深了';
+}
+
 function syncTopbar(route) {
     if (!shellState.labelEl || !shellState.subtitleEl) return;
     shellState.labelEl.textContent = route.label;
     shellState.subtitleEl.textContent = route.subtitle || '';
+
+    // 问候只在工作台出现：它是首页的「打招呼」元素，不是通用页标题
+    if (shellState.greetEl) {
+        if (route.path === '/') {
+            shellState.greetEl.querySelector('.mobile-topbar-greet-hi').textContent =
+                greetingText(new Date()) + '！';
+            shellState.greetEl.removeAttribute('hidden');
+        } else {
+            shellState.greetEl.setAttribute('hidden', '');
+        }
+    }
 
     // 返回按钮只在子页面出现。用 hidden 属性而不是删节点：
     // 反复增删 DOM 会让顶栏抖动，也会让之前绑过监听的引用失效。
@@ -255,6 +277,10 @@ export function mountMobileShell(root, path) {
         '      <p class="mobile-topbar-sub" id="mobile-topbar-sub">' + (route.subtitle || '') + '</p>' +
         '    </div>' +
         '  </div>' +
+        '  <div class="mobile-topbar-greet" id="mobile-topbar-greet" hidden>' +
+        '    <p class="mobile-topbar-greet-hi"></p>' +
+        '    <p class="mobile-topbar-greet-sub">继续加油，梦想总会到达</p>' +
+        '  </div>' +
         '  <div class="mobile-topbar-user-wrap" id="mobile-topbar-user-wrap">' +
         '    <button type="button" class="mobile-topbar-user-btn" id="mobile-topbar-user-btn" aria-haspopup="true" aria-expanded="false">' +
         '      <img class="mobile-topbar-avatar" id="mobile-topbar-avatar" src="" alt="" width="32" height="32" />' +
@@ -317,6 +343,7 @@ export function mountMobileShell(root, path) {
     shellState.contentEl = content;
     shellState.labelEl = topbar.querySelector('#mobile-topbar-label');
     shellState.subtitleEl = topbar.querySelector('#mobile-topbar-sub');
+    shellState.greetEl = topbar.querySelector('#mobile-topbar-greet');
     shellState.backBtn = topbar.querySelector('#mobile-topbar-back');
     shellState.userWrap = topbar.querySelector('#mobile-topbar-user-wrap');
     shellState.userBtn = topbar.querySelector('#mobile-topbar-user-btn');

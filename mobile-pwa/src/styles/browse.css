@@ -8,16 +8,18 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    margin: -12px -10px 8px;
-    padding: 12px 10px 8px;
+    /* 同 .ord-tools：负边距抵容器 padding + 上渗阴影盖 iOS 滚动缝 */
+    margin: -12px -10px 8px calc(-12px - env(safe-area-inset-left, 0px));
+    padding: 10px 10px 6px calc(12px + env(safe-area-inset-left, 0px));
     background: var(--shell-bg);
+    box-shadow: 0 -14px 0 var(--shell-bg);
 }
 
 .br-search {
     width: 100%;
     box-sizing: border-box;
-    height: 36px;
-    margin: 0 0 8px;
+    height: 32px;
+    margin: 0 0 6px;
     padding: 0 12px;
     border: 1px solid var(--shell-border);
     border-radius: 10px;
@@ -41,10 +43,18 @@
 .br-chips {
     display: flex;
     flex: 1;
-    flex-wrap: wrap;
+    /* 不换行、横向滚动 —— 跟 .ord-chips 同款，工具栏永远只占一行高 */
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 6px;
     min-width: 0;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+
+/** 多组 chips 合并成一行时的分组壳（JS 分壳填内容，布局当透明） */
+.br-chipgroup {
+    display: contents;
 }
 
 .br-chips::-webkit-scrollbar {
@@ -54,8 +64,8 @@
 .br-chip,
 .br-refresh {
     flex: 0 0 auto;
-    height: 28px;
-    padding: 0 10px;
+    height: 26px;
+    padding: 0 9px;
     border: 1px solid var(--shell-border);
     border-radius: 999px;
     background: var(--shell-surface);

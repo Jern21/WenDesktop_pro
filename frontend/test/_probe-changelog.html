@@ -7,9 +7,9 @@
 <script>
 /**
  * 验证应用内「更新日志」面板：
- *   A. 本地 CHANGELOG.json 被读到（当前运行 v2.0.2）
+ *   A. 本地 CHANGELOG.json 被读到（当前运行 v2.1.0）
  *   B. 线上未 push 时面板给出准确提示
- *   C. 线上取不到时走「本地数据」分支，2.0.2 的条目能正确渲染
+ *   C. 线上取不到时走「本地数据」分支，2.1.0 的条目能正确渲染
  *
  * C 是重点：buildContentHtml 取值优先级是 remote > local，
  * 只要 GitHub 上还是旧版，新条目就不会出现在列表里 —— 这不是 bug，是设计。
@@ -39,15 +39,20 @@
         var w = f.contentWindow, d = f.contentDocument;
         var lines = [];
         var api = null;   // 存 AppChangelog 本身：refresh() 之后 then 拿到的是 state，会被覆盖
+        var loadedState = null;
         function check(name, cond) { lines.push((cond ? 'PASS  ' : 'FAIL  ') + name); return cond; }
 
         wait(function () { return w.AppChangelog; }, 15000, 'AppChangelog')
             .then(function (cl) {
                 api = cl;
-                check('本地 CHANGELOG.json 已读取：当前运行 v2.0.2', cl.version === '2.0.2');
+                return cl.ensureData();
+            })
+            .then(function (state) {
+                loadedState = state;
+                check('本地 CHANGELOG.json 已读取：当前运行 v2.1.0', api.version === '2.1.0');
 
                 // ---- A/B：正常打开，确认面板结构与「未 push」提示 ----
-                cl.open();
+                api.open();
                 return wait(function () {
                     return panelText(d).indexOf('更新日志') !== -1;
                 }, 12000, '面板打开');
@@ -55,10 +60,14 @@
             .then(function () {
                 return new Promise(function (r) { setTimeout(r, 500); }).then(function () {
                     var text = panelText(d);
-                    check('面板显示「当前运行 v2.0.2」', text.indexOf('当前运行 v2.0.2') !== -1);
-                    // 线上还是 2.0.1 时，该提示必须出现（否则用户不知道为啥看不到新条目）
-                    check('线上落后时给出「本地 changelog 未 push」提示',
-                        text.indexOf('未 push') !== -1 || text.indexOf('GitHub 线上 v2.0.1') !== -1);
+                    check('面板显示「当前运行 v2.1.0」', text.indexOf('当前运行 v2.1.0') !== -1);
+                    // 按实际远端状态断言，发布后与远端一致也应通过。
+                    var remote = loadedState.remote;
+                    var cmp = remote ? api.compareVersion(remote.latestVersion, api.version) : null;
+                    var expected = cmp === null ? '未能拉取 GitHub'
+                        : cmp < 0 ? '本地 changelog 未 push'
+                        : cmp > 0 ? '线上较新' : '与线上一致';
+                    check('线上比对提示符合实际版本状态', text.indexOf(expected) !== -1);
                     // 关掉面板，避免遮罩挡住后续操作
                     var root = d.getElementById('app-overlay-root');
                     var btn = root && root.querySelector('button');
@@ -82,18 +91,18 @@
                 api.open();
                 return wait(function () {
                     var t = panelText(d);
-                    return t.indexOf('数据隔离与菜单开关') !== -1;
-                }, 12000, '本地分支渲染 2.0.2');
+                    return t.indexOf('移动业务接入与智能助理') !== -1;
+                }, 12000, '本地分支渲染 2.1.0');
             })
             .then(function () {
                 var text = panelText(d);
-                check('本地分支渲染出 v2.0.2 条目', text.indexOf('2.0.2') !== -1);
-                check('条目标题「数据隔离与菜单开关」', text.indexOf('数据隔离与菜单开关') !== -1);
-                check('亮点含「菜单选项」', text.indexOf('菜单选项') !== -1);
-                check('亮点含数据隔离', text.indexOf('按账号隔离') !== -1);
-                check('新版本排在 2.0.1 之前',
-                    text.indexOf('2.0.2') !== -1 &&
-                    text.indexOf('2.0.2') < text.indexOf('2.0.1'));
+                check('本地分支渲染出 v2.1.0 条目', text.indexOf('2.1.0') !== -1);
+                check('条目标题「移动业务接入与智能助理」', text.indexOf('移动业务接入与智能助理') !== -1);
+                check('亮点含 GrokBot', text.indexOf('GrokBot') !== -1);
+                check('亮点含部署指南', text.indexOf('部署指南') !== -1);
+                check('新版本条目排在 2.0.2 之前',
+                    text.indexOf('移动业务接入与智能助理') !== -1 &&
+                    text.indexOf('移动业务接入与智能助理') < text.indexOf('数据隔离与菜单开关'));
 
                 lines.push('---- 面板文本 ----');
                 lines.push(text.replace(/\n{2,}/g, '\n').slice(0, 800));

@@ -29,7 +29,9 @@ var DEFAULT_SETTINGS = {
     exportFormat: 'json',
     cleanupDays: 30,
     devLedger: {
-        goalAmount: 20000
+        goalAmount: 20000,
+        goalName: '',
+        goalImage: ''
     },
     /**
      * 大模型配置。密钥每次读盘都是明文（decrypt 已解开），落盘是 enc:v1: 密文。

@@ -35,6 +35,8 @@ import { mountPlatformPostDetailPanel } from './platform-post-detail.js';
 import { mountBookmarksPanel } from './bookmarks.js';
 import { mountStatsPanel } from './stats.js';
 import { mountAccountsPanel } from './accounts.js';
+import { mountGrokPanel } from './grok.js';
+import { mountGrokKeysPanel } from './grok-keys.js';
 
 export var PANEL_REGISTRY = {
     workbench: {
@@ -104,7 +106,15 @@ export var PANEL_REGISTRY = {
 
     accounts: {
         mount: mountAccountsPanel
-    }
+    },
+
+    grok: {
+        mount: mountGrokPanel
+    },
+
+    'grok-keys': {
+        mount: mountGrokKeysPanel
+    },
 
     // 新增页面模板：
     // orders: {

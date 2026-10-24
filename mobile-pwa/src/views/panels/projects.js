@@ -56,8 +56,10 @@ export function mountProjectsPanel(container) {
         '<div class="br-page">' +
         '  <div class="br-tools">' +
         '    <input class="br-search" type="search" enterkeyhint="search" placeholder="搜项目、客户、编号" aria-label="搜索项目" />' +
-        '    <div class="br-tools-row"><div class="br-chips br-scopes"></div><button type="button" class="br-refresh" data-act="refresh">刷新</button></div>' +
-        '    <div class="br-chips br-statuses"></div>' +
+        '    <div class="br-tools-row"><div class="br-chips">' +
+        '      <span class="br-chipgroup br-scopes"></span>' +
+        '      <span class="br-chipgroup br-statuses"></span>' +
+        '    </div><button type="button" class="br-refresh" data-act="refresh">刷新</button></div>' +
         '    <p class="br-count"></p>' +
         '  </div>' +
         '  <div class="br-body"></div>' +

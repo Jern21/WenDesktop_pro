@@ -6,6 +6,64 @@
  * （Tailwind CDN 不保证处理 SPA 动态加载的样式表）。
  */
 
+/* 顶部统计卡片：渐变、图标与文字一起随主题切换。 */
+#orders-summary {
+    --summary-surface: #fff;
+    --summary-text: #1f2937;
+    --summary-muted: #6b7280;
+    --summary-tint: 0.05;
+    --summary-border: 0.18;
+    --summary-icon-tint: 0;
+}
+
+#orders-summary .orders-summary-card--blue { --summary-rgb: 59, 130, 246; --summary-ink: #2563eb; --summary-dark-ink: #93c5fd; }
+#orders-summary .orders-summary-card--green { --summary-rgb: 34, 197, 94; --summary-ink: #15803d; --summary-dark-ink: #86efac; }
+#orders-summary .orders-summary-card--orange { --summary-rgb: 249, 115, 22; --summary-ink: #c2410c; --summary-dark-ink: #fdba74; }
+#orders-summary .orders-summary-card--purple { --summary-rgb: 168, 85, 247; --summary-ink: #9333ea; --summary-dark-ink: #d8b4fe; }
+
+#orders-summary .orders-summary-card {
+    border-radius: 0.75rem;
+    border-color: rgba(var(--summary-rgb), var(--summary-border));
+    background-color: var(--summary-surface);
+    background-image: linear-gradient(to bottom right, rgba(var(--summary-rgb), var(--summary-tint)), transparent);
+}
+
+#orders-summary .orders-summary-label,
+#orders-summary .orders-summary-icon {
+    color: var(--summary-accent, var(--summary-ink));
+}
+
+#orders-summary .orders-summary-value { color: var(--summary-text); }
+#orders-summary .orders-summary-caption { color: var(--summary-muted); }
+
+#orders-summary .orders-summary-icon {
+    border-color: rgba(var(--summary-rgb), var(--summary-border));
+    background-color: var(--summary-surface);
+    background-image: linear-gradient(rgba(var(--summary-rgb), var(--summary-icon-tint)), rgba(var(--summary-rgb), var(--summary-icon-tint)));
+}
+
+[data-theme="aurora"] #orders-summary {
+    --summary-surface: var(--aurora-surface, #1a1825);
+    --summary-text: var(--aurora-text, #e2e0f0);
+    --summary-muted: var(--aurora-text-secondary, #a09bb8);
+}
+
+[data-theme="glow-digital-dark"] #orders-summary {
+    --summary-surface: var(--gdd-surface-solid, #0f172a);
+    --summary-text: var(--gdd-text, #e2e8f0);
+    --summary-muted: var(--gdd-text-secondary, #94a3b8);
+}
+
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #orders-summary {
+    --summary-tint: 0.14;
+    --summary-border: 0.28;
+    --summary-icon-tint: 0.18;
+}
+
+:is([data-theme="aurora"], [data-theme="glow-digital-dark"]) #orders-summary .orders-summary-card {
+    --summary-accent: var(--summary-dark-ink);
+}
+
 /* 页面专属：表格行样式 */
 .table-row-item {
     border-bottom: 1px solid #f8fafc;   /* gray-50 */

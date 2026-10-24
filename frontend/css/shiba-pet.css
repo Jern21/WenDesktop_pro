@@ -92,6 +92,7 @@
     padding: 0.65rem 0.75rem;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 0.55rem;
     background: #fff;
 }
@@ -99,7 +100,8 @@
 .shiba-chat-msg {
     font-size: 0.875rem;
     line-height: 1.5;
-    max-width: 100%;
+    max-width: 86%;
+    width: fit-content;
 }
 
 .shiba-chat-msg-label {
@@ -108,6 +110,10 @@
     font-weight: 700;
     margin-bottom: 0.2rem;
     opacity: 0.8;
+}
+
+.shiba-chat-msg--user {
+    align-self: flex-end;
 }
 
 .shiba-chat-msg--user .shiba-chat-msg-label {
@@ -171,6 +177,7 @@
     color: #1c1917;
     background: #fff;
     outline: none;
+    color-scheme: light;
 }
 
 .shiba-chat-input:focus {

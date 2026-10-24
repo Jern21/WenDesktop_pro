@@ -288,11 +288,85 @@ function verifyToken(token) {
     return !!parseToken(token);
 }
 
+// ========== GrokCtrl-Key ==========
+// 长寿命 API Key：外部 Agent（GrokBot）直接当 Bearer 用，不再需要账号密码换 token。
+// 设计：gck_ 前缀与普通 token 区分；auth.json 只存 sha256 哈希，明文只在签发时返回一次。
+
+var GROK_KEY_PREFIX = 'gck_';
+
+function ensureGrokKeys() {
+    if (!state) return [];
+    if (!Array.isArray(state.grokKeys)) state.grokKeys = [];
+    return state.grokKeys;
+}
+
+function hashGrokKey(raw) {
+    return crypto.createHash('sha256').update('gck|' + raw).digest('hex');
+}
+
+/** 签发新 key。明文 key 只在这里返回一次，之后只认哈希。 */
+function issueGrokKey(username) {
+    if (!state) return null;
+    var raw = GROK_KEY_PREFIX + crypto.randomBytes(24).toString('hex');
+    var record = {
+        id: 'k' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'),
+        hash: hashGrokKey(raw),
+        username: normalizeUsername(username || getUsername()),
+        createdAt: new Date().toISOString()
+    };
+    ensureGrokKeys().push(record);
+    writeAuthFile(state);
+    return { id: record.id, key: raw, username: record.username, createdAt: record.createdAt };
+}
+
+function listGrokKeys(username) {
+    var user = normalizeUsername(username);
+    return ensureGrokKeys()
+        .filter(function (k) { return k.username === user; })
+        .map(function (k) {
+            return { id: k.id, username: k.username, createdAt: k.createdAt };
+        });
+}
+
+function revokeGrokKey(id, username) {
+    var keys = ensureGrokKeys();
+    var idx = keys.findIndex(function (k) {
+        return k.id === id && k.username === normalizeUsername(username);
+    });
+    if (idx === -1) return false;
+    keys.splice(idx, 1);
+    writeAuthFile(state);
+    return true;
+}
+
+/** 校验 grok key → { username, keyId } | null */
+function verifyGrokKey(raw) {
+    if (!state || typeof raw !== 'string' || raw.indexOf(GROK_KEY_PREFIX) !== 0) return null;
+    var hash = hashGrokKey(raw);
+    var found = ensureGrokKeys().filter(function (k) {
+        return timingSafeEqualStr(k.hash, hash);
+    })[0];
+    if (!found) return null;
+    return { username: found.username, keyId: found.id };
+}
+
 function getSessionFromRequest(req) {
     if (!AUTH_ENABLED) {
         return { username: getUsername(), isTrial: false, trusted: true };
     }
-    var parsed = parseToken(getTokenFromRequest(req));
+    var rawToken = getTokenFromRequest(req);
+    // gck_ 前缀：GrokCtrl-Key，按 key 校验（失败不回落 —— 前缀即声明身份方式）
+    if (rawToken && rawToken.indexOf(GROK_KEY_PREFIX) === 0) {
+        var gk = verifyGrokKey(rawToken);
+        if (!gk) return null;
+        return {
+            username: gk.username,
+            isTrial: isTrialLogin(gk.username),
+            trusted: false,
+            viaGrokKey: true
+        };
+    }
+    var parsed = parseToken(rawToken);
     if (parsed) {
         return {
             username: parsed.username,
@@ -459,6 +533,9 @@ module.exports = {
     issueToken: issueToken,
     verifyToken: verifyToken,
     parseToken: parseToken,
+    issueGrokKey: issueGrokKey,
+    listGrokKeys: listGrokKeys,
+    revokeGrokKey: revokeGrokKey,
     getSessionFromRequest: getSessionFromRequest,
     isAuthenticated: isAuthenticated,
     isLoopback: isLoopback,

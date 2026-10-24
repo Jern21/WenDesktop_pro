@@ -212,12 +212,21 @@ router.get('/dashboard', resp.asyncHandler(function (req, res) {
         return p.status === 'in_progress' || p.status === 'todo';
     }).length;
 
+    var paidOrders = allOrders.filter(hasPayment).length;
+    var pendingPayment = allOrders.reduce(function (sum, o) {
+        if (o.orderStatus === 'closed') return sum;
+        var rest = (parseFloat(o.amount) || 0) - paidAmount(o);
+        return rest > 0 ? sum + rest : sum;
+    }, 0);
+
     var publishedPosts = allPosts.filter(function (p) { return p.status === 'published'; }).length;
 
     return resp.success(res, {
         totalRevenue: totalRevenue,
         totalProfit: totalProfit,
         totalOrders: allOrders.length,
+        paidOrders: paidOrders,
+        pendingPayment: Math.round(pendingPayment * 100) / 100,
         totalCustomers: allCustomers.length,
         activeProjects: activeProjects,
         totalProjects: allProjects.length,

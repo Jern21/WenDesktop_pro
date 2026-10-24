@@ -114,7 +114,7 @@ router.post('/backup', resp.asyncHandler(function (req, res) {
 
     backup._meta = {
         exportedAt: new Date().toISOString(),
-        version: '1.0.0'
+        version: require('../../package.json').version
     };
 
     // 更新备份时间

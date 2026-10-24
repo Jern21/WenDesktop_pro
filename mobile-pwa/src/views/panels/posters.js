@@ -31,8 +31,10 @@ export function mountPostersPanel(container) {
         '<div class="br-page">' +
         '  <div class="br-tools">' +
         '    <input class="br-search" type="search" enterkeyhint="search" placeholder="搜标题、标签" aria-label="搜索素材" />' +
-        '    <div class="br-chips br-platforms"></div>' +
-        '    <div class="br-chips br-labels"></div>' +
+        '    <div class="br-chips">' +
+        '      <span class="br-chipgroup br-platforms"></span>' +
+        '      <span class="br-chipgroup br-labels"></span>' +
+        '    </div>' +
         '    <p class="br-count"></p>' +
         '  </div>' +
         '  <div class="br-grid"></div>' +

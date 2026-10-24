@@ -10,9 +10,11 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    margin: -12px -10px 8px;
-    padding: 12px 10px 8px;
+    /* 同 .ord-tools：负边距抵容器 padding + 上渗阴影盖 iOS 滚动缝 */
+    margin: -12px -10px 8px calc(-12px - env(safe-area-inset-left, 0px));
+    padding: 12px 10px 8px calc(12px + env(safe-area-inset-left, 0px));
     background: var(--shell-bg);
+    box-shadow: 0 -14px 0 var(--shell-bg);
 }
 
 .cust-search {

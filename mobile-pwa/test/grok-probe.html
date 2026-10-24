@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GrokBot 面板探针</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #f2f4f8; }
+        #probe-host { height: 720px; overflow-y: auto; padding: 12px; box-sizing: border-box; }
+        #result { padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <!--
+      GrokBot 对话面板回归探针。
+      跑法：http://127.0.0.1:3460/test/grok-probe.html
+    -->
+    <div id="probe-host" class="mobile-content"></div>
+    <pre id="result">running…</pre>
+    <script type="module" src="/test/grok-probe.js"></script>
+</body>
+</html>

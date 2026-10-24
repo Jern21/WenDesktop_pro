@@ -19,17 +19,40 @@ var listeners = [];
 
 var STATE_KEY = '__mobIndex';
 
+/* ---------- hash 路由 ----------
+ * URL 形态：/#/orders/123?x=1 —— 真实 pathname 恒为 '/'，
+ * 站内路径和查询都塞在 # 后面。
+ * 为什么不用裸路径：iOS standalone/webclip 只认启动 URL，
+ * pathname 一变（哪怕是同源 pushState）就弹出地址栏 + 底部工具栏；
+ * 只有 hash 变化时 iOS 认为「还在同一页」，边框不会出来。
+ * 外部深链 /orders/123 在 startRouter() 里归并进 hash。 */
+function hashRoute() {
+    var h = location.hash || '';
+    if (h.charAt(0) === '#') h = h.slice(1);
+    // 非站内锚点（如 #section）不当路由，按 '/' 处理
+    return h.charAt(0) === '/' ? h : '';
+}
+
+/** hash 里的 ?query 部分（含 ?），没有返回 '' */
+function hashQuery() {
+    var h = hashRoute();
+    var i = h.indexOf('?');
+    return i === -1 ? '' : h.slice(i);
+}
+
 function currentIndex() {
     var st = history.state;
     return st && typeof st[STATE_KEY] === 'number' ? st[STATE_KEY] : 0;
 }
 
 export function getPath() {
-    return normalizePath(location.pathname);
+    var h = hashRoute();
+    var p = h ? h.split('?')[0] : '/';
+    return normalizePath(p);
 }
 
 export function safeNextFromQuery() {
-    var raw = new URLSearchParams(location.search).get('next') || '/';
+    var raw = new URLSearchParams(hashQuery()).get('next') || '/';
     if (raw.charAt(0) !== '/' || raw.charAt(1) === '/' || raw.indexOf('\\') !== -1) {
         return '/';
     }
@@ -43,9 +66,9 @@ export function navigate(path, options) {
     var pathname = qIndex === -1 ? raw : raw.slice(0, qIndex);
     var search = qIndex === -1 ? '' : raw.slice(qIndex);
     var targetPath = normalizePath(pathname);
-    var url = targetPath + search;
+    var url = '/#' + targetPath + search;
 
-    if (getPath() === targetPath && location.search === search) {
+    if (getPath() === targetPath && hashQuery() === search) {
         notify();
         return;
     }
@@ -87,5 +110,11 @@ function notify() {
 }
 
 export function startRouter() {
+    // 外部深链 /orders/123 → 归并成 /#/orders/123（真实 pathname 统一 '/'）
+    // 已有 hash 的不动；/index.html、空 path 也跳过。
+    if (location.pathname && location.pathname !== '/' && location.pathname !== '/index.html') {
+        var url = '/#' + normalizePath(location.pathname) + (location.search || '');
+        history.replaceState({ [STATE_KEY]: 0 }, '', url);
+    }
     window.addEventListener('popstate', function () { notify(); });
 }

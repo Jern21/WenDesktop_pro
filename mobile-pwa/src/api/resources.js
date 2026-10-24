@@ -352,6 +352,59 @@ export var settings = {
     }
 };
 
+export var llm = {
+    /** 大模型配置（密钥脱敏返回）；configured=false 表示还没接模型 */
+    config: function (options) {
+        return api.get('/api/llm/config', options);
+    },
+    /** 一轮对话：{ message, history:[{role,content}] } → { configured, reply, model } */
+    chat: function (payload, options) {
+        return api.post('/api/llm/chat', payload, options);
+    },
+    /** GrokBot 接入文档（GROK_BOT_CONNECTION.md 全文）→ { name, content } */
+    connectDoc: function (options) {
+        return api.get('/api/grok-doc', options);
+    }
+};
+
+export var grokMessages = {
+    /** 当前用户的 Grok 对话消息流 [{id, role, text, at}]，时间序 */
+    list: function (options) {
+        return api.get('/api/grok-messages', options);
+    },
+    /** 追加一条。role: 'bot'|'user'，默认 bot */
+    push: function (role, text, options) {
+        return api.post('/api/grok-messages', { role: role, text: text }, options);
+    },
+    /** 清空当前用户的整条消息流 */
+    clear: function (options) {
+        return api.del('/api/grok-messages', options);
+    }
+};
+
+export var grokKeys = {
+    /** 我的 GrokCtrl-Key 列表（不含明文） */
+    list: function (options) {
+        return api.get('/api/grok-keys', options);
+    },
+    /** 新建一枚 → { id, key, username, createdAt }（明文只此一次） */
+    create: function (options) {
+        return api.post('/api/grok-keys', {}, options);
+    },
+    revoke: function (id, options) {
+        return api.del('/api/grok-keys/' + encodeURIComponent(id), options);
+    }
+};
+
+export var uploads = {
+    /** 上传单个文件（图片/文档），返回 { url, filename, ... } —— 小目标配图用 */
+    file: function (file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        return api.postForm('/api/upload', fd);
+    }
+};
+
 export var accounts = {
     /**
      * ⚠️ 返回的是**解密后的真实凭据**，移动端只做脱敏只读展示。
